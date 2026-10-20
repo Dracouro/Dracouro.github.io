@@ -1,0 +1,851 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>化肥提炼与化学合成 · 火星番茄 · JINJIARAN</title><meta name="description" content="把垃圾拆成零件、拼成器材、再炼成六种基础元素的完整链路 —— 以及为什么玩家该在乎自己捡的是什么。"><link rel="canonical" href="https://jinjiaran.com/projects/tomato/modules/chemistry/"><!--
+      图标组（2026-10-21：换成 R 标）。
+      由 `node tmp/make-brand-icons.mjs` 从矢量化的 R 生成，别手工换图。
+      · favicon.svg —— 深底圆角块 + 白色 R。**深底不是装饰**：标签栏底色不可控
+        （浅色主题浅灰 / 深色主题近黑），透明底的黑 R 在深色标签栏上会整块消失。
+      · favicon.ico —— 16/24/32/48 四档**各自原生渲染**后拼成（不是缩出来的），
+        老浏览器、收藏夹、各类爬虫要的就是它。
+      · apple-touch-icon —— 180×180 **满幅方角、不透明**：圆角与遮罩由 iOS 自己套。
+      · site.webmanifest —— Android/Chrome「添加到主屏幕」用，带 192/512 两档。
+      顺序：SVG 在前（首选），ICO 兜底。
+    --><link rel="icon" type="image/svg+xml" href="/favicon.svg"><link rel="icon" type="image/x-icon" href="/favicon.ico" sizes="16x16 24x24 32x32 48x48"><link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180"><link rel="manifest" href="/site.webmanifest"><meta name="generator" content="Astro v7.3.2"><meta property="og:type" content="website"><meta property="og:site_name" content="JINJIARAN"><meta property="og:title" content="化肥提炼与化学合成 · 火星番茄 · JINJIARAN"><meta property="og:description" content="把垃圾拆成零件、拼成器材、再炼成六种基础元素的完整链路 —— 以及为什么玩家该在乎自己捡的是什么。"><meta property="og:url" content="https://jinjiaran.com/projects/tomato/modules/chemistry/"><!--
+      社交卡片图（2026-10-19 补）。之前全站没有任何 og:image，分享出去的链接是纯文字。
+      图是 public/og.png（1200×630，站点深底 + 品牌标），由 scripts/make-og.mjs 生成，
+      改文案/换标就重跑那个脚本，不要手工改图。
+      宽高必须写：部分抓取方（含微信/Twitter）会按它预留版位，缺了会裁得很难看。
+    --><meta property="og:image" content="https://jinjiaran.com/og.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="JINJIARAN · 个人作品站"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://jinjiaran.com/og.png"><!--
+      移动端浏览器地址栏染色。**只放一个 meta**，由下面那段内联脚本按最终主题
+      改 content —— 站内的主题是「手动切换 + data-theme」，不是跟随系统，
+      用两条 media 查询会跟用户手动选的打架。
+    --><meta name="theme-color" content="#f6f7f9" data-theme-color><script>
+      // 在首次绘制前定好主题，避免闪白；顺手把地址栏颜色定下来
+      ;(() => {
+        /* 先算出最终主题，再写 data-theme —— 两件事分开做，
+           是因为 localStorage 在隐私模式下会抛异常，旧写法里抛了就整段跳过。 */
+        let theme = 'light'
+        try {
+          const saved = localStorage.getItem('theme')
+          theme =
+            saved === 'light' || saved === 'dark'
+              ? saved
+              : window.matchMedia('(prefers-color-scheme: dark)').matches
+                ? 'dark'
+                : 'light'
+        } catch {
+          theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+        }
+        document.documentElement.dataset.theme = theme
+
+        const meta = document.querySelector('meta[data-theme-color]')
+        if (meta) meta.setAttribute('content', theme === 'dark' ? '#0d1117' : '#f6f7f9')
+      })()
+    </script><link rel="stylesheet" href="/_astro/BaseLayout.CKlrZbNO.css"><style>.bp[data-astro-cid-rf4rmido]{border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);overflow:hidden}.bp-head[data-astro-cid-rf4rmido]{border-bottom:1px solid var(--line);flex-wrap:wrap;align-items:flex-start;gap:12px;padding:16px 18px 14px;display:flex}.bp-head-main[data-astro-cid-rf4rmido]{flex:260px;min-width:0}.bp-title[data-astro-cid-rf4rmido]{margin:0;font-size:16px}.bp-graph[data-astro-cid-rf4rmido]{color:var(--fg-3);flex-wrap:wrap;align-items:center;gap:6px;margin:5px 0 0;font-size:12.5px;display:flex}.bp-graph[data-astro-cid-rf4rmido] code[data-astro-cid-rf4rmido]{color:var(--fg-2);background:var(--surface-2);border-radius:5px;padding:1px 7px;font-size:12px}.bp-dot[data-astro-cid-rf4rmido]{opacity:.5}.bp-actions[data-astro-cid-rf4rmido]{flex-wrap:wrap;flex:none;gap:8px;display:flex}.bp-btn[data-astro-cid-rf4rmido]{color:var(--fg-2);background:var(--surface-2);border:1px solid var(--line);cursor:pointer;border-radius:999px;align-items:center;gap:6px;padding:6px 12px;font-family:inherit;font-size:13px;transition:color .15s,border-color .15s;display:inline-flex}.bp-btn[data-astro-cid-rf4rmido]:hover{color:var(--accent);border-color:var(--accent)}.bp-summary[data-astro-cid-rf4rmido]{color:var(--fg-2);margin:0;padding:14px 18px 0;font-size:13.5px}.bp-stage[data-astro-cid-rf4rmido]{background:#242424;position:relative}.bp-loading[data-astro-cid-rf4rmido]{color:#9aa2ad;z-index:2;background:#242424;justify-content:center;align-items:center;gap:10px;font-size:13px;display:flex;position:absolute;inset:0}.bp-spinner[data-astro-cid-rf4rmido]{border:2px solid #fff3;border-top-color:#6a9bff;border-radius:50%;width:15px;height:15px;animation:.8s linear infinite bp-spin}@keyframes bp-spin{to{transform:rotate(360deg)}}ueb-blueprint[data-astro-cid-rf4rmido]:defined~.bp-loading[data-astro-cid-rf4rmido]{display:none}.bp-fallback[data-astro-cid-rf4rmido]{color:var(--fg-2);padding:14px 18px;font-size:13px;display:none}.bp-fallback[data-astro-cid-rf4rmido] pre[data-astro-cid-rf4rmido]{background:var(--surface-2);border-radius:var(--radius-sm);white-space:pre;max-height:340px;padding:12px;font-size:11.5px;line-height:1.5;overflow:auto}html[data-ueb-failed] .bp-fallback[data-astro-cid-rf4rmido],html[data-ueb-failed] .bp-loading[data-astro-cid-rf4rmido]{display:block}html[data-ueb-failed] .bp-loading[data-astro-cid-rf4rmido]{display:none}.bp-foot[data-astro-cid-rf4rmido]{border-top:1px solid var(--line);background:var(--surface);flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;padding:10px 18px;display:flex}.bp-hint[data-astro-cid-rf4rmido]{color:var(--fg-3);margin:0;font-size:12px}.bp-tags[data-astro-cid-rf4rmido]{flex-wrap:wrap;gap:6px;margin:0;display:flex}.bp-stage[data-astro-cid-rf4rmido] ueb-blueprint[data-astro-cid-rf4rmido]{width:100%;display:block}
+.meta-row[data-astro-cid-tzzuq5oi]{flex-wrap:wrap;gap:6px;margin-top:14px;display:flex}.module-lede[data-astro-cid-tzzuq5oi]{color:var(--fg-2);max-width:64ch;margin:10px 0 0}.bp-stack[data-astro-cid-tzzuq5oi]{flex-direction:column;gap:30px;margin-top:18px;display:flex}.code-wrap[data-astro-cid-tzzuq5oi]{margin-top:22px}.blk[data-astro-cid-tzzuq5oi]{margin-top:44px}.blk-title[data-astro-cid-tzzuq5oi]{border-bottom:1px solid var(--line);margin:0;padding-bottom:8px;font-size:20px}.code-name[data-astro-cid-tzzuq5oi]{color:var(--fg-3);margin:0 0 6px;font-family:Cascadia Code,Consolas,monospace;font-size:12.5px}.code-block[data-astro-cid-tzzuq5oi]{background:color-mix(in srgb, var(--surface-2) 78%, transparent);border:1px solid var(--line);border-radius:14px;margin:0;padding:16px 18px;font-size:12.5px;line-height:1.65;overflow-x:auto;box-shadow:inset 0 1px #ffffff1f}.pager[data-astro-cid-tzzuq5oi]{border-top:1px solid var(--line);justify-content:space-between;gap:14px;margin-top:56px;padding-top:22px;display:flex}.pager-item[data-astro-cid-tzzuq5oi]{border-radius:var(--radius-sm);flex-direction:column;gap:3px;padding:10px 14px;transition:background .15s;display:flex}.pager-item[data-astro-cid-tzzuq5oi]:hover{background:var(--surface-2)}.pager-next[data-astro-cid-tzzuq5oi]{text-align:right}.pager-dir[data-astro-cid-tzzuq5oi]{color:var(--fg-3);font-size:12px}.pager-name[data-astro-cid-tzzuq5oi]{font-size:14px;font-weight:500}
+</style><script type="module" src="/_astro/page.CQWjsXKf.js"></script></head><body class="glass"><div class="backdrop" aria-hidden="true"><i class="mark"></i><i class="grid"></i></div><div class="read-progress" aria-hidden="true"></div><a class="skip-link" href="#main">跳到主内容</a><header class="site-header"><div class="wrap"><a class="brand" href="/"><svg class="mark" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 524 438"><path fill="currentColor" fill-rule="evenodd" d="M416.82 435.14C401.57 430.1 389.97 420.04 326.46 356.8C296.19 326.66 271.11 302 270.71 302C270.32 302 270 305.17 270 309.04C270 325.19 266.58 345.78 262.45 354.51C255.61 368.97 239.01 381.19 219 386.5C209.37 389.05 184.12 389.66 172.36 387.62C134.98 381.14 105.07 359.07 93.9 329.73C92.7 326.56 91.89 323.77 92.12 323.55C92.35 323.32 95.67 323.54 99.52 324.04C109.01 325.26 124.12 325.21 132 323.93C141.17 322.44 145.84 319.58 148.95 313.53L151.5 308.56L151.81 272.78L152.12 237L132.31 236.97C105.96 236.93 68.66 235.43 57.5 233.96C32.51 230.67 18.83 221.26 8.86 200.5C3.37 189.06 0.95 178.74 0.29 164C-1.78 117.22 20.72 76.49 57.46 60.54C61.84 58.64 65.56 57.23 65.73 57.39C65.9 57.56 65.56 63.06 64.98 69.6C63.25 89.16 65.33 104.68 70.52 110.84C71.9 112.48 75.16 114.64 77.76 115.64C82.12 117.3 87.25 117.47 141 117.7C198.58 117.94 199.41 117.91 194 116.14C184.03 112.87 177.68 108.9 169.91 101.11C155.15 86.31 149.34 67.33 153.5 47.5C157.85 26.81 174.05 9.13 194.5 2.75C204.23 -0.28 218.77 -0.28 228.5 2.75C253.04 10.4 270.97 34.35 270.97 59.5C270.97 84.6 253.48 108.19 229 116.11C223.57 117.87 224.17 117.89 274.6 117.95C330.81 118.01 346.08 118.82 360.71 122.53C388.99 129.7 411.57 149.04 419.41 172.81C426.33 193.77 425.17 212.89 415.83 232C412.46 238.88 410.01 242.14 402.95 249.15L394.22 257.79L425.86 289.28C461.17 324.42 463.99 326.58 473.64 325.78C477.54 325.46 480.31 324.42 484.3 321.77C490.34 317.75 503.89 304.49 509.63 296.96C511.71 294.23 513.7 292 514.05 292C514.92 292 519.59 304.17 521.52 311.5C527.78 335.19 521.31 366.33 505.14 390.29C490.96 411.31 472.31 426.78 452.87 433.64C442.77 437.2 425.28 437.93 416.82 435.14ZM293.41 220.59C301.72 216.52 304.4 212.05 304.85 201.48C305.27 191.48 302.79 184.69 296.87 179.62C292 175.45 287.15 174 278.13 174L271 174L271 199.13L271 224.25L279.36 223.81C285.87 223.47 288.97 222.76 293.41 220.59Z"/></svg>
+<span>JINJIARAN<span class="sub"> · 个人作品站</span></span></a><nav class="nav" aria-label="主导航"><a href="/?browse=1">首页</a><a href="/projects" aria-current="page">项目</a><a href="/gallery">图片</a><a href="/videos">视频</a><a href="/docs">文档</a><a href="/models">模型</a><a href="/tools">工具</a><a href="/about">关于</a></nav><button class="icon-btn" type="button" data-search-open aria-label="站内搜索" title="搜索（按 / ）" aria-expanded="false" aria-controls="site-search" data-astro-cid-av774hkb><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" data-astro-cid-av774hkb><circle cx="11" cy="11" r="7" data-astro-cid-av774hkb></circle><path d="m20 20-3.5-3.5" data-astro-cid-av774hkb></path></svg></button><button class="icon-btn" id="theme-toggle" type="button" aria-label="切换深浅色主题" aria-pressed="false"><svg class="sun" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"></path></svg><svg class="moon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"></path></svg></button><!--
+          主题切换的状态播报（2026-10-19 审计 D3）。
+          按钮本身只管"按下去了没有"（aria-pressed），**说不清现在是什么主题** ——
+          读屏用户听到"切换深浅色主题，已按下"，还是不知道屏幕上到底变深了还是变浅了。
+          所以另起一个 role="status" 的区域，切换后把结果念出来。
+          role="status" 自带 aria-live="polite"；这里两个都写，是为了兼容只认其一的读屏。
+          它必须常驻 DOM（不能切换时才插入），否则播报不会触发。
+        --><p class="sr-only" role="status" aria-live="polite" data-theme-status></p></div></header><main id="main" data-pagefind-body><div class="wrap" data-astro-cid-tzzuq5oi><header class="glass-hero" style="--i:0" data-astro-cid-tzzuq5oi><p class="crumb" data-astro-cid-tzzuq5oi><a href="/projects" data-astro-cid-tzzuq5oi>项目</a><span aria-hidden="true" data-astro-cid-tzzuq5oi>/</span><a href="/projects/tomato" data-astro-cid-tzzuq5oi>火星番茄</a><span aria-hidden="true" data-astro-cid-tzzuq5oi>/</span><span data-astro-cid-tzzuq5oi>化肥提炼与化学合成</span></p><h1 class="h-page" data-astro-cid-tzzuq5oi>化肥提炼与化学合成</h1><p class="module-lede" data-astro-cid-tzzuq5oi>把垃圾拆成零件、拼成器材、再炼成六种基础元素的完整链路 —— 以及为什么玩家该在乎自己捡的是什么。</p><div class="meta-row" data-astro-cid-tzzuq5oi><span class="chip" data-astro-cid-tzzuq5oi>进行中</span><span class="chip" data-astro-cid-tzzuq5oi>C++</span><span class="chip" data-astro-cid-tzzuq5oi>数据表</span></div></header></div><div class="wrap" style="padding-block:28px 0" data-astro-cid-tzzuq5oi><article class="prose glass-sheet" style="--i:1" data-astro-cid-tzzuq5oi><h2 id="要解决什么">要解决什么</h2>
+<p>农场系统的病害表现是能跑的，但<strong>玩家凭什么去治它</strong>？
+需要一条从「垃圾」到「肥料」的通路，而且这条通路要有游戏性 ——
+不能是「捡三个垃圾，点一下，得到一袋化肥」。</p>
+<h2 id="分层">分层</h2>
+<p>整条链分四层，每一层都能独立成立：</p>
+<table>
+<thead>
+<tr>
+<th>层</th>
+<th>名字</th>
+<th>举例</th>
+<th>来源</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>L0</td>
+<td>垃圾</td>
+<td>锈蚀的罐头、废电池、塑料桶</td>
+<td>场景里捡 / 传送带送来</td>
+</tr>
+<tr>
+<td>L1</td>
+<td>材料与零件</td>
+<td>铁皮、锌壳、电解液、玻璃管、橡胶塞、软管、滤材</td>
+<td>拆解 L0</td>
+</tr>
+<tr>
+<td>L2</td>
+<td>中间体</td>
+<td>硫酸、氨液、硝酸钾粗品、木炭、玻璃粉</td>
+<td>化学合成 / 加工站</td>
+</tr>
+<tr>
+<td>L3</td>
+<td>产物</td>
+<td>氮肥、磷肥、钾肥…</td>
+<td>精制</td>
+</tr>
+</tbody>
+</table>
+<p>关键在于 <strong>L1 是零件不是元素</strong>。一块铁皮可以拿去修水泵，也可以拿去做硫酸亚铁 ——
+同一件东西有两个用途，玩家得做取舍。这才是这条链存在的意义。</p>
+<h2 id="六种元素">六种元素</h2>
+<table>
+<thead>
+<tr>
+<th>元素</th>
+<th>作用</th>
+<th>缺素症状</th>
+<th>主要来源</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>N</strong> 氮</td>
+<td>促叶片生长</td>
+<td>老叶均匀黄化</td>
+<td>有机垃圾发酵 → 氨液 → 蒸馏</td>
+</tr>
+<tr>
+<td><strong>P</strong> 磷</td>
+<td>促根系与开花</td>
+<td>叶背与茎发紫</td>
+<td>磷酸盐渣、骨粉营养砖（P+Ca）</td>
+</tr>
+<tr>
+<td><strong>K</strong> 钾</td>
+<td>抗病、抗逆</td>
+<td>叶缘焦枯</td>
+<td>焚化木质 → 木灰；海盐苦卤残渣</td>
+</tr>
+<tr>
+<td><strong>Ca</strong> 钙</td>
+<td>细胞壁强度</td>
+<td>新叶卷曲</td>
+<td>石膏板碎块（CaSO₄ → Ca+S）、蛋壳粉</td>
+</tr>
+<tr>
+<td><strong>Mg</strong> 镁</td>
+<td>叶绿素核心</td>
+<td>脉间失绿</td>
+<td>泻盐块（MgSO₄ → Mg+S）、镁牺牲阳极</td>
+</tr>
+<tr>
+<td><strong>S</strong> 硫</td>
+<td>蛋白质合成、杀菌</td>
+<td>幼叶失绿</td>
+<td>硫磺矿、硫化橡胶残片</td>
+</tr>
+</tbody>
+</table>
+<p>这六种不是随便选的 —— 它们正好构成<strong>缺素症状可分辨</strong>的最小集合。
+玩家看一眼植株的颜色，就能反推该补哪一种。<strong>看得懂的症状 = 不用查攻略。</strong></p>
+<p>设计上还有一层化学彩蛋：几件垃圾直接带真实化学式，
+<code>石膏板 = CaSO₄</code> 同时给 Ca 和 S，<code>泻盐块 = MgSO₄</code> 同时给 Mg 和 S ——
+一件垃圾两个产出，于是「直接拆解」和「烧掉换电」之间出现了真实的取舍
+（硫化橡胶残片焚化值 20 EU 是全场最高，但它也是 S 的唯一稳定来源）。</p>
+<h2 id="工艺与器材">工艺与器材</h2>
+<p>覆盖六类基本操作，互相之间可以串联：</p>
+<table>
+<thead>
+<tr>
+<th>工艺</th>
+<th>做什么</th>
+<th>需要的器材</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>蒸馏</td>
+<td>按沸点分离液体混合物</td>
+<td>烧瓶 + 冷凝器 + 收集瓶</td>
+</tr>
+<tr>
+<td>发酵</td>
+<td>靠微生物把有机物转成可提取态</td>
+<td>发酵器 + 温控</td>
+</tr>
+<tr>
+<td>过滤</td>
+<td>固液分离、提纯</td>
+<td>漏斗 + 滤材 + 铁架台</td>
+</tr>
+<tr>
+<td>酸浸</td>
+<td>把金属从矿石/合金里溶出来</td>
+<td>耐酸容器 + 加热</td>
+</tr>
+<tr>
+<td>水溶</td>
+<td>把可溶盐带进溶液</td>
+<td>烧杯 + 搅拌</td>
+</tr>
+<tr>
+<td>混合</td>
+<td>配复合液、暂存</td>
+<td>烧杯</td>
+</tr>
+</tbody>
+</table>
+<p>工艺之间是有依赖的：想酸浸，得先蒸馏出酸；想蒸馏，得先拼出冷凝器。
+<strong>器材本身又得靠上一节（拼装合成）拼出来</strong> —— 两个系统在这里咬合上，
+这也是为什么化学这个模块一大半的工作量其实花在拼装配方上。</p>
+<h3 id="器材与零件的反向映射">器材与零件的反向映射</h3>
+<p>设计上换了个方向：不是问「拼出器材需要哪些零件」，而是问
+<strong>「垃圾堆里能拆出的哪些零件，恰好能拼成一件器材」</strong>。</p>
+<p>这样做的实际好处是，地图上散落的垃圾可以被<strong>反向设计</strong> ——
+想让玩家在这个区域学会蒸馏，就保证这一片能拆出一套完整的蒸馏器材。
+关卡设计因此有了抓手。</p>
+<table>
+<thead>
+<tr>
+<th>器材</th>
+<th>需要零件</th>
+<th>可拆自</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>烧瓶</td>
+<td>玻璃罩、软木塞</td>
+<td>废弃灯具、保温瓶</td>
+</tr>
+<tr>
+<td>冷凝器</td>
+<td>玻璃管 ×2、软管 ×2</td>
+<td>报废蒸馏装置残骸、冰箱、空调外机</td>
+</tr>
+<tr>
+<td>收集瓶</td>
+<td>玻璃罐、橡胶垫圈</td>
+<td>罐头、密封舱门</td>
+</tr>
+<tr>
+<td>过滤器</td>
+<td>金属网、滤材</td>
+<td>废 HEPA 滤芯、纱窗、防护服</td>
+</tr>
+<tr>
+<td>发酵器</td>
+<td>罐体、密封盖、气阀</td>
+<td>报废生物反应器罐体、储水桶</td>
+</tr>
+<tr>
+<td>铁架台</td>
+<td>单件即成品</td>
+<td>报废实验台架、三脚架</td>
+</tr>
+<tr>
+<td>烧杯</td>
+<td>单件即成品</td>
+<td>报废烧杯、破碎量杯</td>
+</tr>
+<tr>
+<td>加热台</td>
+<td>发热体 + 温控 + 电源线 + 外壳 + 开关</td>
+<td>旧电炉盘、控制板、废电源线…</td>
+</tr>
+</tbody>
+</table>
+<p>连<strong>炉子都得自己捡</strong>这套逻辑，是在「房间里本来什么都没有」这条硬设定下推出来的：
+玩家自造范围的最后边界落在 8 件器材上，只有研磨台 / 焚化炉 / 发酵角三个加工站
+是预置基础设施。</p>
+<p>有一处编号冲突值得记一下：早期文档把铁架台写成 <code>RE-05</code>、烧杯写成 <code>RE-07</code>，
+而策划案里这两个编号已经被「金属夹」和「木炭」占了 —— 直接后果是 <code>DT_Items</code>
+行名冲突。裁定后改为 <code>RE-19</code> 铁架台、<code>RE-20</code> 烧杯，L2 层的编号范围收敛到 <code>RE-01~22</code>。
+<strong>行名冲突这种错，在表格驱动 + 表间引用的项目里是最贵的一类</strong>，因为它不会报错，
+只会静默取到另一个物品。</p>
+<h2 id="工程实现化学台">工程实现：化学台</h2>
+<p>化学台是一套「器具集合 + 输入多重集 → 产物」的自动匹配：
+玩家不需要在 UI 里选配方，摆对了就会自己认。</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="cpp"><code><span class="line"><span style="color:#6A737D">/** 反应台状态机 */</span></span>
+<span class="line"><span style="color:#F97583">enum</span><span style="color:#F97583"> class</span><span style="color:#B392F0"> EChemicalStationState</span><span style="color:#E1E4E8"> : </span><span style="color:#F97583">uint8</span></span>
+<span class="line"><span style="color:#E1E4E8">{</span></span>
+<span class="line"><span style="color:#79B8FF">    Idle</span><span style="color:#E1E4E8">,</span><span style="color:#6A737D">        // 什么都没摆</span></span>
+<span class="line"><span style="color:#79B8FF">    Ready</span><span style="color:#E1E4E8">,</span><span style="color:#6A737D">       // 器具齐了、输入够了，等启动信号</span></span>
+<span class="line"><span style="color:#79B8FF">    Processing</span><span style="color:#E1E4E8">,</span><span style="color:#6A737D">  // 反应中</span></span>
+<span class="line"><span style="color:#79B8FF">    Produced</span><span style="color:#E1E4E8">,</span><span style="color:#6A737D">    // 产物已生成，等收集</span></span>
+<span class="line"><span style="color:#E1E4E8">};</span></span></code></pre>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="cpp"><code><span class="line"><span style="color:#B392F0">USTRUCT</span><span style="color:#E1E4E8">(BlueprintType)</span></span>
+<span class="line"><span style="color:#F97583">struct</span><span style="color:#B392F0"> FChemicalRecipe</span><span style="color:#E1E4E8"> : </span><span style="color:#F97583">public</span><span style="color:#B392F0"> FTableRowBase</span></span>
+<span class="line"><span style="color:#E1E4E8">{</span></span>
+<span class="line"><span style="color:#B392F0">    FText</span><span style="color:#E1E4E8"> RecipeName;</span></span>
+<span class="line"><span style="color:#6A737D">    /** 这些器具必须全部就位（集合 ⊇ 即可，不要求顺序） */</span></span>
+<span class="line"><span style="color:#B392F0">    TArray</span><span style="color:#E1E4E8">&lt;</span><span style="color:#B392F0">EChemicalApparatus</span><span style="color:#E1E4E8">&gt; RequiredApparatus;</span></span>
+<span class="line"><span style="color:#6A737D">    /** 这些输入物质必须齐全（多重集 ⊆ 即可） */</span></span>
+<span class="line"><span style="color:#B392F0">    TArray</span><span style="color:#E1E4E8">&lt;</span><span style="color:#B392F0">EChemicalSubstance</span><span style="color:#E1E4E8">&gt; RequiredInputs;</span></span>
+<span class="line"><span style="color:#B392F0">    EChemicalSubstance</span><span style="color:#E1E4E8"> OutputSubstance </span><span style="color:#F97583">=</span><span style="color:#B392F0"> EChemicalSubstance</span><span style="color:#E1E4E8">::None;</span></span>
+<span class="line"><span style="color:#F97583">    float</span><span style="color:#E1E4E8"> ProcessTime </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 5.0</span><span style="color:#F97583">f</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#6A737D">    /** true = 要炉子电源按钮按下才启动（加热类）；false = 输入齐了就自动跑（催化类） */</span></span>
+<span class="line"><span style="color:#F97583">    bool</span><span style="color:#E1E4E8">  bRequiresHeat </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> false</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"><span style="color:#E1E4E8">};</span></span></code></pre>
+<p>两个设计决定：</p>
+<ul>
+<li><strong>热源不进器具枚举。</strong> <code>EChemicalApparatus</code> 只有烧瓶 / 冷凝器 / 收集瓶三种，
+没有 <code>HeatSource</code> —— 加热由 <code>BP_Stove</code> 的电源按钮提供。
+这样「谁在耗电」这件事只有一个归属，不用在两个系统之间对账。</li>
+<li><strong>启动要电。</strong> 每次反应向电力系统扣 <strong>4 EU</strong>（<code>TrySpendPowerFor(ChemistryStation)</code>），
+电力见<a href="/projects/tomato/modules/power">电力系统</a>。</li>
+</ul>
+<p>化学的 ID 体系（<code>EChemicalSubstance</code> 等 <code>uint8</code> 枚举）刻意与物品系统解耦，
+两者之间只有一个接缝：<code>FChemicalSubstanceDef.InventoryItemRowName</code> ——
+物质要变成一件能收进背包的东西时，才去查 <code>DT_Items</code> 的行名。
+这一条隔离做得很值：化学系统改物质表，物品系统一行都不用动。</p>
+<h2 id="️-已经实现的比设计少得多">⚠️ 已经实现的比设计少得多</h2>
+<p>必须说清楚当前的真实边界，否则会误以为六元素链已经在跑：</p>
+<table>
+<thead>
+<tr>
+<th>层</th>
+<th>状态</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>反应台框架（状态机 / 器具匹配 / 输入多重集 / 加热门控 / 扣电 / 收集）</td>
+<td>✅ 已实现</td>
+</tr>
+<tr>
+<td>容器与器具的液体交互（倒液、收集）</td>
+<td>✅ 已实现（水链路）</td>
+</tr>
+<tr>
+<td><code>EChemicalSubstance</code> 里实际存在的物质</td>
+<td>⚠️ <strong>只有 <code>None / Water / DistilledWater</code> 三条</strong></td>
+</tr>
+<tr>
+<td><code>FChemicalComposition</code>（N/P/K/Ca/Mg/S 六元素成分）</td>
+<td>⚠️ 结构体已定义，<strong>与植株生长之间没有数据通路</strong></td>
+</tr>
+<tr>
+<td>上半章的 L0→L3 分层、六元素、8 件器材、<code>RE-01~22</code> 零件表</td>
+<td>📐 <strong>设计层</strong>（在 <code>docs/</code> 里，尚未全部落表落资产）</td>
+</tr>
+</tbody>
+</table>
+<p>所以现在能演示的最长链路是：<strong>给烧瓶灌水 → 器具就位 → 炉子通电扣 4 EU →
+反应中 → 收集瓶被染上颜色 → 收集入库 → 手持蒸馏水去浇花盆</strong>。</p>
+<p>而且这条链的首尾数值还不通：<strong>蒸馏水和白水对植株的效果完全一样</strong>，
+因为 <code>TryAddWater(float)</code> 收不到「这是蒸馏水」这个信息 ——
+这就是上面那条「六元素没有数据通路」的具体表现。</p>
+<h2 id="数据表的一致性靠脚本守">数据表的一致性靠脚本守</h2>
+<p>垃圾与生成物这一层文档量很大（垃圾总表、扩展生成物总表、生成物美术资产表、
+AI 批量出图提示词），为了避免它们互相漂移，约定是：</p>
+<ul>
+<li><strong>唯一事实源</strong>：<code>扩展生成物总表</code> 里的 <strong>120 个 <code>Junk_*</code> 行名</strong> = 数值 + 外观的唯一来源。</li>
+<li>往总表加物品后<strong>必须跑</strong> <code>python Tools/check_art_coverage.py</code>
+（退出码 0 = 通过，校验行名覆盖与各族件数）。</li>
+<li>改完美术表<strong>必须重跑</strong> <code>python Tools/gen_art_batch_prompts.py</code>
+重生成提示词全集（生成物头部写着「请勿手工编辑」）。</li>
+</ul>
+<p>这套检查脚本抓到过一次真问题：美术资产表只覆盖了 114/120，漏了 6 件，
+其中 <strong><code>Junk_PotashBlock</code>（钾肥盐块）是钾的两条直给来源之一</strong> ——
+漏掉它，钾链就只剩一条路。机器能查的东西不该留给眼睛。</p>
+<h2 id="待确认">待确认</h2>
+<ul class="contains-task-list">
+<li class="task-list-item"><input type="checkbox" disabled> 六种元素是否够用 —— 是否需要一个「复合肥」的中间态</li>
+<li class="task-list-item"><input type="checkbox" disabled> 酸浸的腐蚀风险要不要做成机制（穿防护服 / 弄坏器材）</li>
+<li class="task-list-item"><input type="checkbox" disabled> 器材是否需要耐久与损耗</li>
+<li class="task-list-item"><input type="checkbox" disabled> 六元素成分 → 养分池 → 生长的接线（<strong>当前最大的断点</strong>）</li>
+<li class="task-list-item"><input type="checkbox" disabled> 化学器具清单是否完整（设计与策划案已经对过一轮编号，<strong>再确认一次</strong>）</li>
+</ul>
+</article><section class="blk" data-astro-cid-tzzuq5oi><h2 class="blk-title" data-astro-cid-tzzuq5oi>源码</h2><div class="code-wrap" data-astro-cid-tzzuq5oi><p class="code-name" data-astro-cid-tzzuq5oi>ChemicalTypes.h</p><pre class="code-block" data-astro-cid-tzzuq5oi>
+                <code data-astro-cid-tzzuq5oi>// Fill out your copyright notice in the Description page of Project Settings.
+
+#pragma once
+
+#include &quot;CoreMinimal.h&quot;
+#include &quot;Engine/DataTable.h&quot;
+#include &quot;Internationalization/Text.h&quot;
+#include &quot;Materials/MaterialInterface.h&quot;
+#include &quot;Math/Color.h&quot;
+#include &quot;ChemicalTypes.generated.h&quot;
+
+// ------------------------------------------------------------------------
+// Chemistry refining station — shared identity &amp; data types.
+// Independent, low-overhead ID system (uint8 enums) decoupled from the
+// existing inventory ItemID / DT_Items.ItemName scheme.
+// ------------------------------------------------------------------------
+
+/** Discrete refinable substances. Extend with fertilizer compounds as needed. */
+UENUM(BlueprintType)
+enum class EChemicalSubstance : uint8
+{
+    None            UMETA(DisplayName = &quot;None&quot;),
+    Water           UMETA(DisplayName = &quot;Water&quot;),
+    DistilledWater  UMETA(DisplayName = &quot;Distilled Water&quot;),
+};
+
+/**
+ * Apparatus (glassware) types the station can recognize.
+ * Heat is supplied by the BP_Stove power button, not by a glueable apparatus,
+ * so there is intentionally no HeatSource member here.
+ */
+UENUM(BlueprintType)
+enum class EChemicalApparatus : uint8
+{
+    None            UMETA(DisplayName = &quot;None&quot;),
+    Flask           UMETA(DisplayName = &quot;Flask&quot;),
+    Condenser       UMETA(DisplayName = &quot;Condenser&quot;),
+    CollectionVessel UMETA(DisplayName = &quot;Collection Vessel&quot;),
+};
+
+/** Physical state of a substance (drives future simulation, visuals). */
+UENUM(BlueprintType)
+enum class EChemicalState : uint8
+{
+    Solid   UMETA(DisplayName = &quot;Solid&quot;),
+    Liquid  UMETA(DisplayName = &quot;Liquid&quot;),
+    Gas     UMETA(DisplayName = &quot;Gas&quot;),
+};
+
+/**
+ * Reaction state machine for the station.
+ * Ready = apparatus assembly + inputs are complete, awaiting the start signal
+ * (heat recipes wait for the stove power button; auto recipes skip straight
+ * to Processing).
+ */
+UENUM(BlueprintType)
+enum class EChemicalStationState : uint8
+{
+    Idle        UMETA(DisplayName = &quot;Idle&quot;),
+    Ready       UMETA(DisplayName = &quot;Ready&quot;),
+    Processing  UMETA(DisplayName = &quot;Processing&quot;),
+    Produced    UMETA(DisplayName = &quot;Produced&quot;),
+};
+
+/**
+ * Six-element fertilizer composition (N/P/K/Ca/Mg/S) as continuous quantities.
+ * Matches the legacy Blueprint F_Requirements / BP_Farming_Master element model.
+ * Water / distilled water have all-zero composition; future fertilizer
+ * substances fill these to drive plant growth.
+ */
+USTRUCT(BlueprintType)
+struct FChemicalComposition
+{
+    GENERATED_BODY()
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = &quot;Composition&quot;)
+    float Nitrogen = 0.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = &quot;Composition&quot;)
+    float Phosphorus = 0.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = &quot;Composition&quot;)
+    float Potassium = 0.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = &quot;Composition&quot;)
+    float Calcium = 0.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = &quot;Composition&quot;)
+    float Magnesium = 0.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = &quot;Composition&quot;)
+    float Sulfur = 0.0f;
+};
+
+/** Data-table row: defines how a substance looks (material + color) and its content. */
+USTRUCT(BlueprintType)
+struct FChemicalSubstanceDef : public FTableRowBase
+{
+    GENERATED_BODY()
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = &quot;Substance&quot;)
+    EChemicalSubstance SubstanceID = EChemicalSubstance::None;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = &quot;Substance&quot;)
+    FText DisplayName;
+
+    /** Liquid/disc material assigned to the substance display mesh on production. */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = &quot;Substance&quot;)
+    TObjectPtr&lt;UMaterialInterface&gt; Material = nullptr;
+
+    /** Tint applied to the substance material&#39;s &quot;Color&quot; vector parameter. */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = &quot;Substance&quot;)
+    FLinearColor Color = FLinearColor::White;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = &quot;Substance&quot;)
+    EChemicalState State = EChemicalState::Liquid;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = &quot;Substance&quot;)
+    FChemicalComposition Composition;
+
+    /**
+     * DT_Items row name this substance maps to when collected into the player
+     * inventory. NAME_None means the substance is not collectible (e.g. Water
+     * is a raw input, not a produced good). This is the single decoupling seam
+     * between the chemical ID system and the legacy item system.
+     */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = &quot;Substance&quot;)
+    FName InventoryItemRowName = NAME_None;
+};
+
+/** Data-table row: a refining recipe (required apparatus + inputs -&gt; output). */
+USTRUCT(BlueprintType)
+struct FChemicalRecipe : public FTableRowBase
+{
+    GENERATED_BODY()
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = &quot;Recipe&quot;)
+    FText RecipeName;
+
+    /** Every apparatus in this list must be mounted for the recipe to run. */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = &quot;Recipe&quot;)
+    TArray&lt;EChemicalApparatus&gt; RequiredApparatus;
+
+    /** Every input substance (multiset) must be present for the recipe to run. */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = &quot;Recipe&quot;)
+    TArray&lt;EChemicalSubstance&gt; RequiredInputs;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = &quot;Recipe&quot;)
+    EChemicalSubstance OutputSubstance = EChemicalSubstance::None;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = &quot;Recipe&quot;, meta = (ClampMin = &quot;0.1&quot;))
+    float ProcessTime = 5.0f;
+
+    /**
+     * true  = this recipe needs the stove power button ON to start (heat/cool reactions).
+     * false = auto-starts once all required inputs are loaded (catalyst reactions).
+     */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = &quot;Recipe&quot;)
+    bool bRequiresHeat = false;
+};
+</code>
+              </pre></div></section><nav class="pager" data-astro-cid-tzzuq5oi><a class="pager-item" href="/projects/tomato/modules/assembly" data-astro-cid-tzzuq5oi><span class="pager-dir" data-astro-cid-tzzuq5oi>← 上一个</span><span class="pager-name" data-astro-cid-tzzuq5oi>拼装合成系统</span></a><a class="pager-item pager-next" href="/projects/tomato/modules/power" data-astro-cid-tzzuq5oi><span class="pager-dir" data-astro-cid-tzzuq5oi>下一个 →</span><span class="pager-name" data-astro-cid-tzzuq5oi>电力系统</span></a></nav></div></main><footer class="site-footer"><div class="wrap row"><p style="margin:0">© 2024–2026  内容版权归作者所有</p><p style="margin:0"><span class="chip">静态站</span><span class="chip" style="margin-left:6px">CDN 直出</span><span class="chip" style="margin-left:6px">0 台服务器</span></p></div></footer><!--
+      搜索面板挂在 </body> 前，不能放进页头：
+      页头有 backdrop-filter，它会让后代里的 position: fixed 以页头为包含块，
+      面板会被裁在页头那条 60px 的带子里。
+    --><div class="search-layer" id="site-search" data-search-layer hidden data-astro-cid-av774hkb><div class="search-backdrop" data-search-close aria-hidden="true" data-astro-cid-av774hkb></div><div class="search-panel" role="dialog" aria-modal="true" aria-label="站内搜索" data-astro-cid-av774hkb><div class="search-bar" data-astro-cid-av774hkb><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" data-astro-cid-av774hkb><circle cx="11" cy="11" r="7" data-astro-cid-av774hkb></circle><path d="m20 20-3.5-3.5" data-astro-cid-av774hkb></path></svg><input type="search" data-search-input placeholder="搜项目、模块、图集、蓝图…" autocomplete="off" spellcheck="false" aria-label="搜索关键词" data-astro-cid-av774hkb><kbd data-astro-cid-av774hkb>Esc</kbd></div><div class="search-body" data-search-body data-astro-cid-av774hkb><p class="search-tip" data-astro-cid-av774hkb>输入关键词开始搜索。按 <b data-astro-cid-av774hkb>/</b> 或 <b data-astro-cid-av774hkb>Ctrl</b>+<b data-astro-cid-av774hkb>K</b> 随时打开。</p></div></div></div><script>
+      ;(() => {
+        const layer = document.querySelector('[data-search-layer]')
+        if (!layer) return
+
+        const input = layer.querySelector('[data-search-input]')
+        const body = layer.querySelector('[data-search-body]')
+        const TIP =
+          '<p class="search-tip">输入关键词开始搜索。按 <b>/</b> 或 <b>Ctrl</b>+<b>K</b> 随时打开。</p>'
+
+        /* ---------------- Pagefind 懒加载 ---------------- */
+        let enginePromise = null
+        const loadEngine = () => {
+          if (!enginePromise) {
+            enginePromise = import('/pagefind/pagefind.js')
+              .then(async (pf) => {
+                try {
+                  await pf.options({ excerptLength: 24 })
+                } catch {
+                  /* 老版本没有 options，忽略 */
+                }
+                return pf
+              })
+              .catch((err) => {
+                enginePromise = null // 允许下次重试
+                throw err
+              })
+          }
+          return enginePromise
+        }
+
+        /* ---------------- 渲染 ---------------- */
+        const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
+
+        const setTip = (html) => {
+          body.innerHTML = html
+        }
+
+        const render = (items, query) => {
+          if (!items.length) {
+            setTip(`<p class="search-tip">没有找到和「${esc(query)}」相关的内容。</p>`)
+            return
+          }
+
+          const ul = document.createElement('ul')
+          ul.className = 'search-list'
+
+          for (const it of items) {
+            const a = document.createElement('a')
+            a.href = it.url || '/'
+
+            const t = document.createElement('span')
+            t.className = 'search-item-title'
+            t.textContent = (it.meta && it.meta.title) || it.url || '未命名'
+            a.append(t)
+
+            if (it.excerpt) {
+              const e = document.createElement('span')
+              e.className = 'search-item-excerpt'
+              // Pagefind 给的片段已经转义过，只有 <mark> 是高亮标签
+              e.innerHTML = it.excerpt
+              a.append(e)
+            }
+
+            const li = document.createElement('li')
+            li.append(a)
+            ul.append(li)
+          }
+
+          body.textContent = ''
+          body.append(ul)
+        }
+
+        /* ---------------- 搜索 ---------------- */
+        let seq = 0
+        const run = async (raw) => {
+          const mine = ++seq
+          const query = raw.trim()
+
+          if (!query) {
+            setTip(TIP)
+            return
+          }
+
+          setTip('<p class="search-tip">搜索中…</p>')
+
+          let pf
+          try {
+            pf = await loadEngine()
+          } catch {
+            setTip(
+              '<p class="search-tip">搜索索引暂时用不了。<br />索引是构建期生成的，' +
+                '<b>本地开发模式（pnpm dev）下没有</b>，跑一次 <b>pnpm build</b> 或 <b>pnpm preview</b> 就有了。</p>',
+            )
+            return
+          }
+          if (mine !== seq) return
+
+          try {
+            const res = await pf.search(query)
+            if (mine !== seq) return
+            const items = await Promise.all(res.results.slice(0, 8).map((r) => r.data()))
+            if (mine !== seq) return
+            render(items, query)
+          } catch {
+            setTip('<p class="search-tip">搜索出错了，换几个词再试试。</p>')
+          }
+        }
+
+        let timer
+        input.addEventListener('input', () => {
+          clearTimeout(timer)
+          timer = setTimeout(() => run(input.value), 130)
+        })
+
+        /* ---------------- 开关 ----------------
+         * 焦点闭环（2026-10-19 审计 D2）。此前的问题：
+         *   · 点开搜索、Esc 关掉之后，焦点落在 <body> 上 —— 键盘用户等于被扔回页首，
+         *     得从头 Tab 一遍才能回到刚才那颗放大镜；
+         *   · Tab 能一路走出面板、跑到页头导航和页脚链接上，而背景还盖着，
+         *     人是"看不见自己在哪"的。
+         *
+         * 做法分两层：
+         *   ① `inert` 给面板以外的所有 body 子节点 —— 一整片区域不可聚焦、不可点、
+         *     读屏也跳过。这是浏览器原生的"这块不参与交互"，比自己数可聚焦元素可靠；
+         *   ② Tab 在面板内显式循环 —— inert 已经挡住了外面的元素，但焦点走到最后
+         *     一个链接后浏览器会把焦点交给地址栏，再 Tab 回来就出了面板。显式兜一圈。
+         */
+        const isTyping = (el) =>
+          el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)
+
+        const trigger = document.querySelector('[data-search-open]')
+        /* 面板以外的所有 body 直接子节点（含 skip-link / header / main / footer）。
+           脚本标签也在里面 —— 给 <script> 设 inert 没有任何副作用。 */
+        const background = () => [...document.body.children].filter((el) => el !== layer)
+
+        /** 记住"打开之前焦点在哪"，关的时候还回去 */
+        let lastFocus = null
+
+        const focusables = () => {
+          const list = [...layer.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])')]
+          /* 结果列表是动态渲染的，用 offsetParent 过滤掉 [hidden] 与非可见项 */
+          return list.filter((el) => el === input || el.offsetParent !== null)
+        }
+
+        const open = () => {
+          lastFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
+          layer.hidden = false
+          document.body.style.overflow = 'hidden'
+          background().forEach((el) => el.setAttribute('inert', ''))
+          trigger?.setAttribute('aria-expanded', 'true')
+          input.focus()
+          input.select()
+          // 打开的那一刻就把索引拉起来，等"输入完再等下载"会显得卡
+          loadEngine().catch(() => {})
+        }
+
+        const close = () => {
+          layer.hidden = true
+          document.body.style.overflow = ''
+          background().forEach((el) => el.removeAttribute('inert'))
+          trigger?.setAttribute('aria-expanded', 'false')
+          /* 还焦点之前确认它还在文档里 —— 面板里点链接跳走时焦点目标可能是旧元素 */
+          if (lastFocus && document.contains(lastFocus)) lastFocus.focus()
+          lastFocus = null
+        }
+
+        /* Tab 在面板里循环。Shift+Tab 从第一个回到最后一个，Tab 从最后一个回到第一个。 */
+        layer.addEventListener('keydown', (e) => {
+          if (e.key !== 'Tab') return
+          const list = focusables()
+          if (!list.length) return
+          const first = list[0]
+          const last = list[list.length - 1]
+          if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault()
+            last.focus()
+          } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault()
+            first.focus()
+          }
+        })
+
+        document.addEventListener('click', (e) => {
+          if (e.target.closest('[data-search-open]')) {
+            e.preventDefault()
+            layer.hidden ? open() : close()
+            return
+          }
+          if (e.target.closest('[data-search-close]')) {
+            e.preventDefault()
+            close()
+          }
+        })
+
+        document.addEventListener('keydown', (e) => {
+          const open_ = !layer.hidden
+
+          if (e.key === 'Escape' && open_) {
+            close()
+            return
+          }
+          if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+            e.preventDefault()
+            open_ ? close() : open()
+            return
+          }
+          if (e.key === '/' && !open_ && !isTyping(e.target) && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            e.preventDefault()
+            open()
+          }
+        })
+
+        /* 上下键在结果里走 */
+        input.addEventListener('keydown', (e) => {
+          if (e.key !== 'ArrowDown') return
+          e.preventDefault()
+          body.querySelector('a')?.focus()
+        })
+        body.addEventListener('keydown', (e) => {
+          const links = [...body.querySelectorAll('a')]
+          const i = links.indexOf(document.activeElement)
+          if (e.key === 'ArrowDown') {
+            e.preventDefault()
+            links[Math.min(i + 1, links.length - 1)]?.focus()
+          } else if (e.key === 'ArrowUp') {
+            e.preventDefault()
+            i <= 0 ? input.focus() : links[i - 1].focus()
+          }
+        })
+      })()
+    </script><script>
+      // 主题切换：写 data-theme + 地址栏染色 + 记住选择 + 告诉读屏
+      ;(() => {
+        const btn = document.getElementById('theme-toggle')
+        if (!btn) return
+        const status = document.querySelector('[data-theme-status]')
+
+        /* 初值：<head> 里那段脚本已经把最终主题写进 data-theme 了，
+           这里只负责让按钮的 aria-pressed 跟它对齐（不能写死在 HTML 里 ——
+           首屏主题有一半概率来自系统偏好，服务端并不知道）。 */
+        const sync = (theme) => {
+          btn.setAttribute('aria-pressed', theme === 'dark' ? 'true' : 'false')
+        }
+        sync(document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light')
+
+        btn.addEventListener('click', () => {
+          const root = document.documentElement
+          const next = root.dataset.theme === 'dark' ? 'light' : 'dark'
+          root.dataset.theme = next
+          /* 地址栏跟着变，否则在深色系统里手动切到浅色后，浏览器顶上还是深色 */
+          document
+            .querySelector('meta[data-theme-color]')
+            ?.setAttribute('content', next === 'dark' ? '#0d1117' : '#f6f7f9')
+          sync(next)
+          try {
+            localStorage.setItem('theme', next)
+          } catch {
+            /* 忽略 */
+          }
+          /* 播报结果。先清空再写，是为了让"浅→深→浅"这种连续切换每次都念 ——
+             内容没变化时 aria-live 不会重复播报。 */
+          if (status) {
+            status.textContent = ''
+            requestAnimationFrame(() => {
+              status.textContent = next === 'dark' ? '已切换到深色主题' : '已切换到浅色主题'
+            })
+          }
+        })
+      })()
+    </script><script>
+          /* 两个小动作（关掉不影响阅读）：
+             1) 顶部的阅读进度线 → 往 .read-progress 上写 --p
+             2) 侧栏目录的滚动高亮 → 给当前章节的链接打 aria-current="true"
+             2026-10-19 第二版：删掉了「指针跟随的镜面高光」。
+             背景从彩色极光换成纸 + 单色暗记之后，那圈白斑在纸上没有任何东西可以反射，
+             只剩一层脏雾 —— 与其留着凑数，不如不要。 */
+          ;(() => {
+            const root = document.documentElement
+
+            /* ---------- 1. 阅读进度 ---------- */
+            const bar = document.querySelector('.read-progress')
+            if (bar) {
+              let raf2 = 0
+              const calc = () => {
+                raf2 = 0
+                const max = root.scrollHeight - root.clientHeight
+                const p = max > 0 ? Math.min(1, Math.max(0, root.scrollTop / max)) : 0
+                bar.style.setProperty('--p', p.toFixed(4))
+              }
+              addEventListener(
+                'scroll',
+                () => {
+                  if (!raf2) raf2 = requestAnimationFrame(calc)
+                },
+                { passive: true },
+              )
+              addEventListener('resize', calc, { passive: true })
+              calc()
+            }
+
+            /* ---------- 2. 目录滚动高亮 ---------- */
+            const links = [...document.querySelectorAll('.side nav a[href^="#"]')]
+            const targets = links
+              .map((a) => ({ a, el: document.getElementById(decodeURIComponent(a.hash.slice(1))) }))
+              .filter((x) => x.el)
+            if (targets.length && 'IntersectionObserver' in window) {
+              const setActive = (a) => {
+                for (const { a: l } of targets) l.removeAttribute('aria-current')
+                if (a) a.setAttribute('aria-current', 'true')
+              }
+              const visible = new Set()
+              const io = new IntersectionObserver(
+                (entries) => {
+                  for (const en of entries) {
+                    const hit = targets.find((t) => t.el === en.target)
+                    if (!hit) continue
+                    if (en.isIntersecting) visible.add(hit.a)
+                    else visible.delete(hit.a)
+                  }
+                  /* 同时有多个章节在视口里时，取文档顺序最靠前的那个 —— 与阅读方向一致 */
+                  setActive(links.find((l) => visible.has(l)) || null)
+                },
+                /* 顶部留出吸顶页头的高度，底部只认 30%：这样"刚滚到"就算当前章 */
+                { rootMargin: '-84px 0px -70% 0px', threshold: 0 },
+              )
+              for (const t of targets) io.observe(t.el)
+            }
+          })()
+        </script></body></html>

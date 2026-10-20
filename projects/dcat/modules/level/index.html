@@ -1,0 +1,813 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>关卡与遗留 · 暖洋洋呆猫村 · JINJIARAN</title><meta name="description" content="一个 38 个 Actor 的跑酷测试场、一块还写着 &quot;Third Person Template&quot; 的牌子、一套把 GameMode 改在关卡里而不是配置里的分层，以及一份长到需要单独开一页的遗留清单。"><link rel="canonical" href="https://jinjiaran.com/projects/dcat/modules/level/"><!--
+      图标组（2026-10-21：换成 R 标）。
+      由 `node tmp/make-brand-icons.mjs` 从矢量化的 R 生成，别手工换图。
+      · favicon.svg —— 深底圆角块 + 白色 R。**深底不是装饰**：标签栏底色不可控
+        （浅色主题浅灰 / 深色主题近黑），透明底的黑 R 在深色标签栏上会整块消失。
+      · favicon.ico —— 16/24/32/48 四档**各自原生渲染**后拼成（不是缩出来的），
+        老浏览器、收藏夹、各类爬虫要的就是它。
+      · apple-touch-icon —— 180×180 **满幅方角、不透明**：圆角与遮罩由 iOS 自己套。
+      · site.webmanifest —— Android/Chrome「添加到主屏幕」用，带 192/512 两档。
+      顺序：SVG 在前（首选），ICO 兜底。
+    --><link rel="icon" type="image/svg+xml" href="/favicon.svg"><link rel="icon" type="image/x-icon" href="/favicon.ico" sizes="16x16 24x24 32x32 48x48"><link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180"><link rel="manifest" href="/site.webmanifest"><meta name="generator" content="Astro v7.3.2"><meta property="og:type" content="website"><meta property="og:site_name" content="JINJIARAN"><meta property="og:title" content="关卡与遗留 · 暖洋洋呆猫村 · JINJIARAN"><meta property="og:description" content="一个 38 个 Actor 的跑酷测试场、一块还写着 &quot;Third Person Template&quot; 的牌子、一套把 GameMode 改在关卡里而不是配置里的分层，以及一份长到需要单独开一页的遗留清单。"><meta property="og:url" content="https://jinjiaran.com/projects/dcat/modules/level/"><!--
+      社交卡片图（2026-10-19 补）。之前全站没有任何 og:image，分享出去的链接是纯文字。
+      图是 public/og.png（1200×630，站点深底 + 品牌标），由 scripts/make-og.mjs 生成，
+      改文案/换标就重跑那个脚本，不要手工改图。
+      宽高必须写：部分抓取方（含微信/Twitter）会按它预留版位，缺了会裁得很难看。
+    --><meta property="og:image" content="https://jinjiaran.com/og.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="JINJIARAN · 个人作品站"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://jinjiaran.com/og.png"><!--
+      移动端浏览器地址栏染色。**只放一个 meta**，由下面那段内联脚本按最终主题
+      改 content —— 站内的主题是「手动切换 + data-theme」，不是跟随系统，
+      用两条 media 查询会跟用户手动选的打架。
+    --><meta name="theme-color" content="#f6f7f9" data-theme-color><script>
+      // 在首次绘制前定好主题，避免闪白；顺手把地址栏颜色定下来
+      ;(() => {
+        /* 先算出最终主题，再写 data-theme —— 两件事分开做，
+           是因为 localStorage 在隐私模式下会抛异常，旧写法里抛了就整段跳过。 */
+        let theme = 'light'
+        try {
+          const saved = localStorage.getItem('theme')
+          theme =
+            saved === 'light' || saved === 'dark'
+              ? saved
+              : window.matchMedia('(prefers-color-scheme: dark)').matches
+                ? 'dark'
+                : 'light'
+        } catch {
+          theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+        }
+        document.documentElement.dataset.theme = theme
+
+        const meta = document.querySelector('meta[data-theme-color]')
+        if (meta) meta.setAttribute('content', theme === 'dark' ? '#0d1117' : '#f6f7f9')
+      })()
+    </script><link rel="stylesheet" href="/_astro/BaseLayout.CKlrZbNO.css"><style>.bp[data-astro-cid-rf4rmido]{border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);overflow:hidden}.bp-head[data-astro-cid-rf4rmido]{border-bottom:1px solid var(--line);flex-wrap:wrap;align-items:flex-start;gap:12px;padding:16px 18px 14px;display:flex}.bp-head-main[data-astro-cid-rf4rmido]{flex:260px;min-width:0}.bp-title[data-astro-cid-rf4rmido]{margin:0;font-size:16px}.bp-graph[data-astro-cid-rf4rmido]{color:var(--fg-3);flex-wrap:wrap;align-items:center;gap:6px;margin:5px 0 0;font-size:12.5px;display:flex}.bp-graph[data-astro-cid-rf4rmido] code[data-astro-cid-rf4rmido]{color:var(--fg-2);background:var(--surface-2);border-radius:5px;padding:1px 7px;font-size:12px}.bp-dot[data-astro-cid-rf4rmido]{opacity:.5}.bp-actions[data-astro-cid-rf4rmido]{flex-wrap:wrap;flex:none;gap:8px;display:flex}.bp-btn[data-astro-cid-rf4rmido]{color:var(--fg-2);background:var(--surface-2);border:1px solid var(--line);cursor:pointer;border-radius:999px;align-items:center;gap:6px;padding:6px 12px;font-family:inherit;font-size:13px;transition:color .15s,border-color .15s;display:inline-flex}.bp-btn[data-astro-cid-rf4rmido]:hover{color:var(--accent);border-color:var(--accent)}.bp-summary[data-astro-cid-rf4rmido]{color:var(--fg-2);margin:0;padding:14px 18px 0;font-size:13.5px}.bp-stage[data-astro-cid-rf4rmido]{background:#242424;position:relative}.bp-loading[data-astro-cid-rf4rmido]{color:#9aa2ad;z-index:2;background:#242424;justify-content:center;align-items:center;gap:10px;font-size:13px;display:flex;position:absolute;inset:0}.bp-spinner[data-astro-cid-rf4rmido]{border:2px solid #fff3;border-top-color:#6a9bff;border-radius:50%;width:15px;height:15px;animation:.8s linear infinite bp-spin}@keyframes bp-spin{to{transform:rotate(360deg)}}ueb-blueprint[data-astro-cid-rf4rmido]:defined~.bp-loading[data-astro-cid-rf4rmido]{display:none}.bp-fallback[data-astro-cid-rf4rmido]{color:var(--fg-2);padding:14px 18px;font-size:13px;display:none}.bp-fallback[data-astro-cid-rf4rmido] pre[data-astro-cid-rf4rmido]{background:var(--surface-2);border-radius:var(--radius-sm);white-space:pre;max-height:340px;padding:12px;font-size:11.5px;line-height:1.5;overflow:auto}html[data-ueb-failed] .bp-fallback[data-astro-cid-rf4rmido],html[data-ueb-failed] .bp-loading[data-astro-cid-rf4rmido]{display:block}html[data-ueb-failed] .bp-loading[data-astro-cid-rf4rmido]{display:none}.bp-foot[data-astro-cid-rf4rmido]{border-top:1px solid var(--line);background:var(--surface);flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;padding:10px 18px;display:flex}.bp-hint[data-astro-cid-rf4rmido]{color:var(--fg-3);margin:0;font-size:12px}.bp-tags[data-astro-cid-rf4rmido]{flex-wrap:wrap;gap:6px;margin:0;display:flex}.bp-stage[data-astro-cid-rf4rmido] ueb-blueprint[data-astro-cid-rf4rmido]{width:100%;display:block}
+.meta-row[data-astro-cid-tzzuq5oi]{flex-wrap:wrap;gap:6px;margin-top:14px;display:flex}.module-lede[data-astro-cid-tzzuq5oi]{color:var(--fg-2);max-width:64ch;margin:10px 0 0}.bp-stack[data-astro-cid-tzzuq5oi]{flex-direction:column;gap:30px;margin-top:18px;display:flex}.code-wrap[data-astro-cid-tzzuq5oi]{margin-top:22px}.blk[data-astro-cid-tzzuq5oi]{margin-top:44px}.blk-title[data-astro-cid-tzzuq5oi]{border-bottom:1px solid var(--line);margin:0;padding-bottom:8px;font-size:20px}.code-name[data-astro-cid-tzzuq5oi]{color:var(--fg-3);margin:0 0 6px;font-family:Cascadia Code,Consolas,monospace;font-size:12.5px}.code-block[data-astro-cid-tzzuq5oi]{background:color-mix(in srgb, var(--surface-2) 78%, transparent);border:1px solid var(--line);border-radius:14px;margin:0;padding:16px 18px;font-size:12.5px;line-height:1.65;overflow-x:auto;box-shadow:inset 0 1px #ffffff1f}.pager[data-astro-cid-tzzuq5oi]{border-top:1px solid var(--line);justify-content:space-between;gap:14px;margin-top:56px;padding-top:22px;display:flex}.pager-item[data-astro-cid-tzzuq5oi]{border-radius:var(--radius-sm);flex-direction:column;gap:3px;padding:10px 14px;transition:background .15s;display:flex}.pager-item[data-astro-cid-tzzuq5oi]:hover{background:var(--surface-2)}.pager-next[data-astro-cid-tzzuq5oi]{text-align:right}.pager-dir[data-astro-cid-tzzuq5oi]{color:var(--fg-3);font-size:12px}.pager-name[data-astro-cid-tzzuq5oi]{font-size:14px;font-weight:500}
+</style><script type="module" src="/_astro/page.CQWjsXKf.js"></script></head><body class="glass"><div class="backdrop" aria-hidden="true"><i class="mark"></i><i class="grid"></i></div><div class="read-progress" aria-hidden="true"></div><a class="skip-link" href="#main">跳到主内容</a><header class="site-header"><div class="wrap"><a class="brand" href="/"><svg class="mark" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 524 438"><path fill="currentColor" fill-rule="evenodd" d="M416.82 435.14C401.57 430.1 389.97 420.04 326.46 356.8C296.19 326.66 271.11 302 270.71 302C270.32 302 270 305.17 270 309.04C270 325.19 266.58 345.78 262.45 354.51C255.61 368.97 239.01 381.19 219 386.5C209.37 389.05 184.12 389.66 172.36 387.62C134.98 381.14 105.07 359.07 93.9 329.73C92.7 326.56 91.89 323.77 92.12 323.55C92.35 323.32 95.67 323.54 99.52 324.04C109.01 325.26 124.12 325.21 132 323.93C141.17 322.44 145.84 319.58 148.95 313.53L151.5 308.56L151.81 272.78L152.12 237L132.31 236.97C105.96 236.93 68.66 235.43 57.5 233.96C32.51 230.67 18.83 221.26 8.86 200.5C3.37 189.06 0.95 178.74 0.29 164C-1.78 117.22 20.72 76.49 57.46 60.54C61.84 58.64 65.56 57.23 65.73 57.39C65.9 57.56 65.56 63.06 64.98 69.6C63.25 89.16 65.33 104.68 70.52 110.84C71.9 112.48 75.16 114.64 77.76 115.64C82.12 117.3 87.25 117.47 141 117.7C198.58 117.94 199.41 117.91 194 116.14C184.03 112.87 177.68 108.9 169.91 101.11C155.15 86.31 149.34 67.33 153.5 47.5C157.85 26.81 174.05 9.13 194.5 2.75C204.23 -0.28 218.77 -0.28 228.5 2.75C253.04 10.4 270.97 34.35 270.97 59.5C270.97 84.6 253.48 108.19 229 116.11C223.57 117.87 224.17 117.89 274.6 117.95C330.81 118.01 346.08 118.82 360.71 122.53C388.99 129.7 411.57 149.04 419.41 172.81C426.33 193.77 425.17 212.89 415.83 232C412.46 238.88 410.01 242.14 402.95 249.15L394.22 257.79L425.86 289.28C461.17 324.42 463.99 326.58 473.64 325.78C477.54 325.46 480.31 324.42 484.3 321.77C490.34 317.75 503.89 304.49 509.63 296.96C511.71 294.23 513.7 292 514.05 292C514.92 292 519.59 304.17 521.52 311.5C527.78 335.19 521.31 366.33 505.14 390.29C490.96 411.31 472.31 426.78 452.87 433.64C442.77 437.2 425.28 437.93 416.82 435.14ZM293.41 220.59C301.72 216.52 304.4 212.05 304.85 201.48C305.27 191.48 302.79 184.69 296.87 179.62C292 175.45 287.15 174 278.13 174L271 174L271 199.13L271 224.25L279.36 223.81C285.87 223.47 288.97 222.76 293.41 220.59Z"/></svg>
+<span>JINJIARAN<span class="sub"> · 个人作品站</span></span></a><nav class="nav" aria-label="主导航"><a href="/?browse=1">首页</a><a href="/projects" aria-current="page">项目</a><a href="/gallery">图片</a><a href="/videos">视频</a><a href="/docs">文档</a><a href="/models">模型</a><a href="/tools">工具</a><a href="/about">关于</a></nav><button class="icon-btn" type="button" data-search-open aria-label="站内搜索" title="搜索（按 / ）" aria-expanded="false" aria-controls="site-search" data-astro-cid-av774hkb><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" data-astro-cid-av774hkb><circle cx="11" cy="11" r="7" data-astro-cid-av774hkb></circle><path d="m20 20-3.5-3.5" data-astro-cid-av774hkb></path></svg></button><button class="icon-btn" id="theme-toggle" type="button" aria-label="切换深浅色主题" aria-pressed="false"><svg class="sun" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"></path></svg><svg class="moon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"></path></svg></button><!--
+          主题切换的状态播报（2026-10-19 审计 D3）。
+          按钮本身只管"按下去了没有"（aria-pressed），**说不清现在是什么主题** ——
+          读屏用户听到"切换深浅色主题，已按下"，还是不知道屏幕上到底变深了还是变浅了。
+          所以另起一个 role="status" 的区域，切换后把结果念出来。
+          role="status" 自带 aria-live="polite"；这里两个都写，是为了兼容只认其一的读屏。
+          它必须常驻 DOM（不能切换时才插入），否则播报不会触发。
+        --><p class="sr-only" role="status" aria-live="polite" data-theme-status></p></div></header><main id="main" data-pagefind-body><div class="wrap" data-astro-cid-tzzuq5oi><header class="glass-hero" style="--i:0" data-astro-cid-tzzuq5oi><p class="crumb" data-astro-cid-tzzuq5oi><a href="/projects" data-astro-cid-tzzuq5oi>项目</a><span aria-hidden="true" data-astro-cid-tzzuq5oi>/</span><a href="/projects/dcat" data-astro-cid-tzzuq5oi>暖洋洋呆猫村</a><span aria-hidden="true" data-astro-cid-tzzuq5oi>/</span><span data-astro-cid-tzzuq5oi>关卡与遗留</span></p><h1 class="h-page" data-astro-cid-tzzuq5oi>关卡与遗留</h1><p class="module-lede" data-astro-cid-tzzuq5oi>一个 38 个 Actor 的跑酷测试场、一块还写着 &quot;Third Person Template&quot; 的牌子、一套把 GameMode 改在关卡里而不是配置里的分层，以及一份长到需要单独开一页的遗留清单。</p><div class="meta-row" data-astro-cid-tzzuq5oi><span class="chip" data-astro-cid-tzzuq5oi>搁置</span><span class="chip" data-astro-cid-tzzuq5oi>蓝图</span><span class="chip" data-astro-cid-tzzuq5oi>WorldPartition</span><span class="chip" data-astro-cid-tzzuq5oi>关卡</span></div></header></div><div class="wrap" style="padding-block:28px 0" data-astro-cid-tzzuq5oi><article class="prose glass-sheet" style="--i:1" data-astro-cid-tzzuq5oi><h2 id="关卡thirdpersonmap38-个-actor">关卡：<code>ThirdPersonMap</code>，38 个 Actor</h2>
+<p>只有一个关卡（<code>/Game/ThirdPerson/Maps/ThirdPersonMap</code>），是<strong>模板那张地图原地改的</strong>。
+38 个 Actor 分成七组 —— 六组在有名字的文件夹里，一组裸在外面：</p>
+<table>
+<thead>
+<tr>
+<th>文件夹</th>
+<th>Actor 数</th>
+<th>构成</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Block01</code></td>
+<td><strong>8</strong></td>
+<td>4 × <code>SM_Cube</code> + 2 × <code>SM_QuarterCylinder</code> + 2 × <code>SM_Ramp</code></td>
+</tr>
+<tr>
+<td><code>Block02</code></td>
+<td>4</td>
+<td>2 × <code>SM_Cube</code> + 2 × <code>SM_QuarterCylinder</code></td>
+</tr>
+<tr>
+<td><code>Block03</code></td>
+<td>4</td>
+<td>2 × <code>SM_Cube</code> + 2 × <code>SM_QuarterCylinder</code></td>
+</tr>
+<tr>
+<td><code>Cylinder</code></td>
+<td>4</td>
+<td>4 × <code>SM_QuarterCylinder</code></td>
+</tr>
+<tr>
+<td><code>Playground</code></td>
+<td>1</td>
+<td>1 × <code>SM_Cube</code></td>
+</tr>
+<tr>
+<td><code>Lighting</code></td>
+<td>7</td>
+<td><code>DirectionalLight</code>、<code>ExponentialHeightFog</code>、<code>PostProcessVolume</code>、<code>SkyAtmosphere</code>、<code>SkyLight</code>、<code>SM_SkySphere</code>、<code>VolumetricCloud</code></td>
+</tr>
+<tr>
+<td>（无文件夹）</td>
+<td><strong>10</strong></td>
+<td><code>BP_Box</code>、<code>BP_Testltem</code>、<code>PlayerStart</code>、3 × <code>SM_ChamferCube</code>、1 × <code>SM_Ramp</code>、<code>TextRenderActor</code>、<code>WorldDataLayers</code>、<code>WorldPartitionMiniMap0</code></td>
+</tr>
+</tbody>
+</table>
+<p>一眼能看出这是<strong>跑酷试跑场</strong>，不是关卡设计：</p>
+<ul>
+<li><strong><code>SM_Cube</code> 当平台</strong> —— 就是引擎自带的立方体，缩放当台阶/平台用。</li>
+<li><strong><code>SM_QuarterCylinder</code> 当弯道</strong>（共 12 个）—— 四分之一圆柱，
+用来做弧面坡道，让猫能顺着弧度滑上去。</li>
+<li><strong><code>SM_Ramp</code> 当斜坡</strong>（3 个）—— 直角斜面，用来测跳跃距离。</li>
+<li><strong><code>Block01</code> 明显是主测试区</strong>（唯一同时有斜坡和弯道的一堆），
+<code>Block02</code> / <code>Block03</code> 是从它拆出来的两个精简版。</li>
+<li><strong><code>Playground</code> 里只有一个 Cube</strong> —— 名字起得像主场地，实际是最小的一块。</li>
+</ul>
+<p>配合<a href="/projects/dcat/modules/cat">猫角色的数值</a>（走 160 / 跳 900 / 重力 2.5），
+这个场地是给“蹦床跑酷”手感调参用的。
+<code>SM_ChamferCube</code>（倒角立方体）裸在外面没进文件夹，说明是临时拖进来试的。</p>
+<h2 id="一块写着-third-person-template-的牌子">一块写着 “Third Person Template” 的牌子</h2>
+<p>无文件夹的那一堆里有个 <code>TextRenderActor</code>，它上面挂的
+<code>TextRenderComponent</code> 的内容是：</p>
+<table>
+<thead>
+<tr>
+<th>属性</th>
+<th>值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Text</code></td>
+<td><strong><code>Third Person Template</code></strong></td>
+</tr>
+<tr>
+<td><code>WorldSize</code></td>
+<td>150</td>
+</tr>
+<tr>
+<td><code>TextRenderColor</code></td>
+<td><code>(R=109, G=109, B=109)</code> 深灰</td>
+</tr>
+<tr>
+<td><code>HorizontalAlignment</code></td>
+<td><code>EHTA_Left</code></td>
+</tr>
+<tr>
+<td><code>Font</code></td>
+<td><code>/Engine/EngineFonts/RobotoDistanceField</code></td>
+</tr>
+<tr>
+<td>相对变换</td>
+<td>位置 <code>(-0.1, 1100, 140)</code>、<code>Yaw = 180°</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>这是模板自带的那块牌子</strong>，作者九天里一次都没想起来把它删掉或改掉。
+它至今立在场景里、用深灰 Roboto 字体、冲着出生点反向（<code>Yaw = 180</code>）——
+从 <code>PlayerStart</code> 出生就能看见“Third Person Template”这几个字。</p>
+<blockquote>
+<p>这块牌子是整份工程”<strong>从一个模板长出来</strong>“的最直白的证据。
+其它证据（配置里的 <code>ProjectName</code>、动画蓝图里的英文注释、
+角色继承自 <code>BP_ThirdPersonCharacter</code>）都要翻代码才看得到，
+只有这一条是站在关卡里抬头就能看见的。</p>
+</blockquote>
+<h2 id="world-partition--外部-actor">World Partition + 外部 Actor</h2>
+<p>关卡启用了 UE5 的 World Partition，而且开了外部 Actor：</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>PersistentLevel</span></span>
+<span class="line"><span>  bUseExternalActors   = True</span></span>
+<span class="line"><span>  bUseActorFolders     = True</span></span>
+<span class="line"><span>  bIsPartitioned       = True</span></span></code></pre>
+<p>结果是 <strong>Actor 根本不在 <code>.umap</code> 里</strong> —— 每个 Actor 各自一个文件，
+丢在 <code>Content/__ExternalActors__/</code> 与 <code>Content/__ExternalObjects__/</code> 下：</p>
+<table>
+<thead>
+<tr>
+<th>目录</th>
+<th>文件数</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>__ExternalActors__/</code></td>
+<td><strong>39</strong></td>
+</tr>
+<tr>
+<td><code>__ExternalObjects__/</code></td>
+<td><strong>6</strong></td>
+</tr>
+</tbody>
+</table>
+<p>（39 ≈ 38 个 Actor + 1，各自一个 <code>.uasset</code>。）</p>
+<p>对一个 38 个 Actor 的测试场来说，<strong>这套配置是杀鸡用牛刀</strong>：</p>
+<ul>
+<li>好处是多人同时改关卡不会互相锁文件、版本管理里 diff 更细。</li>
+<li>代价是<strong>关卡目录里凭空多出 45 个文件</strong>，而且都是乱码路径
+（<code>__ExternalActors__/ThirdPerson/Maps/ThirdPersonMap/1/ABC123...uasset</code>）——
+用文件管理器找 Actor 完全找不到，只能靠编辑器。</li>
+</ul>
+<p>这是模板默认开着、作者没动过的配置。<strong>原型阶段其实该关掉它省一堆文件。</strong></p>
+<h2 id="一个关于-gamemode-的分层陷阱">一个关于 GameMode 的分层陷阱</h2>
+<p>这个值得单独记，因为它<strong>会让人改错文件</strong>。</p>
+<p>工程配置文件 <code>Config/DefaultEngine.ini</code> 里，全局默认 GameMode 指的是
+<strong>模板的</strong> <code>BP_ThirdPersonGameMode</code>：</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="ini"><code><span class="line"><span style="color:#B392F0">[/Script/EngineSettings.GameMapsSettings]</span></span>
+<span class="line"><span style="color:#F97583">GlobalDefaultGameMode</span><span style="color:#E1E4E8">=.../Game/ThirdPerson/Blueprints/BP_ThirdPersonGameMode.BP_ThirdPersonGameMode_C</span></span></code></pre>
+<p>但<strong>关卡里覆盖了它</strong>。<code>ThirdPersonMap</code> 的 <code>WorldSettings</code> 上写着：</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>DefaultGameMode = /Game/B_Cat/GM_Catt.GM_Catt_C</span></span></code></pre>
+<p><strong>真正生效的是 <code>GM_Catt</code>。</strong> 配置文件里那一行是死的 ——
+想改默认 Pawn 而去改 <code>DefaultEngine.ini</code>，是改不出任何效果的。</p>
+<p><code>GM_Catt</code> 的实际配置（从 CDO 读出来的）：</p>
+<table>
+<thead>
+<tr>
+<th>项</th>
+<th>值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>DefaultPawnClass</code></td>
+<td><strong><code>BP_CATTTTTT_C</code></strong></td>
+</tr>
+<tr>
+<td><code>PlayerControllerClass</code></td>
+<td><strong><code>PC_MyPlayerController_C</code></strong></td>
+</tr>
+<tr>
+<td><code>HUDClass</code></td>
+<td><code>Engine.HUD</code> ← <strong>原生 HUD，没用 <code>AHUD</code> 子类</strong></td>
+</tr>
+<tr>
+<td><code>GameStateClass</code></td>
+<td><code>Engine.GameStateBase</code></td>
+</tr>
+<tr>
+<td><code>PlayerStateClass</code></td>
+<td><code>Engine.PlayerState</code></td>
+</tr>
+<tr>
+<td><code>SpectatorClass</code></td>
+<td><code>Engine.SpectatorPawn</code></td>
+</tr>
+<tr>
+<td><code>bUseSeamlessTravel</code></td>
+<td><code>False</code></td>
+</tr>
+</tbody>
+</table>
+<p>两个读法：</p>
+<ol>
+<li><strong><code>GM_Catt</code> 只改了“谁操控、谁巡逻”，其它全留原生</strong> ——
+连 <code>HUDClass</code> 都是 <code>Engine.HUD</code>。这也解释了为什么所有界面都走
+<code>PC_MyPlayerController</code> + UMG，而不是走 <code>AHUD</code> 的绘制回调
+（见<a href="/projects/dcat/modules/ui">界面</a>）。</li>
+<li><code>GameStateClass</code> / <code>PlayerStateClass</code> 都是原生空类 ——
+<strong>工程里没有任何一处地方存“游戏状态”</strong>（分数、关卡进度、时间）。
+对一个只做到“跑跳捡东西”的原型来说合理。</li>
+</ol>
+<blockquote>
+<p>还有一处改名残留：关卡的 <code>LevelScriptBlueprint</code> 对象叫 <code>ThirdPersonMap</code>，
+但它的 <code>LevelScriptActor</code> 实例名却是 <strong><code>ThirdPersonExampleMap_C_0</code></strong> ——
+说明这个关卡原来叫 <code>ThirdPersonExampleMap</code>，被改名成了 <code>ThirdPersonMap</code>，
+而 Actor 实例的名字留在了旧的名字上。</p>
+</blockquote>
+<h2 id="工程的规模">工程的规模</h2>
+<table>
+<thead>
+<tr>
+<th>目录</th>
+<th><code>.uasset</code> 数</th>
+<th>大小</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Content/</code> 整体</td>
+<td><strong>1118</strong></td>
+<td><strong>1.3 GB</strong></td>
+</tr>
+<tr>
+<td>排除 <code>Megascans</code> / <code>StarterContent</code> / <code>LevelPrototyping</code> / <code>Developers</code></td>
+<td>822</td>
+<td>—</td>
+</tr>
+<tr>
+<td><strong><code>B_Cat/</code>（猫、输入、动画、武器、材质）</strong></td>
+<td><strong>68</strong></td>
+<td><strong>16 MB</strong></td>
+</tr>
+<tr>
+<td><strong><code>Inventory/</code>（背包、物品、界面）</strong></td>
+<td><strong>36</strong></td>
+<td><strong>2.4 MB</strong></td>
+</tr>
+</tbody>
+</table>
+<p><code>B_Cat/</code> 68 + <code>Inventory/</code> 36 = <strong>104</strong> —— 这就是这个工程<strong>全部自己做的资产</strong>。</p>
+<p>剩下 700 多个是模板自带的：<code>StarterContent</code>（一整套示例材质与网格）、
+<code>Megascans</code>、<code>LevelPrototyping</code>、<code>Characters/Mannequins</code>、
+<code>CraftResourcesIcons</code>（那 432 个导入的图标）。
+<strong>1.3 GB 里只有 18 MB 是作者写的。</strong></p>
+<h2 id="遗留清单">遗留清单</h2>
+<p>把前面八页里散落的“未清理”集中列一次 —— 这份清单本身就是这个工程的
+“完成度画像”：</p>
+<h3 id="死掉的类与资产">死掉的类与资产</h3>
+<table>
+<thead>
+<tr>
+<th>对象</th>
+<th>状态</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>BP_ItemMaster</code></td>
+<td>空基类（3 个空事件 + 空 UCS），零引用</td>
+</tr>
+<tr>
+<td><code>BPC_ItemContainer</code></td>
+<td>完整的容器实现，<strong>从未被挂到任何 Actor 上</strong></td>
+</tr>
+<tr>
+<td><code>BPC_PlayerInverntory</code></td>
+<td>上面那个的空壳子类，同样零引用</td>
+</tr>
+<tr>
+<td><code>W_InventorySLOT</code></td>
+<td>控件树为空、图为空的空壳 UMG</td>
+</tr>
+<tr>
+<td><code>ot_we001_BML</code></td>
+<td>导入的武器网格，零引用</td>
+</tr>
+<tr>
+<td><code>TurnRateGamepad_0</code></td>
+<td>零引用残留变量</td>
+</tr>
+</tbody>
+</table>
+<h3 id="空函数与半截功能">空函数与半截功能</h3>
+<table>
+<thead>
+<tr>
+<th>位置</th>
+<th>状态</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>InventorySystem</code> 的 <code>Server_Interact</code> / <code>ServerCreateltemToWorld</code> / <code>ServerRemoveFromlnventory</code> / <code>Server_TransferSlots</code> / <code>OnLocalInteract</code> / <code>MC_Update</code></td>
+<td><strong>全部空函数</strong>（只有 ubergraph 入口）</td>
+</tr>
+<tr>
+<td><code>Interactlnterface.LookAt</code></td>
+<td>声明了返回值 <code>Message: text</code>，<strong>没有任何地方使用</strong></td>
+</tr>
+<tr>
+<td><code>HighLightComponent</code></td>
+<td><strong>只实现了 <code>UnLook</code></strong>；<code>LookAt</code> 没实现 ⇒ 描边不会出现</td>
+</tr>
+<tr>
+<td><code>W_Hotbar</code></td>
+<td>8 格数字栏，图是空的</td>
+</tr>
+<tr>
+<td><code>W_Inventory</code> 的 <code>Crafting</code> 页签</td>
+<td>只有一个按钮文字，无实现</td>
+</tr>
+<tr>
+<td><code>BP_Apple</code> / <code>BP_Testltem</code></td>
+<td>物品 Actor 层零逻辑，网格是引擎默认 <code>Cube</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="拼写l--i-与小写-l-混淆为主">拼写（<code>l</code> / <code>I</code> 与小写 <code>l</code> 混淆为主）</h3>
+<table>
+<thead>
+<tr>
+<th>现名</th>
+<th>应该是</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Interactlnterface</code></td>
+<td><code>InteractInterface</code></td>
+</tr>
+<tr>
+<td><code>RemoveFromlnventory</code></td>
+<td><code>RemoveFromInventory</code></td>
+</tr>
+<tr>
+<td><code>Onlnventoryupdate</code></td>
+<td><code>OnInventoryUpdate</code></td>
+</tr>
+<tr>
+<td><code>BPC_PlayerInverntory</code></td>
+<td><code>BPC_PlayerInventory</code></td>
+</tr>
+<tr>
+<td><code>Movementlnput</code>（动画蓝图变量）</td>
+<td><code>MovementInput</code></td>
+</tr>
+<tr>
+<td><code>AI_Turn_cc</code></td>
+<td><code>IA_Turn_cc</code></td>
+</tr>
+<tr>
+<td><code>weapom_attach_hand_r</code></td>
+<td><code>weapon_attach_hand_r</code></td>
+</tr>
+<tr>
+<td><code>HosterWeapon</code></td>
+<td><code>HolsterWeapon</code></td>
+</tr>
+<tr>
+<td><code>BTN_SlotButon</code></td>
+<td><code>BTN_SlotButton</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="模板残留">模板残留</h3>
+<ul>
+<li>关卡里那块写着 <strong><code>Third Person Template</code></strong> 的 <code>TextRenderActor</code></li>
+<li>配置里 <code>ProjectName</code> 至今是 <code>Third Person BP Game Template</code></li>
+<li>动画蓝图里两块照抄模板的英文分区注释</li>
+<li><code>DefaultEngine.ini</code> 指向模板 GameMode（被关卡覆盖，属死配置）</li>
+<li>关卡 Actor 名 <code>ThirdPersonExampleMap_C_0</code> 与关卡新名不一致</li>
+<li>按 <strong><code>1</code> 键打印背包内容</strong>的调试开关（<code>InpActEvt_One</code>）</li>
+</ul>
+<h2 id="为什么蓝图连线不能自动提取">为什么蓝图连线不能自动提取</h2>
+<p>最后交代一件事：本系列九页里所有“逐块拆解”，<strong>依据的都是节点本身
+（类型、名字、坐标、分区归属），而不是连线</strong>。这是硬限制，不是偷懒：</p>
+<table>
+<thead>
+<tr>
+<th>障碍</th>
+<th>实测</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>EdGraphPin</code> 不是 <code>UObject</code></td>
+<td><code>obj list class=EdGraphPin</code> → <strong><code>0 Objects</code></strong>，无法直接遍历</td>
+</tr>
+<tr>
+<td>插件接口刻意不返回连线</td>
+<td><code>UAL_BuildPinsJson</code>（源码 214–250 行）<strong>不含 <code>LinkedTo</code></strong>，注释原话是“Agent 不应当用它做连线依据”</td>
+</tr>
+<tr>
+<td>插件接口也不返回引脚常量</td>
+<td>同一函数只输出 <code>name / dir / category / sub_category / is_array / is_reference / is_const / sub_category_object / friendly_name</code>，<strong>没有 <code>DefaultValue</code></strong></td>
+</tr>
+<tr>
+<td>状态机内部不是 <code>UObject</code></td>
+<td><code>obj list outer=&lt;EditorStateMachineGraph&gt;</code> → <strong><code>0 Objects</code></strong></td>
+</tr>
+</tbody>
+</table>
+<p>所以：</p>
+<ul>
+<li><strong>连线的形状读不到</strong> —— 分支怎么配对、谁连到谁，只能推；</li>
+<li><strong>开关类节点上的常量读不到</strong> —— 走/跑的两档速度、<code>IsWeaponInHand</code> 的
+<code>true</code>/<code>false</code>、附着的插槽名、追踪通道，<strong>全部在这些引脚上</strong>；</li>
+<li><strong>状态机的状态名读不到</strong> —— <code>ABP_CAT</code> 里两个状态机有多少个状态、
+哪条转换连哪两个状态，全都拿不到。</li>
+</ul>
+<p><code>blueprints/*.t3d</code> 这类“完整连线快照”只有一种拿法：<strong>作者在编辑器里
+打开图、Ctrl+C，然后把剪贴板内容存成文件</strong>。这是唯一能补齐那一层的路径。</p>
+<h2 id="目前的进展">目前的进展</h2>
+<ul class="contains-task-list">
+<li class="task-list-item"><input type="checkbox" checked disabled> 一个 38 Actor 的跑酷测试场，含 6 个命名分组</li>
+<li class="task-list-item"><input type="checkbox" checked disabled> 完整的 7 件套光照（含 <code>SkySphere</code> 与 <code>VolumetricCloud</code>）</li>
+<li class="task-list-item"><input type="checkbox" checked disabled> <code>GM_Catt</code> 作为关卡级 GameMode（<code>DefaultPawnClass</code> / <code>PlayerControllerClass</code> 已接）</li>
+<li class="task-list-item"><input type="checkbox" checked disabled> 自定义追踪通道、外部 Actor / World Partition 可用</li>
+<li class="task-list-item"><input type="checkbox" checked disabled> 104 个自建资产全部定位（<code>B_Cat</code> 68 + <code>Inventory</code> 36）</li>
+<li class="task-list-item"><input type="checkbox" disabled> ⚠️ <code>Config/DefaultEngine.ini</code> 的 GameMode 是死配置，真正生效的在关卡里</li>
+<li class="task-list-item"><input type="checkbox" disabled> ⚠️ 38 个 Actor 却开了 World Partition + 外部 Actor，多出 45 个乱码路径文件</li>
+<li class="task-list-item"><input type="checkbox" disabled> ⚠️ 场景里仍立着 “Third Person Template” 的牌子</li>
+<li class="task-list-item"><input type="checkbox" disabled> ⚠️ 上表“遗留清单”里 6 个死资产 + 6 个空函数 + 9 处拼写未清</li>
+<li class="task-list-item"><input type="checkbox" disabled> ⚠️ 关卡脚本 Actor 名仍是 <code>ThirdPersonExampleMap_C_0</code></li>
+<li class="task-list-item"><input type="checkbox" disabled> 只有一张地图，没有主菜单 / 关卡切换</li>
+<li class="task-list-item"><input type="checkbox" disabled> <code>blueprints/*.t3d</code> 待作者导出（连线与引脚常量的唯一来源）</li>
+</ul>
+</article><nav class="pager" data-astro-cid-tzzuq5oi><a class="pager-item" href="/projects/dcat/modules/ui" data-astro-cid-tzzuq5oi><span class="pager-dir" data-astro-cid-tzzuq5oi>← 上一个</span><span class="pager-name" data-astro-cid-tzzuq5oi>界面</span></a><span data-astro-cid-tzzuq5oi></span></nav></div></main><footer class="site-footer"><div class="wrap row"><p style="margin:0">© 2024–2026  内容版权归作者所有</p><p style="margin:0"><span class="chip">静态站</span><span class="chip" style="margin-left:6px">CDN 直出</span><span class="chip" style="margin-left:6px">0 台服务器</span></p></div></footer><!--
+      搜索面板挂在 </body> 前，不能放进页头：
+      页头有 backdrop-filter，它会让后代里的 position: fixed 以页头为包含块，
+      面板会被裁在页头那条 60px 的带子里。
+    --><div class="search-layer" id="site-search" data-search-layer hidden data-astro-cid-av774hkb><div class="search-backdrop" data-search-close aria-hidden="true" data-astro-cid-av774hkb></div><div class="search-panel" role="dialog" aria-modal="true" aria-label="站内搜索" data-astro-cid-av774hkb><div class="search-bar" data-astro-cid-av774hkb><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" data-astro-cid-av774hkb><circle cx="11" cy="11" r="7" data-astro-cid-av774hkb></circle><path d="m20 20-3.5-3.5" data-astro-cid-av774hkb></path></svg><input type="search" data-search-input placeholder="搜项目、模块、图集、蓝图…" autocomplete="off" spellcheck="false" aria-label="搜索关键词" data-astro-cid-av774hkb><kbd data-astro-cid-av774hkb>Esc</kbd></div><div class="search-body" data-search-body data-astro-cid-av774hkb><p class="search-tip" data-astro-cid-av774hkb>输入关键词开始搜索。按 <b data-astro-cid-av774hkb>/</b> 或 <b data-astro-cid-av774hkb>Ctrl</b>+<b data-astro-cid-av774hkb>K</b> 随时打开。</p></div></div></div><script>
+      ;(() => {
+        const layer = document.querySelector('[data-search-layer]')
+        if (!layer) return
+
+        const input = layer.querySelector('[data-search-input]')
+        const body = layer.querySelector('[data-search-body]')
+        const TIP =
+          '<p class="search-tip">输入关键词开始搜索。按 <b>/</b> 或 <b>Ctrl</b>+<b>K</b> 随时打开。</p>'
+
+        /* ---------------- Pagefind 懒加载 ---------------- */
+        let enginePromise = null
+        const loadEngine = () => {
+          if (!enginePromise) {
+            enginePromise = import('/pagefind/pagefind.js')
+              .then(async (pf) => {
+                try {
+                  await pf.options({ excerptLength: 24 })
+                } catch {
+                  /* 老版本没有 options，忽略 */
+                }
+                return pf
+              })
+              .catch((err) => {
+                enginePromise = null // 允许下次重试
+                throw err
+              })
+          }
+          return enginePromise
+        }
+
+        /* ---------------- 渲染 ---------------- */
+        const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
+
+        const setTip = (html) => {
+          body.innerHTML = html
+        }
+
+        const render = (items, query) => {
+          if (!items.length) {
+            setTip(`<p class="search-tip">没有找到和「${esc(query)}」相关的内容。</p>`)
+            return
+          }
+
+          const ul = document.createElement('ul')
+          ul.className = 'search-list'
+
+          for (const it of items) {
+            const a = document.createElement('a')
+            a.href = it.url || '/'
+
+            const t = document.createElement('span')
+            t.className = 'search-item-title'
+            t.textContent = (it.meta && it.meta.title) || it.url || '未命名'
+            a.append(t)
+
+            if (it.excerpt) {
+              const e = document.createElement('span')
+              e.className = 'search-item-excerpt'
+              // Pagefind 给的片段已经转义过，只有 <mark> 是高亮标签
+              e.innerHTML = it.excerpt
+              a.append(e)
+            }
+
+            const li = document.createElement('li')
+            li.append(a)
+            ul.append(li)
+          }
+
+          body.textContent = ''
+          body.append(ul)
+        }
+
+        /* ---------------- 搜索 ---------------- */
+        let seq = 0
+        const run = async (raw) => {
+          const mine = ++seq
+          const query = raw.trim()
+
+          if (!query) {
+            setTip(TIP)
+            return
+          }
+
+          setTip('<p class="search-tip">搜索中…</p>')
+
+          let pf
+          try {
+            pf = await loadEngine()
+          } catch {
+            setTip(
+              '<p class="search-tip">搜索索引暂时用不了。<br />索引是构建期生成的，' +
+                '<b>本地开发模式（pnpm dev）下没有</b>，跑一次 <b>pnpm build</b> 或 <b>pnpm preview</b> 就有了。</p>',
+            )
+            return
+          }
+          if (mine !== seq) return
+
+          try {
+            const res = await pf.search(query)
+            if (mine !== seq) return
+            const items = await Promise.all(res.results.slice(0, 8).map((r) => r.data()))
+            if (mine !== seq) return
+            render(items, query)
+          } catch {
+            setTip('<p class="search-tip">搜索出错了，换几个词再试试。</p>')
+          }
+        }
+
+        let timer
+        input.addEventListener('input', () => {
+          clearTimeout(timer)
+          timer = setTimeout(() => run(input.value), 130)
+        })
+
+        /* ---------------- 开关 ----------------
+         * 焦点闭环（2026-10-19 审计 D2）。此前的问题：
+         *   · 点开搜索、Esc 关掉之后，焦点落在 <body> 上 —— 键盘用户等于被扔回页首，
+         *     得从头 Tab 一遍才能回到刚才那颗放大镜；
+         *   · Tab 能一路走出面板、跑到页头导航和页脚链接上，而背景还盖着，
+         *     人是"看不见自己在哪"的。
+         *
+         * 做法分两层：
+         *   ① `inert` 给面板以外的所有 body 子节点 —— 一整片区域不可聚焦、不可点、
+         *     读屏也跳过。这是浏览器原生的"这块不参与交互"，比自己数可聚焦元素可靠；
+         *   ② Tab 在面板内显式循环 —— inert 已经挡住了外面的元素，但焦点走到最后
+         *     一个链接后浏览器会把焦点交给地址栏，再 Tab 回来就出了面板。显式兜一圈。
+         */
+        const isTyping = (el) =>
+          el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)
+
+        const trigger = document.querySelector('[data-search-open]')
+        /* 面板以外的所有 body 直接子节点（含 skip-link / header / main / footer）。
+           脚本标签也在里面 —— 给 <script> 设 inert 没有任何副作用。 */
+        const background = () => [...document.body.children].filter((el) => el !== layer)
+
+        /** 记住"打开之前焦点在哪"，关的时候还回去 */
+        let lastFocus = null
+
+        const focusables = () => {
+          const list = [...layer.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])')]
+          /* 结果列表是动态渲染的，用 offsetParent 过滤掉 [hidden] 与非可见项 */
+          return list.filter((el) => el === input || el.offsetParent !== null)
+        }
+
+        const open = () => {
+          lastFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
+          layer.hidden = false
+          document.body.style.overflow = 'hidden'
+          background().forEach((el) => el.setAttribute('inert', ''))
+          trigger?.setAttribute('aria-expanded', 'true')
+          input.focus()
+          input.select()
+          // 打开的那一刻就把索引拉起来，等"输入完再等下载"会显得卡
+          loadEngine().catch(() => {})
+        }
+
+        const close = () => {
+          layer.hidden = true
+          document.body.style.overflow = ''
+          background().forEach((el) => el.removeAttribute('inert'))
+          trigger?.setAttribute('aria-expanded', 'false')
+          /* 还焦点之前确认它还在文档里 —— 面板里点链接跳走时焦点目标可能是旧元素 */
+          if (lastFocus && document.contains(lastFocus)) lastFocus.focus()
+          lastFocus = null
+        }
+
+        /* Tab 在面板里循环。Shift+Tab 从第一个回到最后一个，Tab 从最后一个回到第一个。 */
+        layer.addEventListener('keydown', (e) => {
+          if (e.key !== 'Tab') return
+          const list = focusables()
+          if (!list.length) return
+          const first = list[0]
+          const last = list[list.length - 1]
+          if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault()
+            last.focus()
+          } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault()
+            first.focus()
+          }
+        })
+
+        document.addEventListener('click', (e) => {
+          if (e.target.closest('[data-search-open]')) {
+            e.preventDefault()
+            layer.hidden ? open() : close()
+            return
+          }
+          if (e.target.closest('[data-search-close]')) {
+            e.preventDefault()
+            close()
+          }
+        })
+
+        document.addEventListener('keydown', (e) => {
+          const open_ = !layer.hidden
+
+          if (e.key === 'Escape' && open_) {
+            close()
+            return
+          }
+          if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+            e.preventDefault()
+            open_ ? close() : open()
+            return
+          }
+          if (e.key === '/' && !open_ && !isTyping(e.target) && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            e.preventDefault()
+            open()
+          }
+        })
+
+        /* 上下键在结果里走 */
+        input.addEventListener('keydown', (e) => {
+          if (e.key !== 'ArrowDown') return
+          e.preventDefault()
+          body.querySelector('a')?.focus()
+        })
+        body.addEventListener('keydown', (e) => {
+          const links = [...body.querySelectorAll('a')]
+          const i = links.indexOf(document.activeElement)
+          if (e.key === 'ArrowDown') {
+            e.preventDefault()
+            links[Math.min(i + 1, links.length - 1)]?.focus()
+          } else if (e.key === 'ArrowUp') {
+            e.preventDefault()
+            i <= 0 ? input.focus() : links[i - 1].focus()
+          }
+        })
+      })()
+    </script><script>
+      // 主题切换：写 data-theme + 地址栏染色 + 记住选择 + 告诉读屏
+      ;(() => {
+        const btn = document.getElementById('theme-toggle')
+        if (!btn) return
+        const status = document.querySelector('[data-theme-status]')
+
+        /* 初值：<head> 里那段脚本已经把最终主题写进 data-theme 了，
+           这里只负责让按钮的 aria-pressed 跟它对齐（不能写死在 HTML 里 ——
+           首屏主题有一半概率来自系统偏好，服务端并不知道）。 */
+        const sync = (theme) => {
+          btn.setAttribute('aria-pressed', theme === 'dark' ? 'true' : 'false')
+        }
+        sync(document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light')
+
+        btn.addEventListener('click', () => {
+          const root = document.documentElement
+          const next = root.dataset.theme === 'dark' ? 'light' : 'dark'
+          root.dataset.theme = next
+          /* 地址栏跟着变，否则在深色系统里手动切到浅色后，浏览器顶上还是深色 */
+          document
+            .querySelector('meta[data-theme-color]')
+            ?.setAttribute('content', next === 'dark' ? '#0d1117' : '#f6f7f9')
+          sync(next)
+          try {
+            localStorage.setItem('theme', next)
+          } catch {
+            /* 忽略 */
+          }
+          /* 播报结果。先清空再写，是为了让"浅→深→浅"这种连续切换每次都念 ——
+             内容没变化时 aria-live 不会重复播报。 */
+          if (status) {
+            status.textContent = ''
+            requestAnimationFrame(() => {
+              status.textContent = next === 'dark' ? '已切换到深色主题' : '已切换到浅色主题'
+            })
+          }
+        })
+      })()
+    </script><script>
+          /* 两个小动作（关掉不影响阅读）：
+             1) 顶部的阅读进度线 → 往 .read-progress 上写 --p
+             2) 侧栏目录的滚动高亮 → 给当前章节的链接打 aria-current="true"
+             2026-10-19 第二版：删掉了「指针跟随的镜面高光」。
+             背景从彩色极光换成纸 + 单色暗记之后，那圈白斑在纸上没有任何东西可以反射，
+             只剩一层脏雾 —— 与其留着凑数，不如不要。 */
+          ;(() => {
+            const root = document.documentElement
+
+            /* ---------- 1. 阅读进度 ---------- */
+            const bar = document.querySelector('.read-progress')
+            if (bar) {
+              let raf2 = 0
+              const calc = () => {
+                raf2 = 0
+                const max = root.scrollHeight - root.clientHeight
+                const p = max > 0 ? Math.min(1, Math.max(0, root.scrollTop / max)) : 0
+                bar.style.setProperty('--p', p.toFixed(4))
+              }
+              addEventListener(
+                'scroll',
+                () => {
+                  if (!raf2) raf2 = requestAnimationFrame(calc)
+                },
+                { passive: true },
+              )
+              addEventListener('resize', calc, { passive: true })
+              calc()
+            }
+
+            /* ---------- 2. 目录滚动高亮 ---------- */
+            const links = [...document.querySelectorAll('.side nav a[href^="#"]')]
+            const targets = links
+              .map((a) => ({ a, el: document.getElementById(decodeURIComponent(a.hash.slice(1))) }))
+              .filter((x) => x.el)
+            if (targets.length && 'IntersectionObserver' in window) {
+              const setActive = (a) => {
+                for (const { a: l } of targets) l.removeAttribute('aria-current')
+                if (a) a.setAttribute('aria-current', 'true')
+              }
+              const visible = new Set()
+              const io = new IntersectionObserver(
+                (entries) => {
+                  for (const en of entries) {
+                    const hit = targets.find((t) => t.el === en.target)
+                    if (!hit) continue
+                    if (en.isIntersecting) visible.add(hit.a)
+                    else visible.delete(hit.a)
+                  }
+                  /* 同时有多个章节在视口里时，取文档顺序最靠前的那个 —— 与阅读方向一致 */
+                  setActive(links.find((l) => visible.has(l)) || null)
+                },
+                /* 顶部留出吸顶页头的高度，底部只认 30%：这样"刚滚到"就算当前章 */
+                { rootMargin: '-84px 0px -70% 0px', threshold: 0 },
+              )
+              for (const t of targets) io.observe(t.el)
+            }
+          })()
+        </script></body></html>

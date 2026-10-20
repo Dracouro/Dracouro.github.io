@@ -1,0 +1,693 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>暖洋洋呆猫村 · JINJIARAN</title><meta name="description" content="一只跑酷的猫，和一套从零手搓的背包。九天做完、停摆两年，全部用蓝图 —— 工程里一行 C++ 都没有。"><link rel="canonical" href="https://jinjiaran.com/projects/dcat/"><!--
+      图标组（2026-10-21：换成 R 标）。
+      由 `node tmp/make-brand-icons.mjs` 从矢量化的 R 生成，别手工换图。
+      · favicon.svg —— 深底圆角块 + 白色 R。**深底不是装饰**：标签栏底色不可控
+        （浅色主题浅灰 / 深色主题近黑），透明底的黑 R 在深色标签栏上会整块消失。
+      · favicon.ico —— 16/24/32/48 四档**各自原生渲染**后拼成（不是缩出来的），
+        老浏览器、收藏夹、各类爬虫要的就是它。
+      · apple-touch-icon —— 180×180 **满幅方角、不透明**：圆角与遮罩由 iOS 自己套。
+      · site.webmanifest —— Android/Chrome「添加到主屏幕」用，带 192/512 两档。
+      顺序：SVG 在前（首选），ICO 兜底。
+    --><link rel="icon" type="image/svg+xml" href="/favicon.svg"><link rel="icon" type="image/x-icon" href="/favicon.ico" sizes="16x16 24x24 32x32 48x48"><link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180"><link rel="manifest" href="/site.webmanifest"><meta name="generator" content="Astro v7.3.2"><meta property="og:type" content="website"><meta property="og:site_name" content="JINJIARAN"><meta property="og:title" content="暖洋洋呆猫村 · JINJIARAN"><meta property="og:description" content="一只跑酷的猫，和一套从零手搓的背包。九天做完、停摆两年，全部用蓝图 —— 工程里一行 C++ 都没有。"><meta property="og:url" content="https://jinjiaran.com/projects/dcat/"><!--
+      社交卡片图（2026-10-19 补）。之前全站没有任何 og:image，分享出去的链接是纯文字。
+      图是 public/og.png（1200×630，站点深底 + 品牌标），由 scripts/make-og.mjs 生成，
+      改文案/换标就重跑那个脚本，不要手工改图。
+      宽高必须写：部分抓取方（含微信/Twitter）会按它预留版位，缺了会裁得很难看。
+    --><meta property="og:image" content="https://jinjiaran.com/og.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="JINJIARAN · 个人作品站"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://jinjiaran.com/og.png"><!--
+      移动端浏览器地址栏染色。**只放一个 meta**，由下面那段内联脚本按最终主题
+      改 content —— 站内的主题是「手动切换 + data-theme」，不是跟随系统，
+      用两条 media 查询会跟用户手动选的打架。
+    --><meta name="theme-color" content="#f6f7f9" data-theme-color><script>
+      // 在首次绘制前定好主题，避免闪白；顺手把地址栏颜色定下来
+      ;(() => {
+        /* 先算出最终主题，再写 data-theme —— 两件事分开做，
+           是因为 localStorage 在隐私模式下会抛异常，旧写法里抛了就整段跳过。 */
+        let theme = 'light'
+        try {
+          const saved = localStorage.getItem('theme')
+          theme =
+            saved === 'light' || saved === 'dark'
+              ? saved
+              : window.matchMedia('(prefers-color-scheme: dark)').matches
+                ? 'dark'
+                : 'light'
+        } catch {
+          theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+        }
+        document.documentElement.dataset.theme = theme
+
+        const meta = document.querySelector('meta[data-theme-color]')
+        if (meta) meta.setAttribute('content', theme === 'dark' ? '#0d1117' : '#f6f7f9')
+      })()
+    </script><link rel="stylesheet" href="/_astro/BaseLayout.CKlrZbNO.css"><link rel="stylesheet" href="/_astro/index.vWTfYhUo.css"><script type="module" src="/_astro/page.CQWjsXKf.js"></script></head><body class="glass"><div class="backdrop" aria-hidden="true"><i class="mark"></i><i class="grid"></i></div><div class="read-progress" aria-hidden="true"></div><a class="skip-link" href="#main">跳到主内容</a><header class="site-header"><div class="wrap"><a class="brand" href="/"><svg class="mark" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 524 438"><path fill="currentColor" fill-rule="evenodd" d="M416.82 435.14C401.57 430.1 389.97 420.04 326.46 356.8C296.19 326.66 271.11 302 270.71 302C270.32 302 270 305.17 270 309.04C270 325.19 266.58 345.78 262.45 354.51C255.61 368.97 239.01 381.19 219 386.5C209.37 389.05 184.12 389.66 172.36 387.62C134.98 381.14 105.07 359.07 93.9 329.73C92.7 326.56 91.89 323.77 92.12 323.55C92.35 323.32 95.67 323.54 99.52 324.04C109.01 325.26 124.12 325.21 132 323.93C141.17 322.44 145.84 319.58 148.95 313.53L151.5 308.56L151.81 272.78L152.12 237L132.31 236.97C105.96 236.93 68.66 235.43 57.5 233.96C32.51 230.67 18.83 221.26 8.86 200.5C3.37 189.06 0.95 178.74 0.29 164C-1.78 117.22 20.72 76.49 57.46 60.54C61.84 58.64 65.56 57.23 65.73 57.39C65.9 57.56 65.56 63.06 64.98 69.6C63.25 89.16 65.33 104.68 70.52 110.84C71.9 112.48 75.16 114.64 77.76 115.64C82.12 117.3 87.25 117.47 141 117.7C198.58 117.94 199.41 117.91 194 116.14C184.03 112.87 177.68 108.9 169.91 101.11C155.15 86.31 149.34 67.33 153.5 47.5C157.85 26.81 174.05 9.13 194.5 2.75C204.23 -0.28 218.77 -0.28 228.5 2.75C253.04 10.4 270.97 34.35 270.97 59.5C270.97 84.6 253.48 108.19 229 116.11C223.57 117.87 224.17 117.89 274.6 117.95C330.81 118.01 346.08 118.82 360.71 122.53C388.99 129.7 411.57 149.04 419.41 172.81C426.33 193.77 425.17 212.89 415.83 232C412.46 238.88 410.01 242.14 402.95 249.15L394.22 257.79L425.86 289.28C461.17 324.42 463.99 326.58 473.64 325.78C477.54 325.46 480.31 324.42 484.3 321.77C490.34 317.75 503.89 304.49 509.63 296.96C511.71 294.23 513.7 292 514.05 292C514.92 292 519.59 304.17 521.52 311.5C527.78 335.19 521.31 366.33 505.14 390.29C490.96 411.31 472.31 426.78 452.87 433.64C442.77 437.2 425.28 437.93 416.82 435.14ZM293.41 220.59C301.72 216.52 304.4 212.05 304.85 201.48C305.27 191.48 302.79 184.69 296.87 179.62C292 175.45 287.15 174 278.13 174L271 174L271 199.13L271 224.25L279.36 223.81C285.87 223.47 288.97 222.76 293.41 220.59Z"/></svg>
+<span>JINJIARAN<span class="sub"> · 个人作品站</span></span></a><nav class="nav" aria-label="主导航"><a href="/?browse=1">首页</a><a href="/projects" aria-current="page">项目</a><a href="/gallery">图片</a><a href="/videos">视频</a><a href="/docs">文档</a><a href="/models">模型</a><a href="/tools">工具</a><a href="/about">关于</a></nav><button class="icon-btn" type="button" data-search-open aria-label="站内搜索" title="搜索（按 / ）" aria-expanded="false" aria-controls="site-search" data-astro-cid-av774hkb><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" data-astro-cid-av774hkb><circle cx="11" cy="11" r="7" data-astro-cid-av774hkb></circle><path d="m20 20-3.5-3.5" data-astro-cid-av774hkb></path></svg></button><button class="icon-btn" id="theme-toggle" type="button" aria-label="切换深浅色主题" aria-pressed="false"><svg class="sun" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"></path></svg><svg class="moon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"></path></svg></button><!--
+          主题切换的状态播报（2026-10-19 审计 D3）。
+          按钮本身只管"按下去了没有"（aria-pressed），**说不清现在是什么主题** ——
+          读屏用户听到"切换深浅色主题，已按下"，还是不知道屏幕上到底变深了还是变浅了。
+          所以另起一个 role="status" 的区域，切换后把结果念出来。
+          role="status" 自带 aria-live="polite"；这里两个都写，是为了兼容只认其一的读屏。
+          它必须常驻 DOM（不能切换时才插入），否则播报不会触发。
+        --><p class="sr-only" role="status" aria-live="polite" data-theme-status></p></div></header><main id="main" data-pagefind-body><div class="wrap" data-astro-cid-rjht73i5><header class="glass-hero" style="--i:0" data-astro-cid-rjht73i5><p class="crumb" data-astro-cid-rjht73i5><a href="/projects" data-astro-cid-rjht73i5>项目</a><span aria-hidden="true" data-astro-cid-rjht73i5>/</span><span data-astro-cid-rjht73i5>暖洋洋呆猫村</span></p><div class="proj-head" data-astro-cid-rjht73i5><div data-astro-cid-rjht73i5><h1 class="h-page" data-astro-cid-rjht73i5>暖洋洋呆猫村</h1><p class="proj-summary" data-astro-cid-rjht73i5>一只跑酷的猫，和一套从零手搓的背包。九天做完、停摆两年，全部用蓝图 —— 工程里一行 C++ 都没有。</p><div class="proj-meta" data-astro-cid-rjht73i5><span class="chip" data-astro-cid-rjht73i5>搁置</span><span class="chip" data-astro-cid-rjht73i5>工作区 U_DCat02</span><span class="chip" data-astro-cid-rjht73i5>蓝图</span><span class="chip" data-astro-cid-rjht73i5>增强输入</span><span class="chip" data-astro-cid-rjht73i5>UMG</span><span class="chip" data-astro-cid-rjht73i5>数据表</span></div></div></div></header></div><div class="wrap" style="padding-block:26px 0" data-astro-cid-rjht73i5><figure class="proj-video" data-astro-cid-rjht73i5><video src="/media/dcat/demo.mp4" poster="/media/dcat/demo-poster.webp" width="1600" height="868" controls preload="metadata" playsinline data-astro-cid-rjht73i5></video><figcaption data-astro-cid-rjht73i5>实机演示 · 42 秒 · 原片 168 MB，已压至 6 MB</figcaption></figure></div><div class="wrap" style="padding-block:28px 0" data-astro-cid-rjht73i5><div class="proj-layout" data-astro-cid-rjht73i5><aside class="side" style="--i:1" data-astro-cid-rjht73i5><p class="side-label" data-astro-cid-rjht73i5>本项目</p><nav data-astro-cid-rjht73i5><a href="#overview" data-astro-cid-rjht73i5>概览</a><p class="side-label" style="margin-top:14px" data-astro-cid-rjht73i5>功能模块</p><a href="/projects/dcat/modules/cat" data-astro-cid-rjht73i5>猫角色</a><a href="/projects/dcat/modules/input" data-astro-cid-rjht73i5>增强输入</a><a href="/projects/dcat/modules/weapon" data-astro-cid-rjht73i5>武器与持握</a><a href="/projects/dcat/modules/animation" data-astro-cid-rjht73i5>动画蓝图</a><a href="/projects/dcat/modules/inventory" data-astro-cid-rjht73i5>背包系统</a><a href="/projects/dcat/modules/interaction" data-astro-cid-rjht73i5>交互与高亮</a><a href="/projects/dcat/modules/item-data" data-astro-cid-rjht73i5>物品数据</a><a href="/projects/dcat/modules/ui" data-astro-cid-rjht73i5>界面</a><a href="/projects/dcat/modules/level" data-astro-cid-rjht73i5>关卡与遗留</a></nav></aside><article class="prose glass-sheet" id="overview" style="--i:2" data-astro-cid-rjht73i5><h2 id="一句话">一句话</h2>
+<p>一只猫在一片积木场里跑跳，捡东西、开箱子、翻背包 —— 所有系统都用蓝图连出来，没有一行 C++。</p>
+<h2 id="这是个什么项目">这是个什么项目</h2>
+<p>《暖洋洋呆猫村》是一个 <strong>纯蓝图</strong> 的 UE5 第三人称原型：一只猫（网格 <code>CAT3_0</code>）在
+一片用 <code>SM_Cube</code> / <code>SM_QuarterCylinder</code> / <code>SM_Ramp</code> 搭出来的跑酷场里跑跳，
+路上能捡东西进背包、能开箱子、能切武器。</p>
+<p>它的看点不在玩法，在<strong>实现方式</strong>：这是一个把「角色控制 + 增强输入 + 背包数据 +
+交互高亮 + 一整套 UMG」全部用蓝图连出来的工程 —— 装不下 C++ 的一行代码。</p>
+<blockquote>
+<p>工程里<strong>没有 <code>Source/</code> 目录</strong>，没有 <code>.cpp</code>，没有 <code>.h</code>。
+九个模块的所有逻辑，都是 <code>K2Node</code>。</p>
+</blockquote>
+<p>它同时也是一份<strong>很典型的中途工程样本</strong>：2024 年 11 月做了九天就停了，
+两年后才重新打开，于是工程里同时留着「当年的做法」和「当年没做完的地方」——
+一半的迁移、拼错的资产名、空掉的控件、零引用的基类。
+这些东西没有掩饰地留在了工程里，也是这份记录里最有信息量的部分。</p>
+<h2 id="玩法形状">玩法形状</h2>
+<p>一条很短的循环，但每一环都是自己搭的：</p>
+<blockquote>
+<p><strong>跑跳（含超级跳） → 看向物品（描边高亮） → 按 E 拾取 → 背包里整理 / 拖拽 / 丢弃 → 切武器</strong></p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>环节</th>
+<th>做什么</th>
+<th>落在哪个模块</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>跑跳</td>
+<td>WASD + 手柄，走 / 跑 / 蹲 / 跳 / <strong>超级跳</strong>（带冷却）</td>
+<td><a href="/projects/dcat/modules/cat">猫角色</a></td>
+</tr>
+<tr>
+<td>切武器</td>
+<td>Q 在「手持」与「背上」之间切换，带动画蒙太奇</td>
+<td><a href="/projects/dcat/modules/weapon">武器与持握</a></td>
+</tr>
+<tr>
+<td>找东西</td>
+<td>每帧从相机向前的球形射线，命中后物体上描边</td>
+<td><a href="/projects/dcat/modules/interaction">交互与高亮</a></td>
+</tr>
+<tr>
+<td>捡起</td>
+<td>按 E，物品写进背包槽，<strong>场景里那份自己销毁</strong></td>
+<td><a href="/projects/dcat/modules/inventory">背包系统</a></td>
+</tr>
+<tr>
+<td>整理</td>
+<td>背包 / 箱子两张网格，可拖拽互换、可右键弹菜单</td>
+<td><a href="/projects/dcat/modules/ui">界面</a></td>
+</tr>
+</tbody>
+</table>
+<h2 id="九个模块">九个模块</h2>
+<p>按「一块资产干一件事」切开，每个模块一份独立的解读与踩坑记录：</p>
+<table>
+<thead>
+<tr>
+<th>模块</th>
+<th>管什么</th>
+<th>关键资产</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="/projects/dcat/modules/cat">猫角色</a></td>
+<td>移动手感、跳跃、蹲伏、冲刺、超级跳</td>
+<td><code>BP_CATTTTTT</code>、<code>BP_ThirdPersonCharacter</code></td>
+</tr>
+<tr>
+<td><a href="/projects/dcat/modules/input">增强输入</a></td>
+<td>按键怎么变成意图，轴怎么被取反与死区</td>
+<td><code>IMC_Inventory_catAWSD</code>、10 个 <code>IA_*</code></td>
+</tr>
+<tr>
+<td><a href="/projects/dcat/modules/weapon">武器与持握</a></td>
+<td>武器怎么生成、挂到手上、跟着动画走</td>
+<td><code>BP_Weapon</code>、<code>ChildActorComponent</code></td>
+</tr>
+<tr>
+<td><a href="/projects/dcat/modules/animation">动画蓝图</a></td>
+<td>蹲/空中/移动/持械四路状态怎么算出来</td>
+<td><code>ABP_CAT</code>、<code>CR_Catt</code>、<code>SK_CAT3_0_CtrlRig</code></td>
+</tr>
+<tr>
+<td><a href="/projects/dcat/modules/inventory">背包系统</a></td>
+<td>槽位数组、增/删/转移、掉回世界</td>
+<td><code>InventorySystem</code>、<code>BPC_ItemContainer</code></td>
+</tr>
+<tr>
+<td><a href="/projects/dcat/modules/interaction">交互与高亮</a></td>
+<td>看向什么、能捡什么、按下去发生什么</td>
+<td><code>Interactlnterface</code>、<code>HighLightComponent</code>、<code>ItemDataComponent</code></td>
+</tr>
+<tr>
+<td><a href="/projects/dcat/modules/item-data">物品数据</a></td>
+<td>三个枚举、三个结构体、两张表 —— 以及一次做了一半的迁移</td>
+<td><code>F_ItemStruct</code>、<code>F_SlotStruct</code>、<code>S_ItemInfo</code>、<code>Item_Data</code></td>
+</tr>
+<tr>
+<td><a href="/projects/dcat/modules/ui">界面</a></td>
+<td>HUD、背包、箱子、菜单、拖拽预览共 11 个 UMG</td>
+<td><code>W_PlayerHUD</code>、<code>W_InventoryGrid</code>、<code>W_InventorySlot</code>…</td>
+</tr>
+<tr>
+<td><a href="/projects/dcat/modules/level">关卡与遗留</a></td>
+<td>跑酷场里摆了什么，以及工程里没清理干净的东西</td>
+<td><code>ThirdPersonMap</code>、<code>GM_Catt</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="工程规模">工程规模</h2>
+<table>
+<thead>
+<tr>
+<th>项</th>
+<th>数量</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>C++ 源文件</td>
+<td><strong>0</strong> —— 全蓝图</td>
+</tr>
+<tr>
+<td>蓝图（<code>Blueprint</code>）</td>
+<td>25</td>
+</tr>
+<tr>
+<td>UMG 界面（<code>WidgetBlueprint</code>）</td>
+<td>11</td>
+</tr>
+<tr>
+<td>输入资产（<code>InputAction</code> / <code>InputMappingContext</code>）</td>
+<td>10 / 1</td>
+</tr>
+<tr>
+<td>数据表 / 枚举 / 结构体</td>
+<td>2 / 3 / 3</td>
+</tr>
+<tr>
+<td>动画（<code>AnimSequence</code> / <code>PoseAsset</code> / <code>BlendSpace1D</code>）</td>
+<td>69 / 28 / 6</td>
+</tr>
+<tr>
+<td>控制绑定与重定向</td>
+<td>5 <code>ControlRigBlueprint</code>、3 <code>IKRetargeter</code>、2 <code>IKRigDefinition</code></td>
+</tr>
+<tr>
+<td>资产总数</td>
+<td>1121</td>
+</tr>
+<tr>
+<td>其中自制资产</td>
+<td>536（含 432 张导入图标 ⇒ <strong>真正手搓的 104 个</strong>）</td>
+</tr>
+<tr>
+<td><code>Content/</code> 体积</td>
+<td>1.3 GB（其中模板与第三方 1.17 GB）</td>
+</tr>
+<tr>
+<td>开发窗口</td>
+<td><strong>2024-11-12 → 2024-11-20（九天）</strong>，然后中断 22 个月</td>
+</tr>
+</tbody>
+</table>
+<p><strong>游戏逻辑全部住在两个小目录里</strong>：<code>Content/B_Cat/</code>（16 MB）和
+<code>Content/Inventory/</code>（2.4 MB）—— 加起来 18 MB，不到工程的 1.5%。
+剩下 1.17 GB 是 <code>StarterContent</code>（615 MB）、<code>Characters</code>（398 MB）、
+<code>Megascans</code>（155 MB）这些模板与第三方内容。</p>
+<h2 id="技术路线">技术路线</h2>
+<ul>
+<li><strong>纯蓝图，零 C++。</strong> 没有 <code>Source/</code>，没有编译步骤 —— 改完直接跑。
+代价也直接摆在工程里：凡是「需要连一大片节点才判得出来」的逻辑
+（背包增删、槽位查找、堆叠）都变成了几十个节点的大图，
+最长的 <code>RemoveFromlnventory</code> 有 <strong>39 个节点</strong>，<code>AddToInventory</code> 26 个。</li>
+<li><strong>增强输入（Enhanced Input）从第一天就用上了。</strong> 不是老式 Axis/Action Mapping，
+而是一个 <code>InputMappingContext</code> + 10 个 <code>InputAction</code>，
+取反、死区、HoldAndRelease 这些都在资产里配，不写代码。</li>
+<li><strong>数据驱动，但只驱动了一半。</strong> 物品定义在 <code>Item_Data</code> 表里、行结构是蓝图结构体
+<code>F_ItemStruct</code>；但槽位用的是另一个结构体 <code>F_SlotStruct</code>，
+而且两个结构体的 ID 类型不一样（见<a href="/projects/dcat/modules/item-data">物品数据</a>）。</li>
+<li><strong>组件化交互。</strong> 交互能力不写在角色里：物体实现 <code>Interactlnterface</code>
+并提供 <code>HighLightComponent</code>，角色侧的 <code>InventorySystem</code> 只负责射线与分派。</li>
+<li><strong>善用引擎自带的重定向链。</strong> 猫的骨架配了 <code>IKRetargeter</code> + <code>IKRigDefinition</code> +
+<code>ControlRigBlueprint</code>，说明动画是从外部（Mixamo 一类）重定向进来的，
+而不是自己 K 的。</li>
+</ul>
+<h2 id="版本进展">版本进展</h2>
+<p>这个工程没有版本控制记录（<code>.gitattributes</code> 在，<code>.git</code> 不在），
+所以时间线是从 <code>Saved/Logs/</code> 里翻出来的 —— 反而更直白：</p>
+<table>
+<thead>
+<tr>
+<th>时间</th>
+<th>状态</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2024-11-12</td>
+<td>第一次启动（<code>U_DCat.log</code> 最早时间戳 04:17 UTC）</td>
+</tr>
+<tr>
+<td>2024-11-13</td>
+<td><code>U_DCat02_2.log</code> 启动</td>
+</tr>
+<tr>
+<td>2024-11-18</td>
+<td>三个会话（06:31 / 10:42 / 13:57 UTC），改得最密的一天</td>
+</tr>
+<tr>
+<td>2024-11-19</td>
+<td>三个会话（04:09 / 07:15 / 13:03 UTC）</td>
+</tr>
+<tr>
+<td>2024-11-20</td>
+<td>最后一个 2024 年的会话（07:08 UTC）—— 之后停摆</td>
+</tr>
+<tr>
+<td>——</td>
+<td><strong>中断 22 个月</strong></td>
+</tr>
+<tr>
+<td>2026-09-30</td>
+<td>重新打开（15:31 UTC）。改的是 <code>W_Hotbar</code>、<code>W_InventoryGrid</code>、<code>W_InventorySlot</code>、<code>W_ItemInfo</code>、<code>W_PlayerHUD</code>、<code>W_PlayerMenu</code>、<code>W_Inventory</code> —— <strong>全是 UI</strong></td>
+</tr>
+</tbody>
+</table>
+<p>最后一次动的东西全是界面，而不是玩法 —— 这条线索本身就说明停下的位置在哪。</p>
+<h2 id="目前的状态">目前的状态</h2>
+<p><strong>能跑通的</strong>：角色移动与跳跃（含超级跳冷却）、增强输入全链路、
+蹲伏 / 冲刺 / 视角旋转、武器切手持与背上（带蒙太奇）、
+看向物体描边高亮、按 E 拾取进背包、物品从背包丢回世界、
+背包 / 箱子两张网格的拖拽互换、右键动作菜单（使用 / 丢弃1个 / 丢弃全部）、
+以及按 I 打开的角色菜单。</p>
+<p><strong>还没闭合的</strong>：</p>
+<ul>
+<li><strong>物品数据的迁移只做了一半。</strong> 新结构体 <code>S_ItemInfo</code> 和它的表 <code>ItemInfo_Data</code>
+都建好了，但表里<strong>一行数据都没有</strong>，工程里也没有任何地方在用它 ——
+老的 <code>F_ItemStruct</code> + <code>Item_Data</code>（两行）仍是唯一在跑的通路。</li>
+<li><strong>堆叠逻辑写了，数据说不该堆。</strong> <code>AddToInventory</code> 里有完整的
+「找同类槽 → 塞满 → 开新堆」，但表里两个物品的 <code>IsStackable?</code> 都是 <code>false</code>。</li>
+<li><strong><code>W_Inventory</code>（背包主界面）仍是空壳。</strong> 布局搭到了三层嵌套，
+但最里层的 <code>Border_40</code>、<code>HorizontalBox_281</code> 都没有子控件；
+唯一有文字的 <code>TextBlock_215</code> 写着占位符 <code>PlayerName</code>。</li>
+<li><strong><code>W_Hotbar</code>（快捷栏）完全没有逻辑</strong>，只有三个空事件；
+<code>W_ItemInfo</code> 里的标题与数量还是 <code>文本块</code> / <code>99</code> 这种默认值。</li>
+<li><strong>一整套多人网络函数（<code>Server_*</code> / <code>MC_Update</code> / <code>SetReplicates</code>）挂着，但没人调用。</strong>
+拾取走的是本地直连，不是服务器往返。</li>
+</ul>
+<p><strong>工程里的疑点与残留</strong>（不阻塞，但都是坑）：</p>
+<table>
+<thead>
+<tr>
+<th>现象</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ProjectName</code> 还是 <code>Third Person BP Game Template</code></td>
+<td>工程从头到尾<strong>没有改过名</strong></td>
+</tr>
+<tr>
+<td>配置里的默认 GameMode 还是模板的 <code>BP_ThirdPersonGameMode</code></td>
+<td>真正生效的是关卡 WorldSettings 里覆盖的 <code>GM_Catt</code>。改配置不会有效果</td>
+</tr>
+<tr>
+<td><code>AI_Turn_cc</code></td>
+<td>应该是 <code>IA_Turn_cc</code>，少打一个 <code>I</code></td>
+</tr>
+<tr>
+<td><code>RemoveFromlnventory</code> / <code>Onlnventoryupdate</code> / <code>ServerRemoveFromlnventory</code></td>
+<td>用的大写 <code>I</code> 而不是小写 <code>l</code> —— <code>ln</code> 与 <code>In</code> 混用</td>
+</tr>
+<tr>
+<td><code>BPC_PlayerInverntory</code></td>
+<td>拼错的 <code>Inverntory</code>，而且它是个<strong>空组件</strong>，只转调父类</td>
+</tr>
+<tr>
+<td><code>W_InventorySLOT</code> 与 <code>W_InventorySlot</code></td>
+<td>两个几乎同名的资产共存，前者控件树是<strong>空的</strong></td>
+</tr>
+<tr>
+<td><code>BP_ItemMaster</code></td>
+<td>一个零引用的物品基类，没有任何逻辑</td>
+</tr>
+<tr>
+<td><code>Saved/Crashes/</code></td>
+<td>留了一批崩溃转储</td>
+</tr>
+</tbody>
+</table>
+<h2 id="关于工作区">关于工作区</h2>
+<p>工程正源在 <code>D:/UE/UUUUUUUUUUUUUUUUUUU/U_DCat002/</code>（注意目录多一个 <code>0</code>，
+但 <code>.uproject</code> 与日志都叫 <code>U_DCat02</code>）。原始引擎关联是 <strong>5.4</strong>；
+为了读取蓝图结构，另建了一份 5.7 副本在 <code>.../暖洋洋呆猫村 5.7/</code>。</p>
+<p>工程里没有 <code>Source/</code>、没有 <code>.git</code>、没有 README、没有设计文档 ——
+九天的开发没留下任何文字说明。<strong>这份记录是从蓝图本身反推出来的</strong>：见<a href="/projects/dcat/modules/level">关卡与遗留</a>。</p>
+<blockquote>
+<p>⚠️ 关于读法：本工程是纯蓝图，蓝图对象在 UE 里<strong>不是文本资产</strong>，
+所以本站的「源码」区块在它下面没有内容 —— 那是正常的，不是漏了。
+蓝图的可读形式只有「节点列表」和「图」，前者已按模块整理进各页正文，
+后者需要从编辑器里手工复制（见<a href="/projects/dcat/modules/level">关卡与遗留</a>）。</p>
+</blockquote>
+<section class="blk" data-astro-cid-rjht73i5><h2 class="blk-title" data-astro-cid-rjht73i5>功能模块</h2><div class="mod-grid" data-astro-cid-rjht73i5><a class="card mod-card" href="/projects/dcat/modules/cat" data-astro-cid-rjht73i5><div class="mc-top" data-astro-cid-rjht73i5><h3 class="mc-title" data-astro-cid-rjht73i5>猫角色</h3><span class="chip" data-astro-cid-rjht73i5>搁置</span></div><p class="mc-summary" data-astro-cid-rjht73i5>一个 EventGraph 里九块分区、83 个节点，把走跑蹲跳和超级跳全连了出来 —— 顺带发现模板角色自己就被人改过，而且蹲下的碰撞体比站着还高。</p></a><a class="card mod-card" href="/projects/dcat/modules/input" data-astro-cid-rjht73i5><div class="mc-top" data-astro-cid-rjht73i5><h3 class="mc-title" data-astro-cid-rjht73i5>增强输入</h3><span class="chip" data-astro-cid-rjht73i5>搁置</span></div><p class="mc-summary" data-astro-cid-rjht73i5>一张 IMC、十个 IA、十六行按键映射。工程从第一天就用 Enhanced Input —— 连蹲和冲刺的触发器都被手调过。</p></a><a class="card mod-card" href="/projects/dcat/modules/weapon" data-astro-cid-rjht73i5><div class="mc-top" data-astro-cid-rjht73i5><h3 class="mc-title" data-astro-cid-rjht73i5>武器与持握</h3><span class="chip" data-astro-cid-rjht73i5>搁置</span></div><p class="mc-summary" data-astro-cid-rjht73i5>一把武器，两个挂点，一个插槽名 —— 而那个插槽名拼错了。武器从来不是&quot;生成&quot;出来的，是从子 Actor 里摘出来再挂到手上的。</p></a><a class="card mod-card" href="/projects/dcat/modules/animation" data-astro-cid-rjht73i5><div class="mc-top" data-astro-cid-rjht73i5><h3 class="mc-title" data-astro-cid-rjht73i5>动画蓝图</h3><span class="chip" data-astro-cid-rjht73i5>搁置</span></div><p class="mc-summary" data-astro-cid-rjht73i5>一个蓝图、三条图、47+23+13 个节点 —— 把&quot;蹲没蹲、在不在空中、手里有没有枪&quot;算成四个布尔，再喂给一张带分层混合的状态机。而骨架的 129 根骨骼全叫 Bone_000 这样的名字。</p></a><a class="card mod-card" href="/projects/dcat/modules/inventory" data-astro-cid-rjht73i5><div class="mc-top" data-astro-cid-rjht73i5><h3 class="mc-title" data-astro-cid-rjht73i5>背包系统</h3><span class="chip" data-astro-cid-rjht73i5>搁置</span></div><p class="mc-summary" data-astro-cid-rjht73i5>一个组件装逻辑、一个组件装容器、一个组件只是空壳 —— 加物品是一个 While 循环配三张安全网，减物品要分&quot;减一个&quot;和&quot;清空整叠&quot;两条路，还有一支每帧跑的球形射线。</p></a><a class="card mod-card" href="/projects/dcat/modules/interaction" data-astro-cid-rjht73i5><div class="mc-top" data-astro-cid-rjht73i5><h3 class="mc-title" data-astro-cid-rjht73i5>交互与高亮</h3><span class="chip" data-astro-cid-rjht73i5>搁置</span></div><p class="mc-summary" data-astro-cid-rjht73i5>一个接口、三个函数、四处实现，而四处实现彼此都不一样 —— 真正干活的是挂在物品上的两个组件，物品 Actor 自己反倒是个空壳。至于描边，查到最后发现只写了&quot;关&quot;、没写&quot;开&quot;。</p></a><a class="card mod-card" href="/projects/dcat/modules/item-data" data-astro-cid-rjht73i5><div class="mc-top" data-astro-cid-rjht73i5><h3 class="mc-title" data-astro-cid-rjht73i5>物品数据</h3><span class="chip" data-astro-cid-rjht73i5>搁置</span></div><p class="mc-summary" data-astro-cid-rjht73i5>三个枚举、三个结构体、两张表 —— 以及一次做到一半的迁移：新结构体丢掉了旧结构体的两个字段、补上了两个新字段，而那张新表里一行数据都没有。</p></a><a class="card mod-card" href="/projects/dcat/modules/ui" data-astro-cid-rjht73i5><div class="mc-top" data-astro-cid-rjht73i5><h3 class="mc-title" data-astro-cid-rjht73i5>界面</h3><span class="chip" data-astro-cid-rjht73i5>搁置</span></div><p class="mc-summary" data-astro-cid-rjht73i5>11 个 UMG，控件的骨架搭得很完整 —— 但热键栏和信息面板的图是空的，还有两个控件连控件树都没有。真正在干活的是 5 个。</p></a><a class="card mod-card" href="/projects/dcat/modules/level" data-astro-cid-rjht73i5><div class="mc-top" data-astro-cid-rjht73i5><h3 class="mc-title" data-astro-cid-rjht73i5>关卡与遗留</h3><span class="chip" data-astro-cid-rjht73i5>搁置</span></div><p class="mc-summary" data-astro-cid-rjht73i5>一个 38 个 Actor 的跑酷测试场、一块还写着 &quot;Third Person Template&quot; 的牌子、一套把 GameMode 改在关卡里而不是配置里的分层，以及一份长到需要单独开一页的遗留清单。</p></a></div></section><p class="updated" data-astro-cid-rjht73i5>最后更新：2024/3/6</p></article></div></div></main><footer class="site-footer"><div class="wrap row"><p style="margin:0">© 2024–2026  内容版权归作者所有</p><p style="margin:0"><span class="chip">静态站</span><span class="chip" style="margin-left:6px">CDN 直出</span><span class="chip" style="margin-left:6px">0 台服务器</span></p></div></footer><!--
+      搜索面板挂在 </body> 前，不能放进页头：
+      页头有 backdrop-filter，它会让后代里的 position: fixed 以页头为包含块，
+      面板会被裁在页头那条 60px 的带子里。
+    --><div class="search-layer" id="site-search" data-search-layer hidden data-astro-cid-av774hkb><div class="search-backdrop" data-search-close aria-hidden="true" data-astro-cid-av774hkb></div><div class="search-panel" role="dialog" aria-modal="true" aria-label="站内搜索" data-astro-cid-av774hkb><div class="search-bar" data-astro-cid-av774hkb><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" data-astro-cid-av774hkb><circle cx="11" cy="11" r="7" data-astro-cid-av774hkb></circle><path d="m20 20-3.5-3.5" data-astro-cid-av774hkb></path></svg><input type="search" data-search-input placeholder="搜项目、模块、图集、蓝图…" autocomplete="off" spellcheck="false" aria-label="搜索关键词" data-astro-cid-av774hkb><kbd data-astro-cid-av774hkb>Esc</kbd></div><div class="search-body" data-search-body data-astro-cid-av774hkb><p class="search-tip" data-astro-cid-av774hkb>输入关键词开始搜索。按 <b data-astro-cid-av774hkb>/</b> 或 <b data-astro-cid-av774hkb>Ctrl</b>+<b data-astro-cid-av774hkb>K</b> 随时打开。</p></div></div></div><script>
+      ;(() => {
+        const layer = document.querySelector('[data-search-layer]')
+        if (!layer) return
+
+        const input = layer.querySelector('[data-search-input]')
+        const body = layer.querySelector('[data-search-body]')
+        const TIP =
+          '<p class="search-tip">输入关键词开始搜索。按 <b>/</b> 或 <b>Ctrl</b>+<b>K</b> 随时打开。</p>'
+
+        /* ---------------- Pagefind 懒加载 ---------------- */
+        let enginePromise = null
+        const loadEngine = () => {
+          if (!enginePromise) {
+            enginePromise = import('/pagefind/pagefind.js')
+              .then(async (pf) => {
+                try {
+                  await pf.options({ excerptLength: 24 })
+                } catch {
+                  /* 老版本没有 options，忽略 */
+                }
+                return pf
+              })
+              .catch((err) => {
+                enginePromise = null // 允许下次重试
+                throw err
+              })
+          }
+          return enginePromise
+        }
+
+        /* ---------------- 渲染 ---------------- */
+        const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
+
+        const setTip = (html) => {
+          body.innerHTML = html
+        }
+
+        const render = (items, query) => {
+          if (!items.length) {
+            setTip(`<p class="search-tip">没有找到和「${esc(query)}」相关的内容。</p>`)
+            return
+          }
+
+          const ul = document.createElement('ul')
+          ul.className = 'search-list'
+
+          for (const it of items) {
+            const a = document.createElement('a')
+            a.href = it.url || '/'
+
+            const t = document.createElement('span')
+            t.className = 'search-item-title'
+            t.textContent = (it.meta && it.meta.title) || it.url || '未命名'
+            a.append(t)
+
+            if (it.excerpt) {
+              const e = document.createElement('span')
+              e.className = 'search-item-excerpt'
+              // Pagefind 给的片段已经转义过，只有 <mark> 是高亮标签
+              e.innerHTML = it.excerpt
+              a.append(e)
+            }
+
+            const li = document.createElement('li')
+            li.append(a)
+            ul.append(li)
+          }
+
+          body.textContent = ''
+          body.append(ul)
+        }
+
+        /* ---------------- 搜索 ---------------- */
+        let seq = 0
+        const run = async (raw) => {
+          const mine = ++seq
+          const query = raw.trim()
+
+          if (!query) {
+            setTip(TIP)
+            return
+          }
+
+          setTip('<p class="search-tip">搜索中…</p>')
+
+          let pf
+          try {
+            pf = await loadEngine()
+          } catch {
+            setTip(
+              '<p class="search-tip">搜索索引暂时用不了。<br />索引是构建期生成的，' +
+                '<b>本地开发模式（pnpm dev）下没有</b>，跑一次 <b>pnpm build</b> 或 <b>pnpm preview</b> 就有了。</p>',
+            )
+            return
+          }
+          if (mine !== seq) return
+
+          try {
+            const res = await pf.search(query)
+            if (mine !== seq) return
+            const items = await Promise.all(res.results.slice(0, 8).map((r) => r.data()))
+            if (mine !== seq) return
+            render(items, query)
+          } catch {
+            setTip('<p class="search-tip">搜索出错了，换几个词再试试。</p>')
+          }
+        }
+
+        let timer
+        input.addEventListener('input', () => {
+          clearTimeout(timer)
+          timer = setTimeout(() => run(input.value), 130)
+        })
+
+        /* ---------------- 开关 ----------------
+         * 焦点闭环（2026-10-19 审计 D2）。此前的问题：
+         *   · 点开搜索、Esc 关掉之后，焦点落在 <body> 上 —— 键盘用户等于被扔回页首，
+         *     得从头 Tab 一遍才能回到刚才那颗放大镜；
+         *   · Tab 能一路走出面板、跑到页头导航和页脚链接上，而背景还盖着，
+         *     人是"看不见自己在哪"的。
+         *
+         * 做法分两层：
+         *   ① `inert` 给面板以外的所有 body 子节点 —— 一整片区域不可聚焦、不可点、
+         *     读屏也跳过。这是浏览器原生的"这块不参与交互"，比自己数可聚焦元素可靠；
+         *   ② Tab 在面板内显式循环 —— inert 已经挡住了外面的元素，但焦点走到最后
+         *     一个链接后浏览器会把焦点交给地址栏，再 Tab 回来就出了面板。显式兜一圈。
+         */
+        const isTyping = (el) =>
+          el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)
+
+        const trigger = document.querySelector('[data-search-open]')
+        /* 面板以外的所有 body 直接子节点（含 skip-link / header / main / footer）。
+           脚本标签也在里面 —— 给 <script> 设 inert 没有任何副作用。 */
+        const background = () => [...document.body.children].filter((el) => el !== layer)
+
+        /** 记住"打开之前焦点在哪"，关的时候还回去 */
+        let lastFocus = null
+
+        const focusables = () => {
+          const list = [...layer.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])')]
+          /* 结果列表是动态渲染的，用 offsetParent 过滤掉 [hidden] 与非可见项 */
+          return list.filter((el) => el === input || el.offsetParent !== null)
+        }
+
+        const open = () => {
+          lastFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
+          layer.hidden = false
+          document.body.style.overflow = 'hidden'
+          background().forEach((el) => el.setAttribute('inert', ''))
+          trigger?.setAttribute('aria-expanded', 'true')
+          input.focus()
+          input.select()
+          // 打开的那一刻就把索引拉起来，等"输入完再等下载"会显得卡
+          loadEngine().catch(() => {})
+        }
+
+        const close = () => {
+          layer.hidden = true
+          document.body.style.overflow = ''
+          background().forEach((el) => el.removeAttribute('inert'))
+          trigger?.setAttribute('aria-expanded', 'false')
+          /* 还焦点之前确认它还在文档里 —— 面板里点链接跳走时焦点目标可能是旧元素 */
+          if (lastFocus && document.contains(lastFocus)) lastFocus.focus()
+          lastFocus = null
+        }
+
+        /* Tab 在面板里循环。Shift+Tab 从第一个回到最后一个，Tab 从最后一个回到第一个。 */
+        layer.addEventListener('keydown', (e) => {
+          if (e.key !== 'Tab') return
+          const list = focusables()
+          if (!list.length) return
+          const first = list[0]
+          const last = list[list.length - 1]
+          if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault()
+            last.focus()
+          } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault()
+            first.focus()
+          }
+        })
+
+        document.addEventListener('click', (e) => {
+          if (e.target.closest('[data-search-open]')) {
+            e.preventDefault()
+            layer.hidden ? open() : close()
+            return
+          }
+          if (e.target.closest('[data-search-close]')) {
+            e.preventDefault()
+            close()
+          }
+        })
+
+        document.addEventListener('keydown', (e) => {
+          const open_ = !layer.hidden
+
+          if (e.key === 'Escape' && open_) {
+            close()
+            return
+          }
+          if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+            e.preventDefault()
+            open_ ? close() : open()
+            return
+          }
+          if (e.key === '/' && !open_ && !isTyping(e.target) && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            e.preventDefault()
+            open()
+          }
+        })
+
+        /* 上下键在结果里走 */
+        input.addEventListener('keydown', (e) => {
+          if (e.key !== 'ArrowDown') return
+          e.preventDefault()
+          body.querySelector('a')?.focus()
+        })
+        body.addEventListener('keydown', (e) => {
+          const links = [...body.querySelectorAll('a')]
+          const i = links.indexOf(document.activeElement)
+          if (e.key === 'ArrowDown') {
+            e.preventDefault()
+            links[Math.min(i + 1, links.length - 1)]?.focus()
+          } else if (e.key === 'ArrowUp') {
+            e.preventDefault()
+            i <= 0 ? input.focus() : links[i - 1].focus()
+          }
+        })
+      })()
+    </script><script>
+      // 主题切换：写 data-theme + 地址栏染色 + 记住选择 + 告诉读屏
+      ;(() => {
+        const btn = document.getElementById('theme-toggle')
+        if (!btn) return
+        const status = document.querySelector('[data-theme-status]')
+
+        /* 初值：<head> 里那段脚本已经把最终主题写进 data-theme 了，
+           这里只负责让按钮的 aria-pressed 跟它对齐（不能写死在 HTML 里 ——
+           首屏主题有一半概率来自系统偏好，服务端并不知道）。 */
+        const sync = (theme) => {
+          btn.setAttribute('aria-pressed', theme === 'dark' ? 'true' : 'false')
+        }
+        sync(document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light')
+
+        btn.addEventListener('click', () => {
+          const root = document.documentElement
+          const next = root.dataset.theme === 'dark' ? 'light' : 'dark'
+          root.dataset.theme = next
+          /* 地址栏跟着变，否则在深色系统里手动切到浅色后，浏览器顶上还是深色 */
+          document
+            .querySelector('meta[data-theme-color]')
+            ?.setAttribute('content', next === 'dark' ? '#0d1117' : '#f6f7f9')
+          sync(next)
+          try {
+            localStorage.setItem('theme', next)
+          } catch {
+            /* 忽略 */
+          }
+          /* 播报结果。先清空再写，是为了让"浅→深→浅"这种连续切换每次都念 ——
+             内容没变化时 aria-live 不会重复播报。 */
+          if (status) {
+            status.textContent = ''
+            requestAnimationFrame(() => {
+              status.textContent = next === 'dark' ? '已切换到深色主题' : '已切换到浅色主题'
+            })
+          }
+        })
+      })()
+    </script><script>
+          /* 两个小动作（关掉不影响阅读）：
+             1) 顶部的阅读进度线 → 往 .read-progress 上写 --p
+             2) 侧栏目录的滚动高亮 → 给当前章节的链接打 aria-current="true"
+             2026-10-19 第二版：删掉了「指针跟随的镜面高光」。
+             背景从彩色极光换成纸 + 单色暗记之后，那圈白斑在纸上没有任何东西可以反射，
+             只剩一层脏雾 —— 与其留着凑数，不如不要。 */
+          ;(() => {
+            const root = document.documentElement
+
+            /* ---------- 1. 阅读进度 ---------- */
+            const bar = document.querySelector('.read-progress')
+            if (bar) {
+              let raf2 = 0
+              const calc = () => {
+                raf2 = 0
+                const max = root.scrollHeight - root.clientHeight
+                const p = max > 0 ? Math.min(1, Math.max(0, root.scrollTop / max)) : 0
+                bar.style.setProperty('--p', p.toFixed(4))
+              }
+              addEventListener(
+                'scroll',
+                () => {
+                  if (!raf2) raf2 = requestAnimationFrame(calc)
+                },
+                { passive: true },
+              )
+              addEventListener('resize', calc, { passive: true })
+              calc()
+            }
+
+            /* ---------- 2. 目录滚动高亮 ---------- */
+            const links = [...document.querySelectorAll('.side nav a[href^="#"]')]
+            const targets = links
+              .map((a) => ({ a, el: document.getElementById(decodeURIComponent(a.hash.slice(1))) }))
+              .filter((x) => x.el)
+            if (targets.length && 'IntersectionObserver' in window) {
+              const setActive = (a) => {
+                for (const { a: l } of targets) l.removeAttribute('aria-current')
+                if (a) a.setAttribute('aria-current', 'true')
+              }
+              const visible = new Set()
+              const io = new IntersectionObserver(
+                (entries) => {
+                  for (const en of entries) {
+                    const hit = targets.find((t) => t.el === en.target)
+                    if (!hit) continue
+                    if (en.isIntersecting) visible.add(hit.a)
+                    else visible.delete(hit.a)
+                  }
+                  /* 同时有多个章节在视口里时，取文档顺序最靠前的那个 —— 与阅读方向一致 */
+                  setActive(links.find((l) => visible.has(l)) || null)
+                },
+                /* 顶部留出吸顶页头的高度，底部只认 30%：这样"刚滚到"就算当前章 */
+                { rootMargin: '-84px 0px -70% 0px', threshold: 0 },
+              )
+              for (const t of targets) io.observe(t.el)
+            }
+          })()
+        </script></body></html>

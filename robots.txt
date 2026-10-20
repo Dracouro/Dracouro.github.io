@@ -1,0 +1,15 @@
+User-agent: *
+Allow: /
+
+# /proto/home.html 是首页的对照副本（线上首页就是 /，内容一模一样）。
+# /proto/letters.html 是"只有字母屏"的独立原型，同样不该作为正式页面被收录。
+#
+# 只挡这两个页面 —— 千万别写成 `Disallow: /proto/`：首页渲染必需的
+# /proto/lib/three.module.min.js（+ three.core.min.js）就在那个目录下，
+# 第二屏的三维档案阵列资源 /proto/three-archive/… 也在那儿。搜索引擎
+# 必须能抓到它们，否则首页在它眼里就是一片空白。
+Disallow: /proto/home.html
+Disallow: /proto/letters.html
+
+# unlisted / private 内容不构建成公开页面，因此无需在此额外屏蔽
+Sitemap: https://jinjiaran.com/sitemap-index.xml

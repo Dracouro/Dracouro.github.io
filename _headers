@@ -1,0 +1,115 @@
+# Cloudflare Pages 缓存规则
+# 构建产物带内容哈希，可以放心长缓存
+
+/_astro/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# HTML 必须每次回源校验，否则发新内容访客看不到
+/*.html
+  Cache-Control: public, max-age=0, must-revalidate
+
+/pagefind/*
+  Cache-Control: public, max-age=86400
+
+# 自托管的第三方库（ueblueprint 的语法高亮/蓝图查看器；three 不在这个目录下，
+# 它在 /proto/lib/* 与 /proto/three-archive/*，各有各的规则）。
+# model-viewer 已于 2026-10-19 移除（构建体积 1.04 MB，源码零引用）。
+# 刻意不用 immutable：这些文件名不带内容哈希，升级库之后文件名不变，
+# 打一年缓存会让老访客一直用着旧库。7 天是个折中 ——
+# 平时完全走缓存，升级后一周内自然换新，不至于要靠清缓存。
+/vendor/*
+  Cache-Control: public, max-age=604800, stale-while-revalidate=86400
+
+# 三维嵌入包（首页接管屏按需加载的那个 1.2 MB 模块 + 两个 GLB + 一个 version.json）。
+# 同理不能 immutable：全是固定文件名，加了内容之后文件名不变，
+# 长缓存会让老访客一直看旧版本（甚至新旧数据错配）。
+# 显式写 max-age=0 是**把"每次都回源校验"这个约束钉下来** ——
+# 平台默认值以后变了也不会失守；没改动时就是一次 304，不传正文。
+#
+# ⚠️⚠️ 2026-09-30 实测：这条 max-age=0 对 archive.js **不生效**，别再指望它！
+#   Cloudflare 对「默认可缓存扩展名」（.js/.css/.svg/.png/.jpg/.webp/.woff…）会用
+#   zone 的 Browser Cache TTL（本 zone = 4 小时 = 14400）**覆盖源站的 Cache-Control**，
+#   而源站给 max-age=0 会被它当成"没指定"。同目录三份实测对照：
+#     archive.js             → public, max-age=14400   cf-cache-status: REVALIDATED  ← 被改写
+#     archives.json  (.json) → public, max-age=0       cf-cache-status: DYNAMIC      ← 保住
+#     assets/*.glb   (.glb)  → public, max-age=0       cf-cache-status: DYNAMIC      ← 保住
+#   （.json / .glb 不在那张扩展名表里，所以源站头保住了。）
+#   后果是「新宿主 + 旧引擎」：home.html 每次都是新的，archive.js 却在访客浏览器里躺
+#   4 小时 —— 表现为「阵列条数与实际内容对不上」「改过的引擎行为看起来没生效」。
+#   而且无头探针查不出来：它每次都是全新 profile，没有缓存，永远是好的。
+#
+#   解法刻意不依赖任何 CF 设置：构建期（scripts/sync-archive.mjs 的步骤 0，在最前面、
+#   不受"数据没变就早退"影响）把 archive.js 的 sha256 前 12 位落成同目录的 version.json；
+#   宿主 home.html 并行读它，import 时带 `?v=<hash>`。实测 query 参与 CF 缓存键
+#   （新 URL 首次一定 MISS），所以内容一变 URL 就变，旧缓存条目再也不会被用上。
+#   ⚠️ 换句话说：archive.js 的更新时效由 version.json 那套兜底，与本条规则无关；
+#   本条规则真正管住的是 archives.json / version.json / *.glb 这三类。
+#
+#   ⚠️ 同一机制还影响 /media/*（283 个 png/webp）—— 它们现在实际是 4 小时缓存，
+#   不是"每次校验"。要不要给 /media/* 单独定一条，见 memory 的待办。
+/proto/three-archive/*
+  Cache-Control: public, max-age=0, must-revalidate
+
+# ===== 首页三维阵列的模型：brotli 预压缩孪生（2026-10-19）=====
+#
+# 问题（线上实测，不是猜）：Cloudflare Pages 的自动压缩只认它那张可压缩 MIME 表，
+# `.glb` 走 `model/gltf-binary` **不在表里** —— 实测响应头里根本没有 Content-Encoding，
+# 访客实打实下载 3.4 MB。同目录的 archive.js 反而是 `Content-Encoding: br`。
+#
+# 做法：`scripts/brotli-assets.mjs` 在构建期产出 `<name>.glb.br`，这里给它派发
+# `Content-Encoding: br`，让**浏览器自己解压** —— 于是 GLTFLoader 读到的仍是原始
+# glTF 字节流（魔数 / bufferView 偏移全不变），前端零改动。
+# 实测 3482 KB → 742 KB（-79%）；两个 GLB 合计 6.59 MB → 1.42 MB（-78%）。
+#
+# ⚠️ 三条约束，改之前先读完：
+#   1. `Content-Type` 必须照写 `model/gltf-binary`。`.br` 这个扩展名 CF 不认识，
+#      不写就发 `application/octet-stream`（浏览器虽然照样能解压，但以后谁看头都得懵）。
+#   2. `Vary: Accept-Encoding` 是给中间缓存看的：同一个 URL 对不同编码能力
+#      必须当成不同实体。少了它，一台不支持 br 的老客户端可能吃到缓存里的 br。
+#   3. **压缩是否生效被交给了 CDN**，所以 `spike/three-archive/src/scene.ts` 里
+#      没有用 `loadAsync(url)`，而是自己 fetch 一次并**先验 glTF 魔数** ——
+#      哪天这个头没派发出去，报错会直说「不是 glTF 字节流」，而不是一句
+#      "Unexpected token"。判线上是否真的生效，只用 curl 看头：
+#        curl -sI https://jinjiaran.com/proto/three-archive/assets/archive-cassette.glb.br
+#        期望：Content-Encoding: br + Content-Type: model/gltf-binary
+#
+# ⚠️ 缓存走上面 `/proto/three-archive/*` 那条（max-age=0 + must-revalidate），
+#    这里**刻意不写** Cache-Control —— 一条规则管一件事，改了缓存策略不用改两处。
+#    同理 `.glb.br` 不在 CF 的"默认可缓存扩展名"表里（表里是 .js/.css/.png…），
+#    所以上面那条 `max-age=0, must-revalidate` 能真的生效，不会重演 archive.js
+#    被 zone 的 Browser Cache TTL 覆盖成 4 小时那个问题。
+/proto/three-archive/assets/*.glb.br
+  Content-Type: model/gltf-binary
+  Content-Encoding: br
+  Vary: Accept-Encoding
+
+# WELCOME 首页的 three 运行时（three.module.min.js + three.core.min.js +
+# BufferGeometryUtils.js，共约 780 KB）—— 整页是 WebGL，这就是首屏地基。
+# 文件名同样不带内容哈希 → 不能 immutable（理由同 /vendor/*）。
+# 但它也不能跟着 three-archive 走"每次回源"：这是实打实的 780 KB 首屏成本，
+# 而 three 的版本升级极低频（升的时候一般会连带改 letters.html）。
+# 所以按 /vendor/* 那一档处理：平时全走缓存，升级后一周内自然换新。
+/proto/lib/*
+  Cache-Control: public, max-age=604800, stale-while-revalidate=86400
+
+# 嵌入的小游戏（首页 WELCOME 圆环里那个入口 → /games/mimi-world/）。
+# 整包原样拷进来的：index.html + js/*.js（其中 assets.js 是 406 KB 的贴图数据）。
+# 文件名同样不带内容哈希，所以不能 immutable —— 换版本时文件名一个都不变。
+# 按 /proto/three-archive/* 那一档处理：每次回源校验，没改动就是一次 304。
+# ⚠️ 上面记过的那条坑这里同样成立：CF 会用 zone 的 Browser Cache TTL 覆盖 .js 的
+#    源站 Cache-Control。真要立刻换版本，就整目录改名（/games/mimi-world-v2/），
+#    别指望这条头。
+/games/*
+  Cache-Control: public, max-age=0, must-revalidate
+
+# 基础安全头
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: SAMEORIGIN

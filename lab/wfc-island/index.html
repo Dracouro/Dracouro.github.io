@@ -1,0 +1,1443 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="color-scheme" content="dark" />
+<title>坍缩浮岛 · Collapse Isle</title>
+<meta name="description" content="用波函数坍缩（Wave Function Collapse）在浏览器里生成一座浮空小岛：看着每一格从不确定态被逐个观测、塌缩成地形，再立体化成一座可以转着看的岛。" />
+<style>
+  :root{
+    --fg:#e9eef7;
+    --fg2:#93a4bb;
+    --fg3:#5d6d84;
+    --line:rgba(255,255,255,.10);
+    --panel:rgba(15,21,33,.66);
+    --accent:#5ba8f5;
+    --accent-soft:rgba(91,168,245,.16);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;overflow:hidden;
+    background:radial-gradient(130% 95% at 50% 0%,#0e1725 0%,#070a12 68%);
+    color:var(--fg);
+    font:13px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased;
+    user-select:none;-webkit-user-select:none;
+    -webkit-tap-highlight-color:transparent;
+  }
+  #view{display:block;width:100%;height:100%;touch-action:none;cursor:grab}
+  #view.dragging{cursor:grabbing}
+
+  .hud{position:fixed;inset:0;pointer-events:none;display:flex;flex-direction:column;justify-content:space-between}
+  .bar{display:flex;align-items:center;gap:10px;padding:14px 18px;flex-wrap:wrap}
+  .bar.bottom{padding-bottom:max(14px, env(safe-area-inset-bottom))}
+
+  .brand{display:flex;align-items:baseline;gap:9px;letter-spacing:.01em}
+  .brand b{font-size:16px;font-weight:600}
+  .brand span{font-size:11px;color:var(--fg3);letter-spacing:.14em;text-transform:uppercase}
+
+  .stat{
+    margin-left:auto;font-size:12px;color:var(--fg2);
+    font-variant-numeric:tabular-nums;
+    background:var(--panel);border:1px solid var(--line);border-radius:999px;
+    padding:5px 12px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  }
+  .stat i{font-style:normal;color:var(--fg3)}
+  .stat b{color:var(--fg);font-weight:600}
+
+  .dock{
+    pointer-events:auto;
+    display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+    background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    padding:8px 10px;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+    box-shadow:0 10px 34px rgba(0,0,0,.42);
+  }
+  .btn{
+    appearance:none;border:1px solid var(--line);background:rgba(255,255,255,.045);
+    color:var(--fg);font:inherit;font-size:12.5px;line-height:1;
+    padding:8px 12px;border-radius:9px;cursor:pointer;transition:background .15s,border-color .15s,opacity .15s;
+  }
+  .btn:hover{background:rgba(255,255,255,.10)}
+  .btn:active{transform:translateY(1px)}
+  .btn.primary{background:rgba(91,168,245,.16);border-color:rgba(91,168,245,.42);color:#bfe0ff}
+  .btn.primary:hover{background:rgba(91,168,245,.26)}
+  .btn.on{background:rgba(91,168,245,.16);border-color:rgba(91,168,245,.42);color:#bfe0ff}
+  .btn:disabled{opacity:.35;cursor:default}
+  .btn:disabled:hover{background:rgba(255,255,255,.045)}
+
+  .slider{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--fg2);padding:0 4px}
+  .slider em{font-style:normal;color:var(--fg3);min-width:2.2em;text-align:right;font-variant-numeric:tabular-nums}
+  input[type=range]{
+    appearance:none;-webkit-appearance:none;width:78px;height:3px;border-radius:2px;
+    background:rgba(255,255,255,.16);outline:none;cursor:pointer;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;width:13px;height:13px;border-radius:50%;
+    background:#cfe4fb;border:none;box-shadow:0 0 0 3px rgba(91,168,245,.20);
+  }
+  input[type=range]::-moz-range-thumb{
+    width:13px;height:13px;border-radius:50%;background:#cfe4fb;border:none;
+  }
+
+  .hint{font-size:11.5px;color:var(--fg3);padding:0 4px;
+    background:var(--panel);border:1px solid var(--line);border-radius:999px;
+    padding:6px 12px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+  .hint kbd{font:inherit;color:var(--fg2);background:rgba(255,255,255,.08);border-radius:4px;padding:1px 5px;margin:0 1px}
+
+  .legend{display:flex;gap:9px;flex-wrap:wrap;font-size:11.5px;color:var(--fg3);padding:0 4px 0 2px}
+  .legend i{display:inline-flex;align-items:center;gap:5px;font-style:normal}
+  .legend i::before{content:"";width:9px;height:9px;border-radius:2.5px;background:var(--c)}
+
+  /* --- 编辑地形：色板 ---------------------------------------------------------
+     ⚠️ 显隐用 .on 类而不是 hidden 属性 —— 这里的 display 是 flex，
+     会把 UA 样式表里的 `[hidden]{display:none}` 整个盖掉，属性挂了也藏不住。
+     本站已经因为这条踩过两次（#detailOpen、#panelMedia img），别再走一遍。 */
+  .swatches{
+    display:none;align-items:center;gap:7px;flex-wrap:wrap;
+    pointer-events:auto;
+    background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    padding:7px 10px;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+    box-shadow:0 10px 34px rgba(0,0,0,.42);
+  }
+  .swatches.on{display:flex}
+  .sw{
+    display:inline-flex;align-items:center;gap:6px;
+    appearance:none;font:inherit;font-size:12.5px;line-height:1;cursor:pointer;
+    padding:6px 11px 6px 9px;border-radius:8px;
+    border:1px solid var(--line);background:rgba(255,255,255,.045);color:var(--fg);
+    transition:background .15s,border-color .15s;
+  }
+  .sw:hover{background:rgba(255,255,255,.10)}
+  .sw::before{
+    content:"";width:11px;height:11px;border-radius:3px;background:var(--c);
+    box-shadow:inset 0 0 0 1px rgba(0,0,0,.3);
+  }
+  .sw.sel{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+  /* 编辑态下色板按钮上已经写了地形名 —— 底下的纯文字图例是同一份信息说第二遍，
+     一并收起。用相邻兄弟选择器联动，不在 JS 里另记一个开关
+     （两份状态迟早会不同步，而这里 CSS 就能表达，没必要）。 */
+  .swatches.on + .legend{display:none}
+  .sw.eraser::before{
+    background:repeating-linear-gradient(45deg,#4a5566 0 3px,#2a3240 3px 6px);
+  }
+  #view.editing{cursor:crosshair}
+
+  @media (max-width:640px){
+    .bar{padding:10px 12px}
+    .brand span{display:none}
+    .slider input[type=range]{width:56px}
+    .legend{display:none}
+  }
+</style>
+</head>
+<body>
+<canvas id="view"></canvas>
+
+<div class="hud">
+  <div class="bar">
+    <div class="brand"><b>坍缩浮岛</b><span>Collapse Isle</span></div>
+    <div class="stat" id="stat">准备中…</div>
+  </div>
+
+  <div class="bar bottom">
+    <div class="dock">
+      <button class="btn primary" id="btnGen" title="快捷键 R / 空格">⟳ 重新生成</button>
+      <button class="btn" id="btnPause">⏸ 暂停</button>
+      <button class="btn" id="btnStep" disabled>⏭ 单步</button>
+      <label class="slider"><span>规模</span><input id="size" type="range" min="14" max="30" step="2" value="22" /><em id="sizeV">22</em></label>
+      <label class="slider"><span>速度</span><input id="speed" type="range" min="2" max="100" step="1" value="62" /><em id="speedV">62</em></label>
+      <button class="btn on" id="btnSpin">↻ 自转</button>
+      <button class="btn" id="btnSeed">#</button>
+      <button class="btn" id="btnEdit">✎ 编辑地形</button>
+    </div>
+    <div class="swatches" id="swatches"></div>
+    <div class="legend" id="legend"></div>
+    <div class="hint" id="hint">拖拽旋转 · 滚轮缩放 · 双击复位</div>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ==========================================================================
+   坍缩浮岛 —— 一个单文件、零依赖的波函数坍缩（WFC）小工程
+   --------------------------------------------------------------------------
+   两段式流程：
+     ①  求解：在 N×N 的网格上跑 WFC，记录**每一格被观测（坍缩）的顺序**。
+     ②  回放：按那个顺序把格子逐个点亮 —— 未观测的格子保持"叠加态"，
+         观测过的才落定成一种地形。然后整体立体化成一座浮空小岛。
+   记录顺序而不是实时求解，是为了让动画永远跑得完：求解失败时静默换种子重试，
+   用户看到的永远是那些已经确定能解出来的过程。
+   ========================================================================== */
+
+/* ---------------------------------------------------------------- 基础工具 */
+
+/** 32 位确定性随机数（mulberry32）—— 同一个种子永远得到同一座岛 */
+function mulberry32(a){
+  return function(){
+    a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/** 位置哈希 → [0,1)，用于"每格固定的随机扰动"（同一格每次刷新都一样） */
+function hash01(x, y, s){
+  let h = (Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263) + Math.imul(s | 0, 1274126177)) | 0;
+  h = (h ^ (h >>> 13)) | 0;
+  h = Math.imul(h, 1274126177) | 0;
+  h = (h ^ (h >>> 16)) >>> 0;
+  return h / 4294967296;
+}
+
+/* ------------------------------------------------------------ 地形与约束 */
+
+const VOID = 0, WATER = 1, SAND = 2, GRASS = 3, FOREST = 4, ROCK = 5;
+const LEVELS = [
+  { key:'void',   name:'深渊', top:'#0c1626', side:'#0a111d' },
+  { key:'water',  name:'水域', top:'#3f88c9', side:'#2a6199' },
+  { key:'sand',   name:'沙滩', top:'#e6d39d', side:'#c2a973' },
+  { key:'grass',  name:'草地', top:'#87bb6c', side:'#5d8d4a' },
+  { key:'forest', name:'林地', top:'#5a8f5e', side:'#3d6846' },
+  { key:'rock',   name:'岩石', top:'#a0a9b2', side:'#777f89' },
+];
+/** 岛底（地幔）用的岩石色 —— 深、冷，跟地表拉开层次 */
+const MANTLE_TOP = '#4a5361', MANTLE_SIDE = '#333b47';
+
+/**
+ * 相邻兼容表：key 的地形可以和数组里的地形紧挨着。
+ * 这张表就是整个工程的"规则"—— WFC 只负责在这套规则下找一组自洽的填法。
+ *
+ * 设计意图：
+ *   water 能挨 grass        → 内陆可以出现湖
+ *   sand  能挨 rock         → 海边可以立礁石
+ *   water 不能挨 forest/rock → 海岸线保留结构，不会糊成一团
+ *   void  只挨 void/water   → 岛的外缘一定是水，于是自然形成"环水的岛"
+ */
+const ADJ_TEXT = {
+  void:   ['void','water'],
+  water:  ['void','water','sand','grass'],
+  sand:   ['water','sand','grass','rock'],
+  grass:  ['water','sand','grass','forest'],
+  forest: ['grass','forest','rock'],
+  rock:   ['sand','forest','rock'],
+};
+
+/** 把上面的表编译成位掩码：ADJ[a] 的第 b 位 = 1 表示 a 与 b 可相邻 */
+const ADJ = new Uint8Array(6);
+for (let a = 0; a < 6; a++){
+  let m = 1 << a;
+  for (let b = 0; b < 6; b++){
+    if (ADJ_TEXT[LEVELS[a].key].indexOf(LEVELS[b].key) >= 0) m |= 1 << b;
+  }
+  ADJ[a] = m;
+}
+for (let a = 0; a < 6; a++){                 // 强制对称，防止手写表写单向
+  for (let b = 0; b < 6; b++){
+    if ((ADJ[a] >> b) & 1) ADJ[b] |= 1 << a;
+  }
+}
+
+/* --------------------------------------------------------------- 权重模型 */
+
+/** 基准权重：草地与水是主体，岩石最少 —— 决定岛的整体"地貌比例" */
+const BASE_W = [0, 62, 34, 72, 48, 24];
+
+/**
+ * 位置权重：按"离岛心的距离"给每种地形加权。
+ * 这不是作弊也不是后处理 —— WFC 里按格子调权重是标准做法，
+ * 它只是改变"随机挑一个候选"时的倾向，约束传播该拦的照样拦。
+ * 没有它环带会整齐得像同心圆；有了它，同一个种子也每次长得不一样。
+ * 高斯峰位大致对应：中心岩石 → 林地 → 草地 → 沙滩 → 外围水域。
+ */
+function biasFor(v, r, jitter){
+  let b = 1;
+  switch (v){
+    case WATER:  b = 0.14 + 3.20 * gauss(r, 1.00, 0.18); break;
+    case SAND:   b = 0.30 + 3.80 * gauss(r, 0.78, 0.16); break;
+    case GRASS:  b = 0.30 + 1.75 * gauss(r, 0.56, 0.26); break;
+    case FOREST: b = 0.16 + 2.60 * gauss(r, 0.34, 0.20); break;
+    case ROCK:   b = 0.05 + 4.60 * gauss(r, 0.06, 0.30); break;
+  }
+  // 逐格固定的随机抖动 —— 环带边界参差不齐全靠它
+  return b * (0.62 + 0.76 * jitter);
+}
+function gauss(x, mu, sigma){
+  const d = (x - mu) / sigma;
+  return Math.exp(-0.5 * d * d);
+}
+
+/* -------------------------------------------------------------- WFC 求解器 */
+
+const DIRS = [[1,0],[-1,0],[0,1],[0,-1]];
+
+class Solver {
+  /** @param n 网格边长；@param seed 随机种子 */
+  constructor(n, seed){
+    this.n = n;
+    this.seed = seed | 0;
+    this.rng = mulberry32(this.seed);
+    this.total = n * n;
+    this.cand  = new Uint8Array(this.total);  // 候选地形位掩码
+    this.fixed = new Uint8Array(this.total);  // 1 = 已确定（含掩码里的 void）
+    this.lv    = new Int8Array(this.total);   // 确定后的地形
+    this.w     = new Float32Array(this.total * 6); // 每格每地形的权重
+
+    this.lastIdx = -1; this.lastLv = 0; this.lastEnt = 0;
+  }
+
+  idx(x, z){ return z * this.n + x; }
+
+  /**
+   * 掩码 + 权重：把圆外的格子钉成"深渊"，圆内按到岛心的距离铺一套倾向权重。
+   * 岛的轮廓半径被三组不同频率的正弦扰动，所以每个种子给出不同的岛形。
+   */
+  init(){
+    const n = this.n, c = (n - 1) / 2, s = this.seed;
+    const FULL = 0b111110;                       // level 1..5
+    for (let z = 0; z < n; z++){
+      for (let x = 0; x < n; x++){
+        const i = this.idx(x, z);
+        const dx = (x - c) / c, dz = (z - c) / c;
+        const rad = Math.sqrt(dx * dx + dz * dz);
+        const ang = Math.atan2(dz, dx);
+
+        // 逐角度起伏的岛缘，三个频率叠出"有机"的轮廓（振幅别太大，否则会散成条带）
+        const edge = 0.850
+          + 0.070 * Math.sin(ang * 3 + s * 0.73)
+          + 0.042 * Math.sin(ang * 5 - s * 1.31)
+          + 0.026 * Math.sin(ang * 8 + s * 2.17);
+
+        if (rad > edge){
+          this.cand[i]  = 1 << VOID;
+          this.fixed[i] = 1;
+          this.lv[i]    = VOID;
+        } else {
+          this.cand[i] = FULL;
+        }
+
+        // 权重：用"实际半径 / 岛缘半径"归一化，岛的胖瘦才不会影响地貌比例
+        const r = Math.min(1, rad / edge);
+        const jit = hash01(x, z, s + 13);
+        for (let v = 1; v <= 5; v++){
+          this.w[i * 6 + v] = BASE_W[v] * biasFor(v, r, jit);
+        }
+      }
+    }
+  }
+
+  /** 把已经确定的格子推进约束队列，跑一次全量传播 */
+  seedPropagate(){
+    const stack = [];
+    for (let i = 0; i < this.total; i++) if (this.fixed[i]) stack.push(i);
+    return this.propagate(stack);
+  }
+
+  /**
+   * 约束传播（AC-3 风格）：
+   * 对队列里每个格子，算出"它的邻居们还允许保留哪些地形"，与邻居当前候选求交；
+   * 交集变了就继续往队列里推。交集为空 = 这组填法矛盾，整轮作废重来。
+   */
+  propagate(stack){
+    const n = this.n;
+    while (stack.length){
+      const i = stack.pop();
+      const ci = this.cand[i];
+      if (!ci) return false;
+      const x = i % n, z = (i / n) | 0;
+
+      for (let d = 0; d < 4; d++){
+        const nx = x + DIRS[d][0], nz = z + DIRS[d][1];
+        if (nx < 0 || nx >= n || nz < 0 || nz >= n) continue;   // 出界 = 无约束
+        const j = this.idx(nx, nz);
+
+        let allowed = 0;
+        for (let b = 0; b < 6; b++) if (ci & (1 << b)) allowed |= ADJ[b];
+
+        const nc = allowed & this.cand[j];
+        if (!nc) return false;
+        if (nc !== this.cand[j]){
+          this.cand[j] = nc;
+          stack.push(j);
+        }
+      }
+    }
+    return true;
+  }
+
+  /** 香农熵：候选集合越"杂"熵越高。WFC 永远先啃熵最低的那一格 */
+  entropy(i){
+    let sum = 0, logsum = 0;
+    const base = i * 6;
+    for (let v = 1; v <= 5; v++){
+      if (this.cand[i] & (1 << v)){
+        const w = this.w[base + v] || 1e-4;
+        sum += w; logsum += w * Math.log(w);
+      }
+    }
+    if (sum <= 0) return 0;
+    return Math.log(sum) - logsum / sum;
+  }
+
+  /** 观测一格：在所有熵最低的格子里随机挑一个，按权重掷出一种地形 */
+  step(){
+    let best = Infinity, ties = [];
+    for (let i = 0; i < this.total; i++){
+      if (this.fixed[i]) continue;
+      const c = this.cand[i];
+      // 只剩一个候选也算"已确定"，优先处理掉
+      const e = (c & (c - 1)) === 0 ? -1 : this.entropy(i);
+      if (e < best - 1e-9){ best = e; ties.length = 0; ties.push(i); }
+      else if (e <= best + 1e-9) ties.push(i);
+    }
+    if (!ties.length) return false;              // 全部观测完毕
+
+    const i = ties[(this.rng() * ties.length) | 0];
+    this.lastEnt = this.entropy(i);
+
+    const base = i * 6;
+    let total = 0;
+    for (let v = 1; v <= 5; v++) if (this.cand[i] & (1 << v)) total += this.w[base + v];
+
+    let pick = 1, acc = this.rng() * total;
+    for (let v = 1; v <= 5; v++){
+      if (this.cand[i] & (1 << v)){
+        acc -= this.w[base + v];
+        if (acc <= 0){ pick = v; break; }
+      }
+    }
+
+    this.cand[i]  = 1 << pick;
+    this.fixed[i] = 1;
+    this.lv[i]    = pick;
+    this.lastIdx  = i;
+    this.lastLv   = pick;
+
+    return this.propagate([i]) ? true : 'fail';
+  }
+}
+
+/**
+ * 求解并返回"坍缩顺序"。失败就换种子重试 —— 规则很宽松，实际上几乎一次就过。
+ * 返回 { n, order:[{i,lv,ent}], cells:Int8Array }
+ */
+function solve(n, seed){
+  for (let attempt = 0; attempt < 90; attempt++){
+    const s = (seed + attempt * 7919) | 0;
+    const solver = new Solver(n, s);
+    solver.init();
+    if (!solver.seedPropagate()) continue;
+
+    const order = [];
+    let ok = true;
+    for (;;){
+      const r = solver.step();
+      if (r === false) break;
+      if (r === 'fail'){ ok = false; break; }
+      order.push({ i: solver.lastIdx, lv: solver.lastLv, ent: solver.lastEnt });
+    }
+    if (ok && order.length) return { n, order, cells: solver.lv, seed: s };
+  }
+  return null;
+}
+
+/* ----------------------------------------------------------- 立体化（体素） */
+
+/**
+ * 把 2D 地形图挤出成一座浮空岛。
+ * 每列是一个竖直的柱：顶面在 y = h，底面在 y = bottom。
+ * 地表之下是一段"地幔"，它的深度由离岛心的距离决定 —— 中心厚、边缘薄，
+ * 收成一个圆润的锥底，这就是"浮空"的观感来源。
+ */
+function buildIsland(solution){
+  const n = solution.n, cells = solution.cells, s = solution.seed;
+  const c = (n - 1) / 2;
+  const cols = [];
+  const count = { [WATER]:0, [SAND]:0, [GRASS]:0, [FOREST]:0, [ROCK]:0 };
+
+  // ---- 第一遍：确定每列的地表高度，并记录原始深度 ----
+  const H = new Int8Array(n * n);
+  const RAWD = new Float32Array(n * n);
+  let maxH = 1;
+
+  for (let z = 0; z < n; z++){
+    for (let x = 0; x < n; x++){
+      const i = z * n + x;
+      const lv = cells[i];
+      if (lv === VOID) continue;
+      count[lv] = (count[lv] || 0) + 1;
+
+      const r = Math.min(1, Math.hypot(x - c, z - c) / c);
+      const j = hash01(x, z, s + 3);
+
+      let h;
+      switch (lv){
+        case WATER:  h = 0; break;
+        case SAND:   h = 1; break;
+        case GRASS:  h = j > 0.74 ? 2 : 1; break;
+        case FOREST: h = j > 0.48 ? 3 : 2; break;
+        default:     h = 3 + Math.round(j * 1.7); break;   // ROCK
+      }
+      H[i] = h;
+      if (h > maxH) maxH = h;
+
+      // 越靠中心越往下的锥形底座；再乘一个每格抖动，避免底面太平滑
+      const taper = Math.max(0, 1 - r);
+      RAWD[i] = 9.5 * taper * (0.68 + 0.62 * hash01(x, z, s + 29));
+    }
+  }
+
+  // ---- 第二遍：深度做一次 3×3 圆盘平滑 ----
+  // 不平滑的话，相邻两列的锥深会差好几个体素，底面看起来像一堆悬空的牙齿。
+  // 平滑只影响"底下多深"，不动地表地形，所以岛的轮廓完全不变。
+  const D = new Float32Array(n * n);
+  for (let z = 0; z < n; z++){
+    for (let x = 0; x < n; x++){
+      const i = z * n + x;
+      if (cells[i] === VOID) continue;
+      let sum = 0, wsum = 0;
+      for (let dz = -1; dz <= 1; dz++){
+        for (let dx = -1; dx <= 1; dx++){
+          if (dx && dz) continue;                    // 圆盘不是方块
+          const nx = x + dx, nz = z + dz;
+          if (nx < 0 || nx >= n || nz < 0 || nz >= n) continue;
+          const j = nz * n + nx;
+          const w = (dx === 0 && dz === 0) ? 2 : 1;
+          sum += RAWD[j] * w; wsum += w;
+        }
+      }
+      D[i] = wsum ? sum / wsum : RAWD[i];
+    }
+  }
+
+  // ---- 第三遍：地层深度 = 地表高度 - 基线（岛越高，底下越厚）----
+  // at[] 是 (x,z) → cols 下标的反查表。cols 是"跳过深渊"的紧凑数组，
+  // 下标不等于 z*n+x，所以编辑时想从鼠标命中的格子找回那根柱子，必须另存一份映射。
+  const at = new Int32Array(n * n).fill(-1);
+  for (let z = 0; z < n; z++){
+    for (let x = 0; x < n; x++){
+      const i = z * n + x;
+      const lv = cells[i];
+      if (lv === VOID) continue;
+      const h = H[i];
+      // 底面**只由"离岛心多远"决定** —— 一个纯几何的锥体，与地表高度无关。
+      // 于是所有柱子共享同一块岩体，天然地形和手动刷出来的高格都稳稳坐着。
+      //
+      // ⚠️ 这里踩过一个只有编辑器才暴露得出来的坑：早先写成 `h-1-depth` 并给 depth 加了
+      // `max(0,…)` 夹取，结果"同底"这个前提被破坏 —— 贴近岛缘处刷一根高岩柱，
+      // 它的底面会比旁边的沙地高好几格，整根柱子**悬在空中**。
+      // 天然生成时岩石总在岛心（那里锥体本来就很深），所以这个 bug 一直没露头。
+      // 再取 min(…, h-1) 是为了保证每根柱子至少有自己那一层地表。
+      const bottom = Math.min(-Math.round(D[i]), h - 1);
+      at[i] = cols.length;
+      cols.push({
+        x, z, lv, h, bottom,
+        deco: hash01(x, z, s + 71),
+        ridge: h >= maxH - 1,
+      });
+    }
+  }
+  return { cols, count, n, maxH, at };
+}
+
+/* --------------------------------------------------------- 点击编辑地形 */
+
+/**
+ * 屏幕点 → 命中的格子键（z*n+x），没命中返回 -1。
+ *
+ * 为什么不用"拾取缓冲"（把每格用纯色再画一遍、然后读回像素）：
+ * 那是通用 3D 引擎在几何不可解析时的兜底手段，代价是要多画一整遍、
+ * 还得跟抗锯齿的串色较劲（边缘像素是两个格子混出来的颜色，解出来是第三个数）。
+ * 而我们的世界是完全解析的：每根柱子的每个可见面就是一个已知四边形，
+ * 投影到屏幕上做一次二维多边形命中测试就行 —— 精确、无误差，也不需要额外一遍绘制。
+ *
+ * 每根柱子最多试 3 个面（顶面 + 两个可见侧面，侧面把地表层和地幔合并成一段，
+ * 因为它们本来就共面）。250 根柱子 = 750 次测试，鼠标每动一下算一次都毫无压力。
+ *
+ * 多个面同时命中时取**相机深度最大**的那个 —— 也就是最靠前的面，
+ * 这样"前面高柱子挡住后面矮柱子的顶面"会自动得到正确的答案。
+ */
+function hitColumn(mx, my){
+  const island = state.island;
+  if (!island || !PR) return -1;
+  const n = island.n;
+  const qx = [0,0,0,0], qy = [0,0,0,0];
+  let bestKey = -1, bestD = -Infinity;
+
+  for (let i = 0; i < island.cols.length; i++){
+    const col = island.cols[i];
+    const x0 = col.x, z0 = col.z, x1 = x0 + 1, z1 = z0 + 1;
+    const h = col.h, bottom = col.bottom;
+    const key = col.z * n + col.x;
+
+    // 顶面
+    if (PR.vis.py){
+      qx[0] = px(x0,h,z0); qy[0] = py(x0,h,z0);
+      qx[1] = px(x0,h,z1); qy[1] = py(x0,h,z1);
+      qx[2] = px(x1,h,z1); qy[2] = py(x1,h,z1);
+      qx[3] = px(x1,h,z0); qy[3] = py(x1,h,z0);
+      if (inQuad(qx, qy, mx, my)){
+        const d = depth3(x0 + 0.5, h, z0 + 0.5);
+        if (d > bestD){ bestD = d; bestKey = key; }
+      }
+    }
+    // 侧面（±X 里朝相机的那一个）
+    if (PR.vis.px || PR.vis.nx){
+      const fx = PR.sx > 0 ? x1 : x0;
+      qx[0] = px(fx,h,z0);      qy[0] = py(fx,h,z0);
+      qx[1] = px(fx,h,z1);      qy[1] = py(fx,h,z1);
+      qx[2] = px(fx,bottom,z1); qy[2] = py(fx,bottom,z1);
+      qx[3] = px(fx,bottom,z0); qy[3] = py(fx,bottom,z0);
+      if (inQuad(qx, qy, mx, my)){
+        const d = depth3(fx, (h + bottom) * 0.5, z0 + 0.5);
+        if (d > bestD){ bestD = d; bestKey = key; }
+      }
+    }
+    // 侧面（±Z 里朝相机的那一个）
+    if (PR.vis.pz || PR.vis.nz){
+      const fz = PR.sz > 0 ? z1 : z0;
+      qx[0] = px(x0,h,fz);      qy[0] = py(x0,h,fz);
+      qx[1] = px(x1,h,fz);      qy[1] = py(x1,h,fz);
+      qx[2] = px(x1,bottom,fz); qy[2] = py(x1,bottom,fz);
+      qx[3] = px(x0,bottom,fz); qy[3] = py(x0,bottom,fz);
+      if (inQuad(qx, qy, mx, my)){
+        const d = depth3(x0 + 0.5, (h + bottom) * 0.5, fz);
+        if (d > bestD){ bestD = d; bestKey = key; }
+      }
+    }
+  }
+  return bestKey;
+}
+
+function depth3(x, y, z){ return x * PR.dir.x + y * PR.dir.y + z * PR.dir.z; }
+
+/** 射线交叉法判断点在不在四边形内。qx/qy 是已经投影好的四个角，顺序绕一圈 */
+function inQuad(qx, qy, x, y){
+  let inside = false;
+  for (let i = 0, j = 3; i < 4; j = i++){
+    const yi = qy[i], yj = qy[j];
+    if ((yi > y) !== (yj > y)){
+      const xi = qx[i], xj = qx[j];
+      if (x < (xj - xi) * (y - yi) / (yj - yi) + xi) inside = !inside;
+    }
+  }
+  return inside;
+}
+
+/** 编辑完重新挤一遍柱子。整岛重算只有几百格，比做增量更新省心得多 */
+function remesh(){
+  const s = state.solution;
+  if (!s) return;
+  state.island = buildIsland({ n: s.n, cells: state.cells, seed: s.seed });
+}
+
+/** 在屏幕坐标处改一格地形 */
+function paintAt(mx, my){
+  if (!edit.on || state.phase !== 'island' || !state.cells) return false;
+  const key = hitColumn(mx, my);
+  if (key < 0) return false;
+  if (state.cells[key] === edit.pick) return false;
+  state.cells[key] = edit.pick;
+  remesh();
+  updateStat();
+  return true;
+}
+
+function pickTerrain(v){
+  edit.pick = v;
+  const box = document.getElementById('swatches');
+  const all = box.querySelectorAll('.sw');
+  for (let i = 0; i < all.length; i++){
+    all[i].classList.toggle('sel', +all[i].dataset.v === v);
+  }
+}
+
+function setEdit(on){
+  // 岛还没成型时不给进编辑态：那会儿画面是 2D 网格，没有"格子"可以点
+  if (on && state.phase !== 'island') return;
+  edit.on = on;
+  edit.hover = -1;
+  if (on) cam.spin = false;                    // 要瞄准就别让岛自己转
+  document.getElementById('btnEdit').classList.toggle('on', on);
+  document.getElementById('btnSpin').classList.toggle('on', cam.spin);
+  document.getElementById('swatches').classList.toggle('on', on);
+  document.getElementById('hint').textContent = on
+    ? '点格子改地形 · 数字键 1-5 换地形 · 0 凿空 · 拖拽旋转 · Esc 退出'
+    : '拖拽旋转 · 滚轮缩放 · 双击复位';
+  canvas.classList.toggle('editing', on);
+  updateStat();
+}
+
+/** 色板：5 种地形 + 一个"凿空"。跟 LEVELS 同源，不另抄一份名字。
+ *  构建调用放在文件末尾的启动段 —— 这里只声明，别在本段直接执行，
+ *  否则会撞上 `const edit` 的暂时性死区（这段代码在状态机之前）。 */
+function buildSwatches(){
+  const box = document.getElementById('swatches');
+  const mk = (v, name, cls) => {
+    const b = document.createElement('button');
+    b.className = 'sw' + (cls ? ' ' + cls : '');
+    b.dataset.v = v;
+    b.textContent = name;
+    if (v > 0) b.style.setProperty('--c', LEVELS[v].top);
+    b.addEventListener('click', () => pickTerrain(v));
+    box.appendChild(b);
+  };
+  for (let v = 1; v <= 5; v++) mk(v, LEVELS[v].name);
+  mk(VOID, '凿空', 'eraser');
+  pickTerrain(GRASS);
+}
+
+/* ------------------------------------------------------------------ 渲染器 */
+
+const canvas = document.getElementById('view');
+const ctx = canvas.getContext('2d', { alpha: false });
+
+let W = 0, H = 0, DPR = 1;
+
+function resize(){
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = canvas.clientWidth  || window.innerWidth;
+  H = canvas.clientHeight || window.innerHeight;
+  canvas.width  = Math.round(W * DPR);
+  canvas.height = Math.round(H * DPR);
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  buildStars();
+}
+
+/** 星空背景：一次性生成，之后每帧只冲刷一遍（不必逐帧随机） */
+let stars = [];
+function buildStars(){
+  const rnd = mulberry32(20260923);
+  stars = [];
+  const k = Math.round((W * H) / 16000);
+  for (let i = 0; i < k; i++){
+    stars.push({
+      x: rnd() * W,
+      y: rnd() * H,
+      r: 0.4 + rnd() * 1.05,
+      a: 0.12 + rnd() * 0.5,
+    });
+  }
+}
+
+function drawBackground(){
+  const g = ctx.createRadialGradient(W * 0.5, H * -0.05, 0, W * 0.5, H * 0.1, Math.max(W, H) * 1.05);
+  g.addColorStop(0, '#101b2b');
+  g.addColorStop(0.55, '#0a111c');
+  g.addColorStop(1, '#05070d');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+
+  for (let i = 0; i < stars.length; i++){
+    const s = stars[i];
+    ctx.globalAlpha = s.a;
+    ctx.fillStyle = '#cfe0f6';
+    ctx.fillRect(s.x, s.y, s.r, s.r);
+  }
+  ctx.globalAlpha = 1;
+}
+
+/* --------------------------------------------------------- 阶段一：2D 网格 */
+
+/** 叠加态的颜色：候选地形的加权平均，再压暗、偏蓝，像"还没被观测的雾" */
+const hexCache = [];
+for (let v = 0; v < 6; v++){
+  const t = LEVELS[v].top;
+  hexCache.push([parseInt(t.slice(1,3),16), parseInt(t.slice(3,5),16), parseInt(t.slice(5,7),16)]);
+}
+
+function drawGrid(alpha, played, levelOf, solution){
+  if (alpha <= 0.002) return;
+  const n = solution.n;
+  const cell = Math.min(W, H) * 0.72 / n;
+  const ox = W / 2 - cell * n / 2;
+  const oy = H / 2 - cell * n / 2 + cell * 0.6;
+  const t = performance.now() / 1000;
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+
+  // 底盘
+  ctx.fillStyle = 'rgba(8,13,22,.55)';
+  roundRect(ox - 16, oy - 16, cell * n + 32, cell * n + 32, 14);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,.07)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  for (let z = 0; z < n; z++){
+    for (let x = 0; x < n; x++){
+      const i = z * n + x;
+      const px = ox + x * cell, py = oy + z * cell;
+      const pad = cell > 12 ? 0.6 : 0.35;
+      const size = cell - pad * 2;
+
+      let fill;
+      if (levelOf[i] >= 0){
+        const lv = levelOf[i];
+        if (lv === VOID){ continue; }                // 岛外的深渊：直接留空
+        fill = LEVELS[lv].top;
+      } else {
+        // 未观测：候选的加权平均色，再压暗成"雾"
+        let r = 0, g = 0, b = 0, tw = 0;
+        for (let v = 1; v <= 5; v++){
+          if (solution.cand0[i] & (1 << v)){
+            const w = BASE_W[v];
+            const cc = hexCache[v];
+            r += cc[0] * w; g += cc[1] * w; b += cc[2] * w; tw += w;
+          }
+        }
+        if (!tw) continue;
+        r /= tw; g /= tw; b /= tw;
+        const k = 0.30;                              // 压暗，跟确定态拉开
+        const flick = 0.85 + 0.15 * Math.sin(t * 2.1 + hash01(x, z, 5) * 9);
+        fill = 'rgb(' + ((r * k * flick) | 0) + ',' + ((g * k * flick) | 0) + ',' + ((b * k * flick) | 0) + ')';
+      }
+
+      ctx.fillStyle = fill;
+      roundRect(px + pad, py + pad, size, size, Math.min(2.5, size * 0.16));
+      ctx.fill();
+    }
+  }
+
+  // 最近被观测的那几格：闪一圈白边，让"坍缩"这件事看得见
+  const flash = 10;
+  for (let k = played - flash; k < played; k++){
+    if (k < 0 || k >= solution.order.length) continue;
+    const o = solution.order[k];
+    const lv0 = o.lv;
+    if (lv0 === VOID) continue;
+    const x = o.i % n, z = (o.i / n) | 0;
+    const a = (1 - (played - k) / flash) * alpha;
+    ctx.globalAlpha = alpha * a * 0.95;
+    ctx.strokeStyle = '#dff0ff';
+    ctx.lineWidth = 1.6;
+    roundRect(ox + x * cell + 0.5, oy + z * cell + 0.5, cell - 1, cell - 1, 3);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = alpha;
+
+  // 上方的进度文字
+  const pct = solution.order.length ? Math.round(played / solution.order.length * 100) : 0;
+  ctx.fillStyle = 'rgba(200,218,240,.75)';
+  ctx.font = '12px ui-sans-serif,system-ui,-apple-system,sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('观测中  ' + played + ' / ' + solution.order.length + '   ' + pct + '%', W / 2, oy - 30);
+
+  // 图例
+  let lx = ox, ly = oy + cell * n + 34;
+  ctx.textAlign = 'left';
+  for (let v = 1; v <= 5; v++){
+    ctx.fillStyle = LEVELS[v].top;
+    roundRect(lx, ly - 7, 9, 9, 2.5); ctx.fill();
+    ctx.fillStyle = 'rgba(160,180,205,.85)';
+    ctx.fillText(LEVELS[v].name, lx + 13, ly + 1);
+    lx += 62;
+  }
+
+  ctx.restore();
+}
+
+function roundRect(x, y, w, h, r){
+  if (w < 0){ x += w; w = -w; }
+  if (h < 0){ y += h; h = -h; }
+  r = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+/* --------------------------------------------------- 阶段二：3D 等距体素 */
+
+const cam = { yaw: 0.72, pitch: 0.46, dist: 1.12, spin: true };
+const HOME_VIEW = { yaw: 0.72, pitch: 0.46, dist: 1.12 };
+
+/** 投影：正交相机。给一组基向量，之后所有顶点都只是"点积 + 加法" */
+let PR = null;
+
+function setupProjection(n, scale){
+  const cy = Math.cos(cam.yaw), sy = Math.sin(cam.yaw);
+  const cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch);
+
+  // 相机位于这个方向（单位向量），往原点看
+  const dx = cp * sy, dy = sp, dz = cp * cy;
+
+  // right = normalize(cross(worldUp, dir))，worldUp = (0,1,0)
+  let rx = dz, rz = -dx;
+  const rl = Math.hypot(rx, rz) || 1;
+  rx /= rl; rz /= rl;
+
+  // up = cross(dir, right)
+  const ux = dy * rz - dz * 0;
+  const uy = dz * rx - dx * rz;
+  const uz = dx * 0 - dy * rx;
+
+  // 三根世界轴各自的屏幕偏移（线性投影 → 可以逐个轴预计算）
+  const e = (ax, ay, az) => ({
+    x: (ax * rx + ay * 0 + az * rz) * scale,
+    y: -(ax * ux + ay * uy + az * uz) * scale,
+  });
+
+  const c = (n - 1) / 2;
+  // 屏幕原点 → 网格中心：先把网格中心摆到画布正中，再往上抬一点。
+  //
+  // ⚠️ LIFT 的量纲是**世界格**，跟缩放无关，所以它不该是"看着差不多"拍出来的数：
+  // 它应该正好等于岛体在 y 上的重心高度（含锥底），量出来约 2。
+  // 早先写了 5.6，结果整座岛稳定偏高 11% 屏高 —— 那个数是拿旧版（较浅的）底面凑出来的。
+  const LIFT = 2.0;
+  const ox = W / 2 - (c * rx + 0 + c * rz) * scale;
+  const oy = H / 2 + (c * ux + 0 * uy + c * uz) * scale - LIFT * uy * scale;
+
+  PR = {
+    dir: { x: dx, y: dy, z: dz },
+    ex: e(1, 0, 0), ey: e(0, 1, 0), ez: e(0, 0, 1),
+    ox, oy,
+    // 六个面朝不朝相机，正交投影下只跟 dir 有关 → 一帧算一次
+    vis: {
+      px: dx > 0, nx: dx < 0,
+      py: dy > 0, ny: dy < 0,
+      pz: dz > 0, nz: dz < 0,
+    },
+    sx: dx > 0 ? 1 : -1,
+    sz: dz > 0 ? 1 : -1,
+  };
+}
+
+/** 世界点 → 屏幕（用预计算的三根轴偏移累加） */
+function px(x, y, z){ return PR.ox + x * PR.ex.x + y * PR.ey.x + z * PR.ez.x; }
+function py(x, y, z){ return PR.oy + x * PR.ex.y + y * PR.ey.y + z * PR.ez.y; }
+
+function drawIsland(alpha, island, opts){
+  if (alpha <= 0.002 || !island) return;
+  const n = island.n;
+  // 取景系数：让岛体的**投影包围盒**在画布上占到这个比例。
+  //
+  // ⚠️ 这个数不该是"看着差不多"拍出来的 —— 用 tmp/probe-wfc-bbox.js 把每根柱子的
+  // 8 个角（顶面 4 个 + 底面 4 个）投到屏幕上量包围盒，才知道它到底多大。
+  // 早先写 0.70，实量岛上只占屏 **49%×51%**：四周空一整圈，岛缩在中间。
+  //
+  // 它是**严格线性**的（包围盒边长 = scale × 常数，与 origin 无关），
+  // 所以换算就是一步比例：0.70 × 75/49.4 ≈ 1.06。
+  const FIT = 1.06;
+  const scale = Math.min(W, H) * FIT / n * cam.dist;
+  setupProjection(n, scale);
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+
+  const D = PR.dir;
+  const items = [];
+
+  for (let k = 0; k < island.cols.length; k++){
+    const col = island.cols[k];
+
+    // 长出动画：按"离岛心的距离"错开，岛从外圈往中心长起来
+    const r = Math.hypot(col.x - (n - 1) / 2, col.z - (n - 1) / 2) / ((n - 1) / 2);
+    let grow = 1;
+    if (opts && opts.grow !== undefined && opts.grow < 1){
+      const local = clamp01((opts.grow - (1 - r) * 0.55) / 0.45);
+      grow = local;
+      if (grow <= 0.001) continue;
+    }
+
+    const h = col.h;
+    const bottom = col.bottom - (1 - grow) * 4.5;   // 还没长出来时，底部悬在上面
+
+    const cx = col.x + 0.5, cz = col.z + 0.5;
+    const depthKey = cx * D.x + cz * D.z + (h + bottom) * 0.5 * D.y + 0.001 * (h - bottom);
+
+    items.push({ col, h, bottom, depthKey, cx, cz });
+  }
+
+  // 画家算法：远的先画。柱子里已经合并了侧面，所以只要按列排一次
+  items.sort((a, b) => a.depthKey - b.depthKey);
+
+  for (let k = 0; k < items.length; k++){
+    const it = items[k];
+    const col = it.col, h = it.h, bottom = it.bottom;
+    const x0 = col.x, z0 = col.z, x1 = x0 + 1, z1 = z0 + 1;
+
+    const lv = col.lv;
+    const isWater = lv === WATER;
+
+    // ---- 地幔（地表之下的锥底）----
+    if (bottom < h - 1 - 1e-6){
+      const my = h - 1;
+      if (PR.vis.py && !isWater){
+        face([[x0,my,z0],[x0,my,z1],[x1,my,z1],[x1,my,z0]], px, py, MANTLE_TOP);
+      }
+      sideFaces(x0, z0, x1, z1, my, bottom, MANTLE_SIDE, MANTLE_SIDE, 0.72);
+    }
+
+    // ---- 地表层：侧面 ----
+    sideFaces(x0, z0, x1, z1, h, h - 1, LEVELS[lv].side, LEVELS[lv].side, isWater ? 0.82 : 1);
+
+    // ---- 地表层：顶面 ----
+    if (PR.vis.py){
+      const top = LEVELS[lv].top;
+      ctx.globalAlpha = alpha * (isWater ? 0.9 : 1);
+      face([[x0,h,z0],[x0,h,z1],[x1,h,z1],[x1,h,z0]], px, py, top);
+      ctx.globalAlpha = alpha;
+    }
+
+    // ---- 装饰：树 / 房子 ----
+    if (!isWater) drawDeco(col, h, n);
+  }
+
+  // ---- 编辑态：把鼠标悬停那一格的顶面描出来 ----
+  // 刻意放到所有柱子画完之后。混在画家排序里描的话，前面更高的柱子会把它盖住，
+  // 变成"鼠标指着的格子反而看不见"。
+  if (edit.on && edit.hover >= 0 && PR.vis.py && island.at){
+    const hx = edit.hover % n, hz = (edit.hover / n) | 0;
+    const ci = island.at[hx + hz * n];
+    if (ci >= 0){
+      const h = island.cols[ci].h;
+      ctx.globalAlpha = alpha;
+      ctx.strokeStyle = 'rgba(255,255,255,.95)';
+      ctx.lineWidth = 2;
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(px(hx, h, hz),     py(hx, h, hz));
+      ctx.lineTo(px(hx, h, hz + 1), py(hx, h, hz + 1));
+      ctx.lineTo(px(hx + 1, h, hz + 1), py(hx + 1, h, hz + 1));
+      ctx.lineTo(px(hx + 1, h, hz), py(hx + 1, h, hz));
+      ctx.closePath();
+      ctx.stroke();
+    }
+  }
+
+  ctx.restore();
+}
+
+/** 画一根柱子的两个可见侧面 */
+function sideFaces(x0, z0, x1, z1, yTop, yBot, colorA, colorB, mul){
+  if (yTop - yBot < 1e-6) return;
+  const sx = PR.sx, sz = PR.sz;
+
+  // 面向 ±X 的那一面
+  if (PR.vis.px || PR.vis.nx){
+    const fx = sx > 0 ? x1 : x0;
+    const c = shade(colorA, mul * (PR.vis.px ? 1 : 0.86));
+    face([[fx,yTop,z0],[fx,yTop,z1],[fx,yBot,z1],[fx,yBot,z0]], px, py, c);
+  }
+  // 面向 ±Z 的那一面
+  if (PR.vis.pz || PR.vis.nz){
+    const fz = sz > 0 ? z1 : z0;
+    const c = shade(colorB, mul * (PR.vis.pz ? 1 : 0.72));
+    face([[x0,yTop,fz],[x1,yTop,fz],[x1,yBot,fz],[x0,yBot,fz]], px, py, c);
+  }
+}
+
+function face(pts, fx, fy, color){
+  ctx.beginPath();
+  ctx.moveTo(fx(pts[0][0], pts[0][1], pts[0][2]), fy(pts[0][0], pts[0][1], pts[0][2]));
+  for (let i = 1; i < pts.length; i++){
+    ctx.lineTo(fx(pts[i][0], pts[i][1], pts[i][2]), fy(pts[i][0], pts[i][1], pts[i][2]));
+  }
+  ctx.closePath();
+  ctx.fillStyle = color;
+  ctx.fill();
+}
+
+const shadeCache = new Map();
+function shade(hex, mul){
+  const key = hex + '|' + mul.toFixed(2);
+  let c = shadeCache.get(key);
+  if (c) return c;
+  let r = parseInt(hex.slice(1,3),16) * mul;
+  let g = parseInt(hex.slice(3,5),16) * mul;
+  let b = parseInt(hex.slice(5,7),16) * mul;
+  c = 'rgb(' + Math.min(255, r|0) + ',' + Math.min(255, g|0) + ',' + Math.min(255, b|0) + ')';
+  shadeCache.set(key, c);
+  return c;
+}
+
+/** 树与房子 —— 岛上的"叠叠乐"味道主要来自它们。传进来的色一律是 #rrggbb */
+function drawDeco(col, h, n){
+  if (col.lv === FOREST){
+    if (col.deco > 0.34) return;
+    // 树干
+    const t = 0.26, ox = col.x + 0.5 - t / 2, oz = col.z + 0.5 - t / 2;
+    sideFaces(ox, oz, ox + t, oz + t, h + 0.95, h, '#6b4c33', '#553c28', 1);
+    if (PR.vis.py){
+      face([[ox,h+0.95,oz],[ox,h+0.95,oz+t],[ox+t,h+0.95,oz+t],[ox+t,h+0.95,oz]], px, py, '#7a583c');
+    }
+    // 树冠：两层方块，下层大、上层小
+    crown(col.x + 0.5, col.z + 0.5, h + 0.85, 0.94, 0.86, '#5d9a55');
+    crown(col.x + 0.5, col.z + 0.5, h + 1.55, 0.64, 0.62, '#6caa60');
+    return;
+  }
+
+  if (col.lv === GRASS && col.deco > 0.905){
+    // 房子：墙 + 屋顶
+    const w = 0.74;
+    const x0 = col.x + 0.5 - w / 2, z0 = col.z + 0.5 - w / 2;
+    const y0 = h + 1.05;
+    sideFaces(x0, z0, x0 + w, z0 + w, y0, h, '#e7e0d2', '#cfc6b4', 1);
+    if (PR.vis.py) face([[x0,y0,z0],[x0,y0,z0+w],[x0+w,y0,z0+w],[x0+w,y0,z0]], px, py, '#f2ece0');
+    // 屋顶
+    const rw = w * 1.24, rx0 = col.x + 0.5 - rw / 2, rz0 = col.z + 0.5 - rw / 2;
+    sideFaces(rx0, rz0, rx0 + rw, rz0 + rw, y0 + 0.44, y0, '#b8563f', '#96432f', 1);
+    if (PR.vis.py) face([[rx0,y0+0.44,rz0],[rx0,y0+0.44,rz0+rw],[rx0+rw,y0+0.44,rz0+rw],[rx0+rw,y0+0.44,rz0]], px, py, '#c96147');
+  }
+}
+
+function crown(cx, cz, yBase, w, hh, hex){
+  const x0 = cx - w / 2, z0 = cz - w / 2;
+  sideFaces(x0, z0, x0 + w, z0 + w, yBase + hh, yBase, hex, hex, 0.84);
+  if (PR.vis.py) face([[x0,yBase+hh,z0],[x0,yBase+hh,z0+w],[x0+w,yBase+hh,z0+w],[x0+w,yBase+hh,z0]], px, py, hex);
+}
+
+function clamp01(v){ return v < 0 ? 0 : v > 1 ? 1 : v; }
+
+/* --------------------------------------------------------------- 状态机 */
+
+const state = {
+  phase: 'collapse',       // collapse → morph → island
+  solution: null,
+  island: null,
+  played: 0,
+  solved: 0,               // 求解耗时（ms）
+  order: [],
+  levelOf: null,
+  paused: false,
+  stepAcc: 0,
+  morphT: 0,
+  seed: 0,
+  size: 22,
+  speed: 62,
+  /** 可编辑的地形数组（求解结果的副本）。玩家改的是它，不是求解器的内部数组 */
+  cells: null,
+};
+
+/**
+ * 编辑态。关着的时候整套命中测试都不跑，页面表现跟以前一模一样。
+ * hover 存的是格子键 z*n+x（不是 cols 下标）—— 因为 cols 会随着编辑重新生成，
+ * 下标不稳定，格子键才是恒定的。
+ */
+const edit = { on: false, pick: GRASS, hover: -1 };
+
+/** 未观测格子的"初始候选"——2D 视图里用来算雾气的颜色 */
+function ensureCand0(n, seed){
+  const s = new Solver(n, seed);
+  s.init();
+  const c0 = new Uint8Array(n * n);
+  c0.set(s.cand);
+  return c0;
+}
+
+function regenerate(newSeed){
+  setEdit(false);        // 重新生成会整张换掉地形，编辑态必须先退出
+  state.size = +document.getElementById('size').value;
+  state.speed = +document.getElementById('speed').value;
+  state.seed = (newSeed === undefined)
+    ? (Math.random() * 1e9) | 0
+    : newSeed | 0;
+
+  const t0 = performance.now();
+  const sol = solve(state.size, state.seed);
+  state.solved = performance.now() - t0;
+
+  if (!sol){
+    // 理论上到不了这儿；真到了就换个种子再来
+    state.seed = (Math.random() * 1e9) | 0;
+    return regenerate(state.seed);
+  }
+
+  sol.cand0 = ensureCand0(sol.n, sol.seed);
+  state.solution = sol;
+  state.order = sol.order;
+  state.played = 0;
+  // 地形单独存一份副本给编辑用 —— 求解器自己的 lv 数组是它的内部状态，
+  // 玩家改地形不该把算法的内部数组也一起改了（那会让"重建"和"原样"没法区分）。
+  state.cells = new Int8Array(sol.cells);
+  state.levelOf = new Int8Array(sol.n * sol.n).fill(-1);
+  // 掩码里的 void 一开始就是确定的
+  for (let i = 0; i < state.levelOf.length; i++){
+    if (sol.cells[i] === VOID) state.levelOf[i] = VOID;
+  }
+  state.island = null;
+  state.phase = 'collapse';
+  state.morphT = 0;
+  state.stepAcc = 0;
+  state.paused = false;
+  document.getElementById('btnPause').textContent = '⏸ 暂停';
+  document.getElementById('btnSeed').textContent = '#' + (state.seed % 100000);
+  syncButtons();
+  updateStat();
+}
+
+function advance(k){
+  const ord = state.order;
+  const upto = Math.min(ord.length, state.played + k);
+  for (let i = state.played; i < upto; i++){
+    state.levelOf[ord[i].i] = ord[i].lv;
+  }
+  state.played = upto;
+  if (state.played >= ord.length && state.phase === 'collapse'){
+    // 从可编辑的 cells 建岛，而不是从求解结果 —— 这样编辑过的地形也会被正确立体化
+    state.island = buildIsland({ n: state.solution.n, cells: state.cells, seed: state.solution.seed });
+    state.phase = 'morph';
+    state.morphT = 0;
+    document.getElementById('btnStep').disabled = true;
+  }
+}
+
+function updateStat(){
+  const el = document.getElementById('stat');
+  if (!state.solution){ el.textContent = '准备中…'; return; }
+  const n = state.solution.n;
+  if (state.phase === 'collapse'){
+    const pct = Math.round(state.played / state.order.length * 100);
+    el.innerHTML = '观测 <b>' + pct + '%</b> <i>·</i> ' + n + '×' + n +
+      ' <i>·</i> 求解 ' + state.solved.toFixed(0) + 'ms' +
+      (state.paused ? ' <i>·</i> 已暂停' : '');
+  } else if (edit.on){
+    const cols = state.island ? state.island.cols.length : 0;
+    el.innerHTML = '编辑中 <b>' + cols + ' 格</b> <i>·</i> 笔刷 ' +
+      (edit.pick === VOID ? '凿空' : LEVELS[edit.pick].name);
+  } else {
+    const c = state.island ? state.island.count : {};
+    el.innerHTML = '岛成 <b>' + n + '×' + n + '</b> <i>·</i> 水 ' + (c[WATER]||0) +
+      ' <i>·</i> 沙 ' + (c[SAND]||0) + ' <i>·</i> 草 ' + (c[GRASS]||0) +
+      ' <i>·</i> 林 ' + (c[FOREST]||0) + ' <i>·</i> 岩 ' + (c[ROCK]||0);
+  }
+}
+
+/* ------------------------------------------------------------------ 主循环 */
+
+let lastT = performance.now();
+let lastStat = 0;
+
+function loop(now){
+  requestAnimationFrame(loop);
+  const dt = Math.min(64, now - lastT);
+  lastT = now;
+
+  // ① 坍缩推进
+  if (state.phase === 'collapse' && !state.paused){
+    state.stepAcc += dt / 1000 * (3 + state.speed * 1.15);
+    let budget = 40;                       // 一帧最多推进 40 格，防止大网格掉帧
+    while (state.stepAcc >= 1 && budget-- > 0 && state.phase === 'collapse'){
+      state.stepAcc -= 1;
+      advance(1);
+    }
+  }
+
+  // ② 立体化过渡
+  if (state.phase === 'morph'){
+    state.morphT += dt / 1000 / 1.15;
+    if (state.morphT >= 1){ state.morphT = 1; state.phase = 'island'; syncButtons(); }
+  }
+
+  // ③ 自转
+  if (state.phase !== 'collapse' && cam.spin) cam.yaw += dt * 0.00013;
+
+  // 状态文字没必要每帧重排
+  if (now - lastStat > 150){ lastStat = now; updateStat(); }
+
+  render();
+}
+
+function render(){
+  drawBackground();
+  if (state.phase === 'collapse'){
+    drawGrid(1, state.played, state.levelOf, state.solution);
+  } else if (state.phase === 'morph'){
+    const t = state.morphT;
+    const e = t * t * (3 - 2 * t);                        // smoothstep
+    drawGrid(1 - e, 0, state.levelOf, state.solution);
+    drawIsland(e, state.island, { grow: e });
+  } else {
+    drawIsland(1, state.island, { grow: 1 });
+  }
+}
+
+/* ------------------------------------------------------------------ 交互 */
+
+let dragging = false, lastX = 0, lastY = 0, moved = 0;
+
+/** 事件坐标 → 画布坐标。canvas 铺满视口时两者相同，但别假设这一点 */
+function localXY(e){
+  const r = canvas.getBoundingClientRect();
+  return [e.clientX - r.left, e.clientY - r.top];
+}
+
+canvas.addEventListener('pointerdown', (e) => {
+  dragging = true; moved = 0;
+  lastX = e.clientX; lastY = e.clientY;
+  canvas.classList.add('dragging');
+  canvas.setPointerCapture(e.pointerId);
+});
+canvas.addEventListener('pointermove', (e) => {
+  if (dragging){
+    const dx = e.clientX - lastX, dy = e.clientY - lastY;
+    lastX = e.clientX; lastY = e.clientY;
+    moved += Math.abs(dx) + Math.abs(dy);
+    cam.yaw   -= dx * 0.0065;
+    cam.pitch  = Math.max(0.08, Math.min(1.45, cam.pitch + dy * 0.005));
+    if (edit.on) edit.hover = -1;          // 转视角时别留着一个错的悬停框
+    return;
+  }
+  if (edit.on && state.phase === 'island'){
+    const [mx, my] = localXY(e);
+    edit.hover = hitColumn(mx, my);
+  }
+});
+canvas.addEventListener('pointerup', (e) => {
+  const wasDrag = moved > 4;               // 拖过了就不算点击，防手抖
+  dragging = false;
+  canvas.classList.remove('dragging');
+  try { canvas.releasePointerCapture(e.pointerId); } catch (_){}
+  if (!wasDrag && edit.on){
+    const [mx, my] = localXY(e);
+    paintAt(mx, my);
+  }
+});
+canvas.addEventListener('pointercancel', () => {
+  dragging = false; canvas.classList.remove('dragging');
+  if (edit.on) edit.hover = -1;
+});
+canvas.addEventListener('pointerleave', () => {
+  if (edit.on) edit.hover = -1;
+});
+
+canvas.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  cam.dist = Math.max(0.42, Math.min(2.6, cam.dist * (e.deltaY > 0 ? 0.92 : 1.087)));
+}, { passive: false });
+
+canvas.addEventListener('dblclick', () => {
+  cam.yaw = HOME_VIEW.yaw; cam.pitch = HOME_VIEW.pitch; cam.dist = HOME_VIEW.dist;
+});
+
+window.addEventListener('keydown', (e) => {
+  if (e.target && /input|textarea/i.test(e.target.tagName)) return;
+  if (e.key === 'r' || e.key === 'R'){ regenerate(); }
+  else if (e.key === ' '){
+    e.preventDefault();
+    if (state.phase === 'collapse') togglePause();
+  }
+  else if (e.key === 'ArrowLeft'){ cam.yaw -= 0.08; }
+  else if (e.key === 'ArrowRight'){ cam.yaw += 0.08; }
+  else if (e.key === 'Escape'){ if (edit.on) setEdit(false); }
+  // 数字键换地形：跟色板的顺序一一对应，1-5 是地形，0 是凿空
+  else if (edit.on){
+    if (e.key >= '1' && e.key <= '5') pickTerrain(+e.key);
+    else if (e.key === '0' || e.key === 'e' || e.key === 'E') pickTerrain(VOID);
+  }
+});
+
+function togglePause(){
+  state.paused = !state.paused;
+  document.getElementById('btnPause').textContent = state.paused ? '▶ 继续' : '⏸ 暂停';
+  syncButtons();
+}
+
+function syncButtons(){
+  const inCollapse = state.phase === 'collapse';
+  document.getElementById('btnStep').disabled = !(inCollapse && state.paused);
+  document.getElementById('btnPause').disabled = !inCollapse;
+  // 编辑只在"岛已成型"时有意义：坍缩阶段画面还是 2D 网格，没有格子可以点。
+  // 不给它置灰的话，那个按钮在成型前就是个点了没反应的死按钮 ——
+  // setEdit() 里当然也会拦，但**拦得住不等于该让用户点**。
+  document.getElementById('btnEdit').disabled = state.phase !== 'island';
+}
+
+document.getElementById('btnGen').addEventListener('click', () => regenerate());
+document.getElementById('btnPause').addEventListener('click', () => { if (state.phase === 'collapse') togglePause(); });
+document.getElementById('btnStep').addEventListener('click', () => {
+  if (state.phase === 'collapse' && state.paused) advance(1);
+});
+document.getElementById('size').addEventListener('input', (e) => {
+  document.getElementById('sizeV').textContent = e.target.value;
+});
+document.getElementById('size').addEventListener('change', () => regenerate());
+document.getElementById('speed').addEventListener('input', (e) => {
+  state.speed = +e.target.value;
+  document.getElementById('speedV').textContent = e.target.value;
+});
+document.getElementById('btnSpin').addEventListener('click', (e) => {
+  cam.spin = !cam.spin;
+  e.currentTarget.classList.toggle('on', cam.spin);
+});
+document.getElementById('btnEdit').addEventListener('click', () => setEdit(!edit.on));
+document.getElementById('btnSeed').addEventListener('click', (e) => {
+  const s = prompt('输入种子（同一个数字永远得到同一座岛）', String(state.seed));
+  if (s === null) return;
+  const v = parseInt(s.replace(/[^0-9]/g, ''), 10);
+  if (isFinite(v)) regenerate(v);
+});
+
+/* ------------------------------------------------------------------ 启动 */
+
+window.addEventListener('resize', () => { resize(); });
+
+// 底部两份 UI：地形的图例、以及编辑态才显示的色板
+(function buildLegend(){
+  const box = document.getElementById('legend');
+  for (let v = 1; v <= 5; v++){
+    const el = document.createElement('i');
+    el.style.setProperty('--c', LEVELS[v].top);
+    el.textContent = LEVELS[v].name;
+    box.appendChild(el);
+  }
+})();
+buildSwatches();
+
+resize();
+regenerate((Math.random() * 1e9) | 0);
+requestAnimationFrame(loop);
+
+// 供无头探针排查用：把页面里的异常收集起来
+window.__errs = [];
+window.addEventListener('error', (e) => {
+  window.__errs.push(String(e.message || e.error || 'error'));
+});
+window.addEventListener('unhandledrejection', (e) => {
+  window.__errs.push('unhandled: ' + String(e.reason));
+});
+
+// 供无头探针读取的内部状态（不影响页面表现）
+window.__wfc = {
+  get phase(){ return state.phase; },
+  get played(){ return state.played; },
+  get total(){ return state.order.length; },
+  get island(){ return state.island; },
+  get cam(){ return cam; },
+  get cells(){ return state.cells; },
+  get edit(){ return edit; },
+  get view(){
+    return {
+      W, H, dpr: DPR,
+      pr: PR ? { ox: PR.ox, oy: PR.oy, ex: { ...PR.ex }, ey: { ...PR.ey }, ez: { ...PR.ez }, dir: { ...PR.dir } } : null,
+    };
+  },
+  regenerate,
+  advance,
+  setEdit,
+  pickTerrain,
+  paintAt,
+  hitColumn,
+  remesh,
+  /**
+   * 渲染耗时基准：同步连画 n 遍，返回**单帧平均毫秒**。
+   * 为什么不数 fps：无头浏览器的 rAF 被锁在 60 Hz，数出来永远是 60，
+   * 拿这个数说"性能好"等于什么都没说。直接量一帧的绘制成本才可比。
+   */
+  benchDraw(n = 120){
+    if (!state.island) return null;
+    const t0 = performance.now();
+    for (let k = 0; k < n; k++) drawIsland(1, state.island, {});
+    return +((performance.now() - t0) / n).toFixed(2);
+  },
+};
+</script>
+</body>
+</html>

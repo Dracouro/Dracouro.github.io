@@ -1,0 +1,714 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>拼装合成系统 · 火星番茄 · JINJIARAN</title><meta name="description" content="散件怎么粘成装配体、装配体怎么固化成成品 —— 两层合成，加上一套物理约束的调参史。"><link rel="canonical" href="https://jinjiaran.com/projects/tomato/modules/assembly/"><!--
+      图标组（2026-10-21：换成 R 标）。
+      由 `node tmp/make-brand-icons.mjs` 从矢量化的 R 生成，别手工换图。
+      · favicon.svg —— 深底圆角块 + 白色 R。**深底不是装饰**：标签栏底色不可控
+        （浅色主题浅灰 / 深色主题近黑），透明底的黑 R 在深色标签栏上会整块消失。
+      · favicon.ico —— 16/24/32/48 四档**各自原生渲染**后拼成（不是缩出来的），
+        老浏览器、收藏夹、各类爬虫要的就是它。
+      · apple-touch-icon —— 180×180 **满幅方角、不透明**：圆角与遮罩由 iOS 自己套。
+      · site.webmanifest —— Android/Chrome「添加到主屏幕」用，带 192/512 两档。
+      顺序：SVG 在前（首选），ICO 兜底。
+    --><link rel="icon" type="image/svg+xml" href="/favicon.svg"><link rel="icon" type="image/x-icon" href="/favicon.ico" sizes="16x16 24x24 32x32 48x48"><link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180"><link rel="manifest" href="/site.webmanifest"><meta name="generator" content="Astro v7.3.2"><meta property="og:type" content="website"><meta property="og:site_name" content="JINJIARAN"><meta property="og:title" content="拼装合成系统 · 火星番茄 · JINJIARAN"><meta property="og:description" content="散件怎么粘成装配体、装配体怎么固化成成品 —— 两层合成，加上一套物理约束的调参史。"><meta property="og:url" content="https://jinjiaran.com/projects/tomato/modules/assembly/"><!--
+      社交卡片图（2026-10-19 补）。之前全站没有任何 og:image，分享出去的链接是纯文字。
+      图是 public/og.png（1200×630，站点深底 + 品牌标），由 scripts/make-og.mjs 生成，
+      改文案/换标就重跑那个脚本，不要手工改图。
+      宽高必须写：部分抓取方（含微信/Twitter）会按它预留版位，缺了会裁得很难看。
+    --><meta property="og:image" content="https://jinjiaran.com/og.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="JINJIARAN · 个人作品站"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://jinjiaran.com/og.png"><!--
+      移动端浏览器地址栏染色。**只放一个 meta**，由下面那段内联脚本按最终主题
+      改 content —— 站内的主题是「手动切换 + data-theme」，不是跟随系统，
+      用两条 media 查询会跟用户手动选的打架。
+    --><meta name="theme-color" content="#f6f7f9" data-theme-color><script>
+      // 在首次绘制前定好主题，避免闪白；顺手把地址栏颜色定下来
+      ;(() => {
+        /* 先算出最终主题，再写 data-theme —— 两件事分开做，
+           是因为 localStorage 在隐私模式下会抛异常，旧写法里抛了就整段跳过。 */
+        let theme = 'light'
+        try {
+          const saved = localStorage.getItem('theme')
+          theme =
+            saved === 'light' || saved === 'dark'
+              ? saved
+              : window.matchMedia('(prefers-color-scheme: dark)').matches
+                ? 'dark'
+                : 'light'
+        } catch {
+          theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+        }
+        document.documentElement.dataset.theme = theme
+
+        const meta = document.querySelector('meta[data-theme-color]')
+        if (meta) meta.setAttribute('content', theme === 'dark' ? '#0d1117' : '#f6f7f9')
+      })()
+    </script><link rel="stylesheet" href="/_astro/BaseLayout.CKlrZbNO.css"><style>.bp[data-astro-cid-rf4rmido]{border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);overflow:hidden}.bp-head[data-astro-cid-rf4rmido]{border-bottom:1px solid var(--line);flex-wrap:wrap;align-items:flex-start;gap:12px;padding:16px 18px 14px;display:flex}.bp-head-main[data-astro-cid-rf4rmido]{flex:260px;min-width:0}.bp-title[data-astro-cid-rf4rmido]{margin:0;font-size:16px}.bp-graph[data-astro-cid-rf4rmido]{color:var(--fg-3);flex-wrap:wrap;align-items:center;gap:6px;margin:5px 0 0;font-size:12.5px;display:flex}.bp-graph[data-astro-cid-rf4rmido] code[data-astro-cid-rf4rmido]{color:var(--fg-2);background:var(--surface-2);border-radius:5px;padding:1px 7px;font-size:12px}.bp-dot[data-astro-cid-rf4rmido]{opacity:.5}.bp-actions[data-astro-cid-rf4rmido]{flex-wrap:wrap;flex:none;gap:8px;display:flex}.bp-btn[data-astro-cid-rf4rmido]{color:var(--fg-2);background:var(--surface-2);border:1px solid var(--line);cursor:pointer;border-radius:999px;align-items:center;gap:6px;padding:6px 12px;font-family:inherit;font-size:13px;transition:color .15s,border-color .15s;display:inline-flex}.bp-btn[data-astro-cid-rf4rmido]:hover{color:var(--accent);border-color:var(--accent)}.bp-summary[data-astro-cid-rf4rmido]{color:var(--fg-2);margin:0;padding:14px 18px 0;font-size:13.5px}.bp-stage[data-astro-cid-rf4rmido]{background:#242424;position:relative}.bp-loading[data-astro-cid-rf4rmido]{color:#9aa2ad;z-index:2;background:#242424;justify-content:center;align-items:center;gap:10px;font-size:13px;display:flex;position:absolute;inset:0}.bp-spinner[data-astro-cid-rf4rmido]{border:2px solid #fff3;border-top-color:#6a9bff;border-radius:50%;width:15px;height:15px;animation:.8s linear infinite bp-spin}@keyframes bp-spin{to{transform:rotate(360deg)}}ueb-blueprint[data-astro-cid-rf4rmido]:defined~.bp-loading[data-astro-cid-rf4rmido]{display:none}.bp-fallback[data-astro-cid-rf4rmido]{color:var(--fg-2);padding:14px 18px;font-size:13px;display:none}.bp-fallback[data-astro-cid-rf4rmido] pre[data-astro-cid-rf4rmido]{background:var(--surface-2);border-radius:var(--radius-sm);white-space:pre;max-height:340px;padding:12px;font-size:11.5px;line-height:1.5;overflow:auto}html[data-ueb-failed] .bp-fallback[data-astro-cid-rf4rmido],html[data-ueb-failed] .bp-loading[data-astro-cid-rf4rmido]{display:block}html[data-ueb-failed] .bp-loading[data-astro-cid-rf4rmido]{display:none}.bp-foot[data-astro-cid-rf4rmido]{border-top:1px solid var(--line);background:var(--surface);flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;padding:10px 18px;display:flex}.bp-hint[data-astro-cid-rf4rmido]{color:var(--fg-3);margin:0;font-size:12px}.bp-tags[data-astro-cid-rf4rmido]{flex-wrap:wrap;gap:6px;margin:0;display:flex}.bp-stage[data-astro-cid-rf4rmido] ueb-blueprint[data-astro-cid-rf4rmido]{width:100%;display:block}
+.meta-row[data-astro-cid-tzzuq5oi]{flex-wrap:wrap;gap:6px;margin-top:14px;display:flex}.module-lede[data-astro-cid-tzzuq5oi]{color:var(--fg-2);max-width:64ch;margin:10px 0 0}.bp-stack[data-astro-cid-tzzuq5oi]{flex-direction:column;gap:30px;margin-top:18px;display:flex}.code-wrap[data-astro-cid-tzzuq5oi]{margin-top:22px}.blk[data-astro-cid-tzzuq5oi]{margin-top:44px}.blk-title[data-astro-cid-tzzuq5oi]{border-bottom:1px solid var(--line);margin:0;padding-bottom:8px;font-size:20px}.code-name[data-astro-cid-tzzuq5oi]{color:var(--fg-3);margin:0 0 6px;font-family:Cascadia Code,Consolas,monospace;font-size:12.5px}.code-block[data-astro-cid-tzzuq5oi]{background:color-mix(in srgb, var(--surface-2) 78%, transparent);border:1px solid var(--line);border-radius:14px;margin:0;padding:16px 18px;font-size:12.5px;line-height:1.65;overflow-x:auto;box-shadow:inset 0 1px #ffffff1f}.pager[data-astro-cid-tzzuq5oi]{border-top:1px solid var(--line);justify-content:space-between;gap:14px;margin-top:56px;padding-top:22px;display:flex}.pager-item[data-astro-cid-tzzuq5oi]{border-radius:var(--radius-sm);flex-direction:column;gap:3px;padding:10px 14px;transition:background .15s;display:flex}.pager-item[data-astro-cid-tzzuq5oi]:hover{background:var(--surface-2)}.pager-next[data-astro-cid-tzzuq5oi]{text-align:right}.pager-dir[data-astro-cid-tzzuq5oi]{color:var(--fg-3);font-size:12px}.pager-name[data-astro-cid-tzzuq5oi]{font-size:14px;font-weight:500}
+</style><script type="module" src="/_astro/page.CQWjsXKf.js"></script></head><body class="glass"><div class="backdrop" aria-hidden="true"><i class="mark"></i><i class="grid"></i></div><div class="read-progress" aria-hidden="true"></div><a class="skip-link" href="#main">跳到主内容</a><header class="site-header"><div class="wrap"><a class="brand" href="/"><svg class="mark" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 524 438"><path fill="currentColor" fill-rule="evenodd" d="M416.82 435.14C401.57 430.1 389.97 420.04 326.46 356.8C296.19 326.66 271.11 302 270.71 302C270.32 302 270 305.17 270 309.04C270 325.19 266.58 345.78 262.45 354.51C255.61 368.97 239.01 381.19 219 386.5C209.37 389.05 184.12 389.66 172.36 387.62C134.98 381.14 105.07 359.07 93.9 329.73C92.7 326.56 91.89 323.77 92.12 323.55C92.35 323.32 95.67 323.54 99.52 324.04C109.01 325.26 124.12 325.21 132 323.93C141.17 322.44 145.84 319.58 148.95 313.53L151.5 308.56L151.81 272.78L152.12 237L132.31 236.97C105.96 236.93 68.66 235.43 57.5 233.96C32.51 230.67 18.83 221.26 8.86 200.5C3.37 189.06 0.95 178.74 0.29 164C-1.78 117.22 20.72 76.49 57.46 60.54C61.84 58.64 65.56 57.23 65.73 57.39C65.9 57.56 65.56 63.06 64.98 69.6C63.25 89.16 65.33 104.68 70.52 110.84C71.9 112.48 75.16 114.64 77.76 115.64C82.12 117.3 87.25 117.47 141 117.7C198.58 117.94 199.41 117.91 194 116.14C184.03 112.87 177.68 108.9 169.91 101.11C155.15 86.31 149.34 67.33 153.5 47.5C157.85 26.81 174.05 9.13 194.5 2.75C204.23 -0.28 218.77 -0.28 228.5 2.75C253.04 10.4 270.97 34.35 270.97 59.5C270.97 84.6 253.48 108.19 229 116.11C223.57 117.87 224.17 117.89 274.6 117.95C330.81 118.01 346.08 118.82 360.71 122.53C388.99 129.7 411.57 149.04 419.41 172.81C426.33 193.77 425.17 212.89 415.83 232C412.46 238.88 410.01 242.14 402.95 249.15L394.22 257.79L425.86 289.28C461.17 324.42 463.99 326.58 473.64 325.78C477.54 325.46 480.31 324.42 484.3 321.77C490.34 317.75 503.89 304.49 509.63 296.96C511.71 294.23 513.7 292 514.05 292C514.92 292 519.59 304.17 521.52 311.5C527.78 335.19 521.31 366.33 505.14 390.29C490.96 411.31 472.31 426.78 452.87 433.64C442.77 437.2 425.28 437.93 416.82 435.14ZM293.41 220.59C301.72 216.52 304.4 212.05 304.85 201.48C305.27 191.48 302.79 184.69 296.87 179.62C292 175.45 287.15 174 278.13 174L271 174L271 199.13L271 224.25L279.36 223.81C285.87 223.47 288.97 222.76 293.41 220.59Z"/></svg>
+<span>JINJIARAN<span class="sub"> · 个人作品站</span></span></a><nav class="nav" aria-label="主导航"><a href="/?browse=1">首页</a><a href="/projects" aria-current="page">项目</a><a href="/gallery">图片</a><a href="/videos">视频</a><a href="/docs">文档</a><a href="/models">模型</a><a href="/tools">工具</a><a href="/about">关于</a></nav><button class="icon-btn" type="button" data-search-open aria-label="站内搜索" title="搜索（按 / ）" aria-expanded="false" aria-controls="site-search" data-astro-cid-av774hkb><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" data-astro-cid-av774hkb><circle cx="11" cy="11" r="7" data-astro-cid-av774hkb></circle><path d="m20 20-3.5-3.5" data-astro-cid-av774hkb></path></svg></button><button class="icon-btn" id="theme-toggle" type="button" aria-label="切换深浅色主题" aria-pressed="false"><svg class="sun" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"></path></svg><svg class="moon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"></path></svg></button><!--
+          主题切换的状态播报（2026-10-19 审计 D3）。
+          按钮本身只管"按下去了没有"（aria-pressed），**说不清现在是什么主题** ——
+          读屏用户听到"切换深浅色主题，已按下"，还是不知道屏幕上到底变深了还是变浅了。
+          所以另起一个 role="status" 的区域，切换后把结果念出来。
+          role="status" 自带 aria-live="polite"；这里两个都写，是为了兼容只认其一的读屏。
+          它必须常驻 DOM（不能切换时才插入），否则播报不会触发。
+        --><p class="sr-only" role="status" aria-live="polite" data-theme-status></p></div></header><main id="main" data-pagefind-body><div class="wrap" data-astro-cid-tzzuq5oi><header class="glass-hero" style="--i:0" data-astro-cid-tzzuq5oi><p class="crumb" data-astro-cid-tzzuq5oi><a href="/projects" data-astro-cid-tzzuq5oi>项目</a><span aria-hidden="true" data-astro-cid-tzzuq5oi>/</span><a href="/projects/tomato" data-astro-cid-tzzuq5oi>火星番茄</a><span aria-hidden="true" data-astro-cid-tzzuq5oi>/</span><span data-astro-cid-tzzuq5oi>拼装合成系统</span></p><h1 class="h-page" data-astro-cid-tzzuq5oi>拼装合成系统</h1><p class="module-lede" data-astro-cid-tzzuq5oi>散件怎么粘成装配体、装配体怎么固化成成品 —— 两层合成，加上一套物理约束的调参史。</p><div class="meta-row" data-astro-cid-tzzuq5oi><span class="chip" data-astro-cid-tzzuq5oi>进行中</span><span class="chip" data-astro-cid-tzzuq5oi>C++</span><span class="chip" data-astro-cid-tzzuq5oi>蓝图</span><span class="chip" data-astro-cid-tzzuq5oi>数据表</span></div></header></div><div class="wrap" style="padding-block:28px 0" data-astro-cid-tzzuq5oi><article class="prose glass-sheet" style="--i:1" data-astro-cid-tzzuq5oi><h2 id="设计取向先推翻重组">设计取向：先推翻「重组」</h2>
+<p>最初的方案是「重组」—— 零件丢进机器里碾碎，按元素比例重新生成新物品。
+做了一版之后推翻了，理由很直接：<strong>重组把玩家捡到的东西变成了数字。</strong>
+一个阀门和一块铁皮在重组系统里没有区别，那玩家为什么要去找阀门？</p>
+<p>于是改成<strong>直接从垃圾里拆零件</strong>：</p>
+<blockquote>
+<p>你捡到一个坏掉的压缩机，拆开它，得到一个阀门、一段铜管、两颗螺栓。
+这三样东西能拼成一台手动水泵。</p>
+</blockquote>
+<p>零件有身份，玩家的每一次拆解都是在做选择。这条决定后来穿透到整个设计：
+化学器材不是「玻璃片 → 研磨 → 玻璃粉 → 拉制 → 玻璃管」重新造出来，
+而是<strong>从报废的蒸馏装置残骸上直接拆下玻璃管</strong>。同一件垃圾，
+既能拆出管件去拼化学台，也能整个烧掉换电 —— <strong>拆解即取舍</strong>。</p>
+<h2 id="两层一个系统">两层，一个系统</h2>
+<p>这套东西实际上有两条完全不同的合成路径，工程量占了这个项目的一大半：</p>
+<table>
+<thead>
+<tr>
+<th>层</th>
+<th>输入 → 输出</th>
+<th>判定依据</th>
+<th>落点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>A 物理拼装层</strong></td>
+<td>散件 → <strong>装配体</strong>（还在世界里，能抓能拆）</td>
+<td>玩家摆出来的物理接触关系</td>
+<td><code>BP_Glue</code> 约束 + <code>AC_AssemblySystem.ConstraintRecorder</code></td>
+</tr>
+<tr>
+<td><strong>B 配方固化层</strong></td>
+<td>装配体 → <strong>成品 + 入库</strong></td>
+<td>多重集完全匹配 <code>DT_AssemblyRecipes</code></td>
+<td><code>UAssemblyBlueprintLibrary</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>交接点是同一条 <code>ConstraintRecorder</code></strong>：A 层往里写「哪些零件被哪些胶连起来了」，
+B 层按这份记录去查表。所以固化不是「再判断一次玩家拼对了没有」——
+它读的是已经发生的事实。</p>
+<h2 id="a-层物理拼装">A 层：物理拼装</h2>
+<table>
+<thead>
+<tr>
+<th>资产</th>
+<th>角色</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>AC_AssemblySystem</code></td>
+<td>拼装模式的宿主组件：模式开关、距离控制、<code>ConstraintRecorder</code> 字典、<code>CacheActorGroup</code> 缓存</td>
+</tr>
+<tr>
+<td><code>BP_Glue</code></td>
+<td>一根胶 = 一个 Actor + 一个 PhysicsConstraint，负责把两个零件鎖在一起</td>
+</tr>
+<tr>
+<td><code>BP_DisableCollisionGlue</code></td>
+<td>只干一件事的胶：在两件之间维持「不互相碰撞」，防止吸附后的穿模</td>
+</tr>
+<tr>
+<td><code>BP_RecordConstraint</code></td>
+<td>一条装配记录（<code>MeshGroup</code> / <code>Actors</code> / <code>GlueGroup</code> / <code>DisableCollisionGroup</code>）</td>
+</tr>
+<tr>
+<td><code>BP_Separation</code></td>
+<td>拆解时算「该恢复成几个独立物件」</td>
+</tr>
+<tr>
+<td><code>AC_InteractionManager</code></td>
+<td>左键分派：有记录走物理抓取，没记录走背包拾取</td>
+</tr>
+<tr>
+<td>碰撞预设 <code>AssemblyItem</code></td>
+<td>让「拼装吸附」和「悬停拾取」两条线都打得到同一个物体</td>
+</tr>
+</tbody>
+</table>
+<p>装配记录<strong>用 <code>ComponentTags[0]</code> 当索引键</strong>：新记录创建后必须立刻把 key 盖到组件标签上，
+否则下一次查表恒为 false。这条契约踩过一次大坑 —— 第二遍查不到就会再建一条空记录，
+循环永不收敛（实测 333,000 条记录后被引擎的疯狂循环护栏打断，整个 PIE 会话一起陪葬）。
+契约固化成了 C++ 的 <code>RegisterRecordComponent</code>，创建与盖章在同一步完成。</p>
+<h3 id="胶的刚性一次完整的推演">胶的刚性：一次完整的推演</h3>
+<p>这是这个模块最花时间的一处，值得从头讲：</p>
+<ul>
+<li>现象：拼好的装配体拎起来，<strong>零件会绕胶点转开、甚至穿到隔壁零件里去</strong>。</li>
+<li>先量：把两条路径的约束逐字段打出来 —— 实时粘合的胶和读档恢复的胶<strong>完全相同</strong>：
+<code>LinearLimit X/Y/Z = LOCKED</code>、<code>Cone/Twist = FREE</code>、<code>bDisableCollision = 1</code>。
+也就是说这不是「读档回归」，实时拼出来的同样会穿。</li>
+<li>因果链清楚了：<strong>平移锁死</strong>（所以搁得住）+ <strong>角向全自由</strong> + <strong>两体碰撞被关</strong>
+⇒ 转起来没有任何东西拦得住 ⇒ 穿模。</li>
+<li>试 A 方案：把 <code>bDisableCollision</code> 清掉，让接触力把零件推回去。
+结果<strong>只治穿模、不治偏移</strong> —— 因为自由度的存在才是根因，松开碰撞只是让两件互推。</li>
+<li>查元凶：<code>BP_Glue</code> 的节点链上，<code>设置角摇摆1限制</code> / <code>设置角摇摆2限制</code> / <code>设置角扭转限制</code>
+<strong>三个节点的默认值都是 <code>ACM_Free</code></strong>，而且它们在「绑定零件 A/B」之后<strong>无条件执行</strong>，
+把刚设好的角向又覆盖回自由。它们在骨骼网格分支之后，静态网格零件根本走不到，
+所以真正生效的永远是这几个 CDO 默认值。</li>
+<li>落 B 方案：<strong>锁死角向</strong>（Cone/Twist 全 <code>LOCKED</code>），代价是失去「绕胶点自转」的手感，
+换绝对不穿模、不偏移。C++ 侧提供 <code>FinalizeGlueConstraint(Glue)</code>，
+在 A/B 解析完成后、约束建立前无条件执行，不分网格类型。</li>
+</ul>
+<p>教训写进了约定：<strong>「位置没变」不能当作约束有效的证据</strong>。
+PIE 会话里世界不推进，<code>add_impulse(200000)</code> 之后 6 秒位移仍是 0.00，
+施加冲量做对照实验在这种环境里根本无效 —— 物理手感类问题只能交实机确认，
+脚本能验的只有状态量（约束枚举值、A/B 身份、<code>bDisableCollision</code>）。</p>
+<h2 id="b-层配方固化">B 层：配方固化</h2>
+<p>配方表 <code>DT_AssemblyRecipes</code> 一行一条，行结构是 C++ 的：</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="cpp"><code><span class="line"><span style="color:#6A737D">/** 一条胶边：只由「零件类 + 插槽」表达，这样才能跟配方逐字段比对 */</span></span>
+<span class="line"><span style="color:#B392F0">USTRUCT</span><span style="color:#E1E4E8">(BlueprintType)</span></span>
+<span class="line"><span style="color:#F97583">struct</span><span style="color:#B392F0"> FAssemblyGlueEdge</span></span>
+<span class="line"><span style="color:#E1E4E8">{</span></span>
+<span class="line"><span style="color:#B392F0">    TSubclassOf</span><span style="color:#E1E4E8">&lt;</span><span style="color:#B392F0">AActor</span><span style="color:#E1E4E8">&gt; PartA;</span></span>
+<span class="line"><span style="color:#B392F0">    TSubclassOf</span><span style="color:#E1E4E8">&lt;</span><span style="color:#B392F0">AActor</span><span style="color:#E1E4E8">&gt; PartB;</span></span>
+<span class="line"><span style="color:#B392F0">    FName</span><span style="color:#E1E4E8"> SocketA </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> NAME_None;</span></span>
+<span class="line"><span style="color:#B392F0">    FName</span><span style="color:#E1E4E8"> SocketB </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> NAME_None;</span></span>
+<span class="line"><span style="color:#E1E4E8">};</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">/** 一行配方：零件多重集 + 胶边多重集 → 产物行 */</span></span>
+<span class="line"><span style="color:#B392F0">USTRUCT</span><span style="color:#E1E4E8">(BlueprintType)</span></span>
+<span class="line"><span style="color:#F97583">struct</span><span style="color:#B392F0"> FAssemblyRecipe</span><span style="color:#E1E4E8"> : </span><span style="color:#F97583">public</span><span style="color:#B392F0"> FTableRowBase</span></span>
+<span class="line"><span style="color:#E1E4E8">{</span></span>
+<span class="line"><span style="color:#B392F0">    FText</span><span style="color:#E1E4E8"> RecipeName;</span></span>
+<span class="line"><span style="color:#B392F0">    TArray</span><span style="color:#E1E4E8">&lt;</span><span style="color:#B392F0">TSubclassOf</span><span style="color:#E1E4E8">&lt;</span><span style="color:#B392F0">AActor</span><span style="color:#E1E4E8">&gt;&gt; RequiredParts;</span></span>
+<span class="line"><span style="color:#B392F0">    TArray</span><span style="color:#E1E4E8">&lt;</span><span style="color:#B392F0">FAssemblyGlueEdge</span><span style="color:#E1E4E8">&gt;  GlueEdges;</span></span>
+<span class="line"><span style="color:#6A737D">    /** 结果物品的 DT_Items 行名（类与网格的唯一事实源） */</span></span>
+<span class="line"><span style="color:#B392F0">    FName</span><span style="color:#E1E4E8"> ResultItemRowName </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> NAME_None;</span></span>
+<span class="line"><span style="color:#E1E4E8">};</span></span></code></pre>
+<p>匹配是<strong>严格的多重集相等</strong>：零件集合与配方完全一致（按类比较、顺序无关），
+胶边也完全一致（按类比较、<strong>允许 A/B 互换</strong>、插槽必须一致、顺序无关）。
+刻意写得很笨 —— 零件种类只有十几种，玩家一次最多摆五六个，
+排序之后逐项比对是确定性的：同样的组合永远得到同样的判定，
+不会因为玩家摆放顺序不同而时灵时不灵。</p>
+<p>固化在按下固化键时才跑，<strong>没有每帧开销</strong>：</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="cpp"><code><span class="line"><span style="color:#6A737D">/**</span></span>
+<span class="line"><span style="color:#6A737D"> * 对 ConstraintRecorder 里第一个命中配方的装配体执行固化：</span></span>
+<span class="line"><span style="color:#6A737D"> * 销毁全部零件与胶（N 个网格 + N−1 个约束塌缩成 1 个），</span></span>
+<span class="line"><span style="color:#6A737D"> * 按配方的 DT_Items 行生成一件成品，并放进玩家背包。</span></span>
+<span class="line"><span style="color:#6A737D"> */</span></span>
+<span class="line"><span style="color:#F97583">static</span><span style="color:#F97583"> bool</span><span style="color:#B392F0"> TrySynthesizeAssembly</span><span style="color:#E1E4E8">(</span><span style="color:#B392F0">UObject</span><span style="color:#F97583">*</span><span style="color:#FFAB70"> WorldContextObject</span><span style="color:#E1E4E8">, </span><span style="color:#B392F0">UActorComponent</span><span style="color:#F97583">*</span><span style="color:#FFAB70"> AssemblySystem</span><span style="color:#E1E4E8">);</span></span></code></pre>
+<h3 id="两个被踩出来的补丁">两个被踩出来的补丁</h3>
+<p><strong>① 唯一的 key 不能用随机数找。</strong></p>
+<p>蓝图的 <code>CreateKey</code> 原本是「在 [1000000, 9999999] 里随机取一个 → 表里已经有就递归重取」。
+它<strong>没有重试上限</strong>：随机撞号的概率再低，撞一次就是一次递归，
+而递归是不会被「重试一次」救回来的。替代实现改成<strong>单调计数器分配</strong> ——
+不需要查表、不需要碰撞检测、不需要递归，因此<strong>结构上不可能死循环</strong>：</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="cpp"><code><span class="line"><span style="color:#F97583">static</span><span style="color:#B392F0"> FName</span><span style="color:#B392F0"> MakeUniqueAssemblyKey</span><span style="color:#E1E4E8">();</span><span style="color:#6A737D">   // 计数器分配，唯一性是构造出来的，不是猜出来的</span></span></code></pre>
+<p><strong>② 固化产物必须补登记。</strong></p>
+<p>固化生成的新 Actor 从来没进过 <code>ConstraintRecorder</code>，
+于是左键点它时 <code>GetRecordConstraint(Component).Find?</code> 为 false
+→ 走了「拾取进背包」的分支 → <strong>物体从场景里消失，再也放不回地上</strong>。
+<code>RegisterSynthesizedResult</code> 负责把新产物按「合并体」的待遇登记好
+（写 map 条目 + 盖 <code>ComponentTags[0]</code>），这样它就能像任何装配体一样被拎起来、放下、再拆开。
+散件（种子、肥料）本来就没记录，所以它们「收进背包」的路径完全不受影响。</p>
+<h3 id="拆解为什么不能立刻销毁胶">拆解：为什么不能立刻销毁胶</h3>
+<p><code>BP_DisableCollisionGlue</code> 的全部职责就是让两件零件<strong>互不碰撞</strong>。
+而吸附过的零件是<strong>嵌在一起</strong>的 —— 拆解时如果当场把胶销毁，
+两件在仍然重叠的状态下重新变成实心，Chaos 会以最大分离速度把它们推开：
+<strong>「另一个零件嗖地飞出去」</strong>。零件质量只有 1.0，飞起来极其明显。</p>
+<p>所以拆解改成两段式：<code>ScheduleDisableGlueRelease</code> 把胶交给一个延迟释放器，
+<strong>等两件实际分开超过 20cm 之后</strong>再销毁胶（3 秒超时兜底，防止玩家永远不分开而泄漏）。
+在不再穿透的状态下恢复碰撞，世界就安静了。</p>
+<h2 id="存档两套存档系统并存">存档：两套存档系统并存</h2>
+<p>这是全项目最绕的一块，值得单独记住：</p>
+<table>
+<thead>
+<tr>
+<th>系统</th>
+<th>文件</th>
+<th>数据</th>
+<th>谁在写</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>面板存档</strong></td>
+<td><code>Saved/SaveGames/BlueprintSave.sav</code></td>
+<td><code>BP_BlueprintGameSave.SavingData</code>（<code>TMap&lt;FName, F_SavingData&gt;</code>）</td>
+<td>存档面板 / 「N」键</td>
+</tr>
+<tr>
+<td><strong>C++ 统一存档</strong></td>
+<td><code>Saved/SaveGames/Slot0.sav</code></td>
+<td><code>UTomatoSaveSubsystem</code> 里的装配体 blob</td>
+<td>自动存档定时器</td>
+</tr>
+</tbody>
+</table>
+<p>两个真实故障，都是从这里长出来的：</p>
+<ul>
+<li><strong>幽灵档复活</strong>：<code>AC_AssemblySystem.GameSaveData</code> <strong>只在 BeginPlay 从磁盘加载一次</strong>，
+从此永不刷新。面板列表读的是这个旧缓存，删除操作也作用在它上面 ——
+于是「删掉的档过一会儿自己回来了」。修法是两条：
+面板打开前先 <code>RefreshAssemblySaveData</code>（把组件对齐到磁盘），
+删除后立刻 <code>PersistAssemblySaveData</code>（删完要落盘）。另外让
+<code>GatherAssemblyFromComponent</code> 在收集前先重载面板存档，
+使<strong>面板存档成为存档名的权威来源</strong>，自动存档不再把旧名字塞回去。</li>
+<li><strong>空档覆盖满档</strong>：给「删除」流程加「保险式落盘」曾经是个回归 ——
+它读不到 map（日志 <code>-1 entries</code>）却照样写盘，把刚删好的档覆盖成 1944 字节的空档。
+教训：<strong>不要给已经正确的链路加保险，加之前先把原链路的每一个引脚读完。</strong></li>
+</ul>
+<p>还有个更隐蔽的坑：装配体数据走的是
+<code>FObjectAndNameAsStringProxyArchive</code> <strong>逐结构体</strong>序列化，
+而它使用的蓝图结构体成员<strong>没有 <code>CPF_SaveGame</code> 标记</strong>。
+一旦给归档设上 <code>ArIsSaveGame</code>，引擎会跳过所有没这个标记的字段 ——
+写出来的 blob <strong>恒为 9 字节空壳</strong>。判据就此固定下来：
+<strong>blob 长度 9 = 空，上百字节 = 有数据。</strong></p>
+<h2 id="一处典型的悬空引用">一处典型的「悬空引用」</h2>
+<p><code>AC_InteractionManager</code> 用 <code>LookAtActor</code> 缓存「当前看向的对象」。
+拾取种子时 <code>TryGrab</code> 把种子收进背包后<strong>立刻 <code>DestroyActor</code></strong>，
+但 <code>LookAtActor</code> 没有清空 —— 下一次点击对接口做动态转换时，
+访问的已经是一个正在等待回收的对象：</p>
+<blockquote>
+<p>已尝试通过属性 <code>K2Node_DynamicCast_AsBPI_Grabbable</code> 访问 <code>BP_SEEDTEX_C_1</code>，
+但该对象无效（等待销毁或垃圾回收）。</p>
+</blockquote>
+<p>两处一起修：<strong>根治</strong>是抓取成功后立刻清空 <code>LookAtActor</code>；
+<strong>兜底</strong>是在 <code>CanBeGrabbed</code> 之前补一道 <code>IsValid</code> 守卫。
+关键在于「缓存指向世界对象的引用」这件事本身就是个坑 ——
+清引用要跟销毁动作绑在一起，而不是指望下一个使用者自己去校验。</p>
+<h2 id="目前的进展">目前的进展</h2>
+<p>物理层与配方层都已实现，16 条以上 issue 的修法全部落地，编译通过、实机确认过
+「之前说的问题都修完了」，但绝大多数票据状态仍是
+<strong>「已修复，待人工 PIE 手感确认」</strong> —— 这也是这个项目里票据系统的诚实之处。</p>
+<ul class="contains-task-list">
+<li class="task-list-item"><input type="checkbox" checked disabled> <code>ConstraintRecorder</code> 记录契约 + <code>ComponentTags[0]</code> 索引</li>
+<li class="task-list-item"><input type="checkbox" checked disabled> 胶约束刚性化（角向锁死）</li>
+<li class="task-list-item"><input type="checkbox" checked disabled> 配方表结构与多重集匹配（零件 + 胶边，A/B 可换）</li>
+<li class="task-list-item"><input type="checkbox" checked disabled> <code>TrySynthesizeAssembly</code> 固化（销毁零件与胶 → 生成成品 → 入库）</li>
+<li class="task-list-item"><input type="checkbox" checked disabled> 唯一 key 改单调计数（消除递归死循环）</li>
+<li class="task-list-item"><input type="checkbox" checked disabled> 固化产物补登记（修复「点一下就进背包」）</li>
+<li class="task-list-item"><input type="checkbox" checked disabled> 拆解的两段式胶释放（消除「另一件被弹飞」）</li>
+<li class="task-list-item"><input type="checkbox" checked disabled> 拼装存档：命名、缩略图、删除持久化、幽灵档清除</li>
+<li class="task-list-item"><input type="checkbox" checked disabled> 左键悬空引用（<code>LookAtActor</code>）修复</li>
+<li class="task-list-item"><input type="checkbox" disabled> 正式配方（当前只有测试配方 <code>Recipe_2xCube</code>，正式配方依赖美术预置的合并网格）</li>
+<li class="task-list-item"><input type="checkbox" disabled> 右键拆解链的执行线</li>
+<li class="task-list-item"><input type="checkbox" disabled> 零件之间的物理导向/预览</li>
+<li class="task-list-item"><input type="checkbox" disabled> 多步合成（中间体参与后续配方）</li>
+<li class="task-list-item"><input type="checkbox" disabled> 一批物理手感问题仍需实机确认（穿模、抖动、抓取距离）</li>
+</ul>
+</article><section class="blk" data-astro-cid-tzzuq5oi><h2 class="blk-title" data-astro-cid-tzzuq5oi>源码</h2><div class="code-wrap" data-astro-cid-tzzuq5oi><p class="code-name" data-astro-cid-tzzuq5oi>AssemblyTypes.h</p><pre class="code-block" data-astro-cid-tzzuq5oi>
+                <code data-astro-cid-tzzuq5oi>// Fill out your copyright notice in the Description page of Project Settings.
+
+#pragma once
+
+#include &quot;CoreMinimal.h&quot;
+#include &quot;Engine/DataTable.h&quot;
+#include &quot;GameFramework/Actor.h&quot;
+#include &quot;AssemblyTypes.generated.h&quot;
+
+/**
+ * A single glue joint between two assembled parts, expressed purely as part
+ * classes + sockets so it can be compared against a recipe definition.
+ * Mirrors the connection fields of the Blueprint F_GlueInfo (AActorClass /
+ * BActorClass / SocketA / SocketB).
+ */
+USTRUCT(BlueprintType)
+struct FAssemblyGlueEdge
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = &quot;Edge&quot;)
+	TSubclassOf&lt;AActor&gt; PartA = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = &quot;Edge&quot;)
+	TSubclassOf&lt;AActor&gt; PartB = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = &quot;Edge&quot;)
+	FName SocketA = NAME_None;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = &quot;Edge&quot;)
+	FName SocketB = NAME_None;
+};
+
+/**
+ * One row of DT_AssemblyRecipes: the multiset of required parts + glue edges
+ * that a finished assembly must match, plus the DT_Items row that provides the
+ * result&#39;s class and static mesh (single source of truth for the result).
+ */
+USTRUCT(BlueprintType)
+struct FAssemblyRecipe : public FTableRowBase
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = &quot;Recipe&quot;)
+	FText RecipeName;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = &quot;Recipe&quot;)
+	TArray&lt;TSubclassOf&lt;AActor&gt;&gt; RequiredParts;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = &quot;Recipe&quot;)
+	TArray&lt;FAssemblyGlueEdge&gt; GlueEdges;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = &quot;Recipe&quot;)
+	FName ResultItemRowName = NAME_None;
+};
+
+/**
+ * The parts a restored glue joint connects, as recorded in the save.
+ *
+ * Mirrors the fields of the Blueprint F_GlueInfo that ResolveGlueParts needs. The
+ * Blueprint struct cannot be referenced from C++ (it is a UserDefinedStruct whose
+ * fields carry GUID suffixes), so the Blueprint side copies those fields into this
+ * native struct at the call site.
+ */
+USTRUCT(BlueprintType)
+struct FAssemblyGlueRecord
+{
+	GENERATED_BODY()
+
+	/** Class of the first part actor. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = &quot;Glue&quot;)
+	TSubclassOf&lt;AActor&gt; AActorClass = nullptr;
+
+	/** Class of the second part actor. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = &quot;Glue&quot;)
+	TSubclassOf&lt;AActor&gt; BActorClass = nullptr;
+
+	/** Part A&#39;s transform relative to the glue&#39;s recorded location. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = &quot;Glue&quot;)
+	FTransform AActorTrans = FTransform::Identity;
+
+	/** Part B&#39;s transform relative to the glue&#39;s recorded location. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = &quot;Glue&quot;)
+	FTransform BActorTrans = FTransform::Identity;
+};
+</code>
+              </pre></div></section><nav class="pager" data-astro-cid-tzzuq5oi><a class="pager-item" href="/projects/tomato/modules/interaction" data-astro-cid-tzzuq5oi><span class="pager-dir" data-astro-cid-tzzuq5oi>← 上一个</span><span class="pager-name" data-astro-cid-tzzuq5oi>交互系统</span></a><a class="pager-item pager-next" href="/projects/tomato/modules/chemistry" data-astro-cid-tzzuq5oi><span class="pager-dir" data-astro-cid-tzzuq5oi>下一个 →</span><span class="pager-name" data-astro-cid-tzzuq5oi>化肥提炼与化学合成</span></a></nav></div></main><footer class="site-footer"><div class="wrap row"><p style="margin:0">© 2024–2026  内容版权归作者所有</p><p style="margin:0"><span class="chip">静态站</span><span class="chip" style="margin-left:6px">CDN 直出</span><span class="chip" style="margin-left:6px">0 台服务器</span></p></div></footer><!--
+      搜索面板挂在 </body> 前，不能放进页头：
+      页头有 backdrop-filter，它会让后代里的 position: fixed 以页头为包含块，
+      面板会被裁在页头那条 60px 的带子里。
+    --><div class="search-layer" id="site-search" data-search-layer hidden data-astro-cid-av774hkb><div class="search-backdrop" data-search-close aria-hidden="true" data-astro-cid-av774hkb></div><div class="search-panel" role="dialog" aria-modal="true" aria-label="站内搜索" data-astro-cid-av774hkb><div class="search-bar" data-astro-cid-av774hkb><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" data-astro-cid-av774hkb><circle cx="11" cy="11" r="7" data-astro-cid-av774hkb></circle><path d="m20 20-3.5-3.5" data-astro-cid-av774hkb></path></svg><input type="search" data-search-input placeholder="搜项目、模块、图集、蓝图…" autocomplete="off" spellcheck="false" aria-label="搜索关键词" data-astro-cid-av774hkb><kbd data-astro-cid-av774hkb>Esc</kbd></div><div class="search-body" data-search-body data-astro-cid-av774hkb><p class="search-tip" data-astro-cid-av774hkb>输入关键词开始搜索。按 <b data-astro-cid-av774hkb>/</b> 或 <b data-astro-cid-av774hkb>Ctrl</b>+<b data-astro-cid-av774hkb>K</b> 随时打开。</p></div></div></div><script>
+      ;(() => {
+        const layer = document.querySelector('[data-search-layer]')
+        if (!layer) return
+
+        const input = layer.querySelector('[data-search-input]')
+        const body = layer.querySelector('[data-search-body]')
+        const TIP =
+          '<p class="search-tip">输入关键词开始搜索。按 <b>/</b> 或 <b>Ctrl</b>+<b>K</b> 随时打开。</p>'
+
+        /* ---------------- Pagefind 懒加载 ---------------- */
+        let enginePromise = null
+        const loadEngine = () => {
+          if (!enginePromise) {
+            enginePromise = import('/pagefind/pagefind.js')
+              .then(async (pf) => {
+                try {
+                  await pf.options({ excerptLength: 24 })
+                } catch {
+                  /* 老版本没有 options，忽略 */
+                }
+                return pf
+              })
+              .catch((err) => {
+                enginePromise = null // 允许下次重试
+                throw err
+              })
+          }
+          return enginePromise
+        }
+
+        /* ---------------- 渲染 ---------------- */
+        const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
+
+        const setTip = (html) => {
+          body.innerHTML = html
+        }
+
+        const render = (items, query) => {
+          if (!items.length) {
+            setTip(`<p class="search-tip">没有找到和「${esc(query)}」相关的内容。</p>`)
+            return
+          }
+
+          const ul = document.createElement('ul')
+          ul.className = 'search-list'
+
+          for (const it of items) {
+            const a = document.createElement('a')
+            a.href = it.url || '/'
+
+            const t = document.createElement('span')
+            t.className = 'search-item-title'
+            t.textContent = (it.meta && it.meta.title) || it.url || '未命名'
+            a.append(t)
+
+            if (it.excerpt) {
+              const e = document.createElement('span')
+              e.className = 'search-item-excerpt'
+              // Pagefind 给的片段已经转义过，只有 <mark> 是高亮标签
+              e.innerHTML = it.excerpt
+              a.append(e)
+            }
+
+            const li = document.createElement('li')
+            li.append(a)
+            ul.append(li)
+          }
+
+          body.textContent = ''
+          body.append(ul)
+        }
+
+        /* ---------------- 搜索 ---------------- */
+        let seq = 0
+        const run = async (raw) => {
+          const mine = ++seq
+          const query = raw.trim()
+
+          if (!query) {
+            setTip(TIP)
+            return
+          }
+
+          setTip('<p class="search-tip">搜索中…</p>')
+
+          let pf
+          try {
+            pf = await loadEngine()
+          } catch {
+            setTip(
+              '<p class="search-tip">搜索索引暂时用不了。<br />索引是构建期生成的，' +
+                '<b>本地开发模式（pnpm dev）下没有</b>，跑一次 <b>pnpm build</b> 或 <b>pnpm preview</b> 就有了。</p>',
+            )
+            return
+          }
+          if (mine !== seq) return
+
+          try {
+            const res = await pf.search(query)
+            if (mine !== seq) return
+            const items = await Promise.all(res.results.slice(0, 8).map((r) => r.data()))
+            if (mine !== seq) return
+            render(items, query)
+          } catch {
+            setTip('<p class="search-tip">搜索出错了，换几个词再试试。</p>')
+          }
+        }
+
+        let timer
+        input.addEventListener('input', () => {
+          clearTimeout(timer)
+          timer = setTimeout(() => run(input.value), 130)
+        })
+
+        /* ---------------- 开关 ----------------
+         * 焦点闭环（2026-10-19 审计 D2）。此前的问题：
+         *   · 点开搜索、Esc 关掉之后，焦点落在 <body> 上 —— 键盘用户等于被扔回页首，
+         *     得从头 Tab 一遍才能回到刚才那颗放大镜；
+         *   · Tab 能一路走出面板、跑到页头导航和页脚链接上，而背景还盖着，
+         *     人是"看不见自己在哪"的。
+         *
+         * 做法分两层：
+         *   ① `inert` 给面板以外的所有 body 子节点 —— 一整片区域不可聚焦、不可点、
+         *     读屏也跳过。这是浏览器原生的"这块不参与交互"，比自己数可聚焦元素可靠；
+         *   ② Tab 在面板内显式循环 —— inert 已经挡住了外面的元素，但焦点走到最后
+         *     一个链接后浏览器会把焦点交给地址栏，再 Tab 回来就出了面板。显式兜一圈。
+         */
+        const isTyping = (el) =>
+          el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)
+
+        const trigger = document.querySelector('[data-search-open]')
+        /* 面板以外的所有 body 直接子节点（含 skip-link / header / main / footer）。
+           脚本标签也在里面 —— 给 <script> 设 inert 没有任何副作用。 */
+        const background = () => [...document.body.children].filter((el) => el !== layer)
+
+        /** 记住"打开之前焦点在哪"，关的时候还回去 */
+        let lastFocus = null
+
+        const focusables = () => {
+          const list = [...layer.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])')]
+          /* 结果列表是动态渲染的，用 offsetParent 过滤掉 [hidden] 与非可见项 */
+          return list.filter((el) => el === input || el.offsetParent !== null)
+        }
+
+        const open = () => {
+          lastFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
+          layer.hidden = false
+          document.body.style.overflow = 'hidden'
+          background().forEach((el) => el.setAttribute('inert', ''))
+          trigger?.setAttribute('aria-expanded', 'true')
+          input.focus()
+          input.select()
+          // 打开的那一刻就把索引拉起来，等"输入完再等下载"会显得卡
+          loadEngine().catch(() => {})
+        }
+
+        const close = () => {
+          layer.hidden = true
+          document.body.style.overflow = ''
+          background().forEach((el) => el.removeAttribute('inert'))
+          trigger?.setAttribute('aria-expanded', 'false')
+          /* 还焦点之前确认它还在文档里 —— 面板里点链接跳走时焦点目标可能是旧元素 */
+          if (lastFocus && document.contains(lastFocus)) lastFocus.focus()
+          lastFocus = null
+        }
+
+        /* Tab 在面板里循环。Shift+Tab 从第一个回到最后一个，Tab 从最后一个回到第一个。 */
+        layer.addEventListener('keydown', (e) => {
+          if (e.key !== 'Tab') return
+          const list = focusables()
+          if (!list.length) return
+          const first = list[0]
+          const last = list[list.length - 1]
+          if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault()
+            last.focus()
+          } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault()
+            first.focus()
+          }
+        })
+
+        document.addEventListener('click', (e) => {
+          if (e.target.closest('[data-search-open]')) {
+            e.preventDefault()
+            layer.hidden ? open() : close()
+            return
+          }
+          if (e.target.closest('[data-search-close]')) {
+            e.preventDefault()
+            close()
+          }
+        })
+
+        document.addEventListener('keydown', (e) => {
+          const open_ = !layer.hidden
+
+          if (e.key === 'Escape' && open_) {
+            close()
+            return
+          }
+          if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+            e.preventDefault()
+            open_ ? close() : open()
+            return
+          }
+          if (e.key === '/' && !open_ && !isTyping(e.target) && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            e.preventDefault()
+            open()
+          }
+        })
+
+        /* 上下键在结果里走 */
+        input.addEventListener('keydown', (e) => {
+          if (e.key !== 'ArrowDown') return
+          e.preventDefault()
+          body.querySelector('a')?.focus()
+        })
+        body.addEventListener('keydown', (e) => {
+          const links = [...body.querySelectorAll('a')]
+          const i = links.indexOf(document.activeElement)
+          if (e.key === 'ArrowDown') {
+            e.preventDefault()
+            links[Math.min(i + 1, links.length - 1)]?.focus()
+          } else if (e.key === 'ArrowUp') {
+            e.preventDefault()
+            i <= 0 ? input.focus() : links[i - 1].focus()
+          }
+        })
+      })()
+    </script><script>
+      // 主题切换：写 data-theme + 地址栏染色 + 记住选择 + 告诉读屏
+      ;(() => {
+        const btn = document.getElementById('theme-toggle')
+        if (!btn) return
+        const status = document.querySelector('[data-theme-status]')
+
+        /* 初值：<head> 里那段脚本已经把最终主题写进 data-theme 了，
+           这里只负责让按钮的 aria-pressed 跟它对齐（不能写死在 HTML 里 ——
+           首屏主题有一半概率来自系统偏好，服务端并不知道）。 */
+        const sync = (theme) => {
+          btn.setAttribute('aria-pressed', theme === 'dark' ? 'true' : 'false')
+        }
+        sync(document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light')
+
+        btn.addEventListener('click', () => {
+          const root = document.documentElement
+          const next = root.dataset.theme === 'dark' ? 'light' : 'dark'
+          root.dataset.theme = next
+          /* 地址栏跟着变，否则在深色系统里手动切到浅色后，浏览器顶上还是深色 */
+          document
+            .querySelector('meta[data-theme-color]')
+            ?.setAttribute('content', next === 'dark' ? '#0d1117' : '#f6f7f9')
+          sync(next)
+          try {
+            localStorage.setItem('theme', next)
+          } catch {
+            /* 忽略 */
+          }
+          /* 播报结果。先清空再写，是为了让"浅→深→浅"这种连续切换每次都念 ——
+             内容没变化时 aria-live 不会重复播报。 */
+          if (status) {
+            status.textContent = ''
+            requestAnimationFrame(() => {
+              status.textContent = next === 'dark' ? '已切换到深色主题' : '已切换到浅色主题'
+            })
+          }
+        })
+      })()
+    </script><script>
+          /* 两个小动作（关掉不影响阅读）：
+             1) 顶部的阅读进度线 → 往 .read-progress 上写 --p
+             2) 侧栏目录的滚动高亮 → 给当前章节的链接打 aria-current="true"
+             2026-10-19 第二版：删掉了「指针跟随的镜面高光」。
+             背景从彩色极光换成纸 + 单色暗记之后，那圈白斑在纸上没有任何东西可以反射，
+             只剩一层脏雾 —— 与其留着凑数，不如不要。 */
+          ;(() => {
+            const root = document.documentElement
+
+            /* ---------- 1. 阅读进度 ---------- */
+            const bar = document.querySelector('.read-progress')
+            if (bar) {
+              let raf2 = 0
+              const calc = () => {
+                raf2 = 0
+                const max = root.scrollHeight - root.clientHeight
+                const p = max > 0 ? Math.min(1, Math.max(0, root.scrollTop / max)) : 0
+                bar.style.setProperty('--p', p.toFixed(4))
+              }
+              addEventListener(
+                'scroll',
+                () => {
+                  if (!raf2) raf2 = requestAnimationFrame(calc)
+                },
+                { passive: true },
+              )
+              addEventListener('resize', calc, { passive: true })
+              calc()
+            }
+
+            /* ---------- 2. 目录滚动高亮 ---------- */
+            const links = [...document.querySelectorAll('.side nav a[href^="#"]')]
+            const targets = links
+              .map((a) => ({ a, el: document.getElementById(decodeURIComponent(a.hash.slice(1))) }))
+              .filter((x) => x.el)
+            if (targets.length && 'IntersectionObserver' in window) {
+              const setActive = (a) => {
+                for (const { a: l } of targets) l.removeAttribute('aria-current')
+                if (a) a.setAttribute('aria-current', 'true')
+              }
+              const visible = new Set()
+              const io = new IntersectionObserver(
+                (entries) => {
+                  for (const en of entries) {
+                    const hit = targets.find((t) => t.el === en.target)
+                    if (!hit) continue
+                    if (en.isIntersecting) visible.add(hit.a)
+                    else visible.delete(hit.a)
+                  }
+                  /* 同时有多个章节在视口里时，取文档顺序最靠前的那个 —— 与阅读方向一致 */
+                  setActive(links.find((l) => visible.has(l)) || null)
+                },
+                /* 顶部留出吸顶页头的高度，底部只认 30%：这样"刚滚到"就算当前章 */
+                { rootMargin: '-84px 0px -70% 0px', threshold: 0 },
+              )
+              for (const t of targets) io.observe(t.el)
+            }
+          })()
+        </script></body></html>

@@ -1,0 +1,1064 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>矢量图分组导出工具 · JINJIARAN</title><meta name="description" content="驱动本机 Illustrator，把 .ai 矢量文件里编好组的图形批量拆成透明 PNG —— 一个分组一张图，300 PPI，自动裁到图形边界。已打包成免安装 EXE。"><link rel="canonical" href="https://jinjiaran.com/tools/vector-group-exporter/"><!--
+      图标组（2026-10-21：换成 R 标）。
+      由 `node tmp/make-brand-icons.mjs` 从矢量化的 R 生成，别手工换图。
+      · favicon.svg —— 深底圆角块 + 白色 R。**深底不是装饰**：标签栏底色不可控
+        （浅色主题浅灰 / 深色主题近黑），透明底的黑 R 在深色标签栏上会整块消失。
+      · favicon.ico —— 16/24/32/48 四档**各自原生渲染**后拼成（不是缩出来的），
+        老浏览器、收藏夹、各类爬虫要的就是它。
+      · apple-touch-icon —— 180×180 **满幅方角、不透明**：圆角与遮罩由 iOS 自己套。
+      · site.webmanifest —— Android/Chrome「添加到主屏幕」用，带 192/512 两档。
+      顺序：SVG 在前（首选），ICO 兜底。
+    --><link rel="icon" type="image/svg+xml" href="/favicon.svg"><link rel="icon" type="image/x-icon" href="/favicon.ico" sizes="16x16 24x24 32x32 48x48"><link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180"><link rel="manifest" href="/site.webmanifest"><meta name="generator" content="Astro v7.3.2"><meta property="og:type" content="website"><meta property="og:site_name" content="JINJIARAN"><meta property="og:title" content="矢量图分组导出工具 · JINJIARAN"><meta property="og:description" content="驱动本机 Illustrator，把 .ai 矢量文件里编好组的图形批量拆成透明 PNG —— 一个分组一张图，300 PPI，自动裁到图形边界。已打包成免安装 EXE。"><meta property="og:url" content="https://jinjiaran.com/tools/vector-group-exporter/"><!--
+      社交卡片图（2026-10-19 补）。之前全站没有任何 og:image，分享出去的链接是纯文字。
+      图是 public/og.png（1200×630，站点深底 + 品牌标），由 scripts/make-og.mjs 生成，
+      改文案/换标就重跑那个脚本，不要手工改图。
+      宽高必须写：部分抓取方（含微信/Twitter）会按它预留版位，缺了会裁得很难看。
+    --><meta property="og:image" content="https://jinjiaran.com/og.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="JINJIARAN · 个人作品站"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://jinjiaran.com/og.png"><!--
+      移动端浏览器地址栏染色。**只放一个 meta**，由下面那段内联脚本按最终主题
+      改 content —— 站内的主题是「手动切换 + data-theme」，不是跟随系统，
+      用两条 media 查询会跟用户手动选的打架。
+    --><meta name="theme-color" content="#f6f7f9" data-theme-color><script>
+      // 在首次绘制前定好主题，避免闪白；顺手把地址栏颜色定下来
+      ;(() => {
+        /* 先算出最终主题，再写 data-theme —— 两件事分开做，
+           是因为 localStorage 在隐私模式下会抛异常，旧写法里抛了就整段跳过。 */
+        let theme = 'light'
+        try {
+          const saved = localStorage.getItem('theme')
+          theme =
+            saved === 'light' || saved === 'dark'
+              ? saved
+              : window.matchMedia('(prefers-color-scheme: dark)').matches
+                ? 'dark'
+                : 'light'
+        } catch {
+          theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+        }
+        document.documentElement.dataset.theme = theme
+
+        const meta = document.querySelector('meta[data-theme-color]')
+        if (meta) meta.setAttribute('content', theme === 'dark' ? '#0d1117' : '#f6f7f9')
+      })()
+    </script><link rel="stylesheet" href="/_astro/BaseLayout.CKlrZbNO.css"><style>.crumb[data-astro-cid-crwazthf] a[data-astro-cid-crwazthf]:hover{color:var(--accent)}.tool-meta[data-astro-cid-crwazthf]{color:var(--fg-3);flex-wrap:wrap;align-items:center;gap:6px;margin-top:14px;font-size:12.5px;display:flex}.dl-note[data-astro-cid-crwazthf]{color:var(--fg-3);margin-left:10px;font-size:12.5px}.prose[data-astro-cid-crwazthf]{min-width:0}.prose[data-astro-cid-crwazthf] h2{border-bottom:1px solid var(--line);margin:34px 0 12px;padding-bottom:8px;font-size:20px}.prose[data-astro-cid-crwazthf] h2:first-child{margin-top:0}.prose[data-astro-cid-crwazthf] h3{margin:24px 0 8px;font-size:16px}.prose[data-astro-cid-crwazthf] p{color:var(--fg-2);margin:12px 0}.prose[data-astro-cid-crwazthf] strong{color:var(--fg)}.prose[data-astro-cid-crwazthf] a{color:var(--accent);text-underline-offset:3px;text-decoration:underline}.prose[data-astro-cid-crwazthf] ul,.prose[data-astro-cid-crwazthf] ol{color:var(--fg-2);padding-left:22px}.prose[data-astro-cid-crwazthf] li{margin:5px 0}.prose[data-astro-cid-crwazthf] code{background:var(--surface-2);border-radius:5px;padding:2px 6px;font-size:.88em}.prose[data-astro-cid-crwazthf] pre{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius);margin:16px 0;padding:16px;overflow-x:auto}.prose[data-astro-cid-crwazthf] pre code{background:0 0;padding:0;font-size:12.5px;line-height:1.6}.prose[data-astro-cid-crwazthf] blockquote{border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:0 var(--radius-sm) var(--radius-sm) 0;color:var(--fg-2);margin:16px 0;padding:10px 18px}.prose[data-astro-cid-crwazthf] blockquote p{margin:0}.prose[data-astro-cid-crwazthf] table{border-collapse:collapse;width:100%;margin:16px 0;font-size:13.5px;display:block;overflow-x:auto}.prose[data-astro-cid-crwazthf] th,.prose[data-astro-cid-crwazthf] td{border:1px solid var(--line);text-align:left;vertical-align:top;padding:8px 12px}.prose[data-astro-cid-crwazthf] th{background:var(--surface-2);white-space:nowrap;font-weight:600}.prose[data-astro-cid-crwazthf] td{color:var(--fg-2)}.prose[data-astro-cid-crwazthf] input[type=checkbox]{margin-right:6px}
+</style><script type="module" src="/_astro/page.CQWjsXKf.js"></script></head><body class="glass"><div class="backdrop" aria-hidden="true"><i class="mark"></i><i class="grid"></i></div><div class="read-progress" aria-hidden="true"></div><a class="skip-link" href="#main">跳到主内容</a><header class="site-header"><div class="wrap"><a class="brand" href="/"><svg class="mark" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 524 438"><path fill="currentColor" fill-rule="evenodd" d="M416.82 435.14C401.57 430.1 389.97 420.04 326.46 356.8C296.19 326.66 271.11 302 270.71 302C270.32 302 270 305.17 270 309.04C270 325.19 266.58 345.78 262.45 354.51C255.61 368.97 239.01 381.19 219 386.5C209.37 389.05 184.12 389.66 172.36 387.62C134.98 381.14 105.07 359.07 93.9 329.73C92.7 326.56 91.89 323.77 92.12 323.55C92.35 323.32 95.67 323.54 99.52 324.04C109.01 325.26 124.12 325.21 132 323.93C141.17 322.44 145.84 319.58 148.95 313.53L151.5 308.56L151.81 272.78L152.12 237L132.31 236.97C105.96 236.93 68.66 235.43 57.5 233.96C32.51 230.67 18.83 221.26 8.86 200.5C3.37 189.06 0.95 178.74 0.29 164C-1.78 117.22 20.72 76.49 57.46 60.54C61.84 58.64 65.56 57.23 65.73 57.39C65.9 57.56 65.56 63.06 64.98 69.6C63.25 89.16 65.33 104.68 70.52 110.84C71.9 112.48 75.16 114.64 77.76 115.64C82.12 117.3 87.25 117.47 141 117.7C198.58 117.94 199.41 117.91 194 116.14C184.03 112.87 177.68 108.9 169.91 101.11C155.15 86.31 149.34 67.33 153.5 47.5C157.85 26.81 174.05 9.13 194.5 2.75C204.23 -0.28 218.77 -0.28 228.5 2.75C253.04 10.4 270.97 34.35 270.97 59.5C270.97 84.6 253.48 108.19 229 116.11C223.57 117.87 224.17 117.89 274.6 117.95C330.81 118.01 346.08 118.82 360.71 122.53C388.99 129.7 411.57 149.04 419.41 172.81C426.33 193.77 425.17 212.89 415.83 232C412.46 238.88 410.01 242.14 402.95 249.15L394.22 257.79L425.86 289.28C461.17 324.42 463.99 326.58 473.64 325.78C477.54 325.46 480.31 324.42 484.3 321.77C490.34 317.75 503.89 304.49 509.63 296.96C511.71 294.23 513.7 292 514.05 292C514.92 292 519.59 304.17 521.52 311.5C527.78 335.19 521.31 366.33 505.14 390.29C490.96 411.31 472.31 426.78 452.87 433.64C442.77 437.2 425.28 437.93 416.82 435.14ZM293.41 220.59C301.72 216.52 304.4 212.05 304.85 201.48C305.27 191.48 302.79 184.69 296.87 179.62C292 175.45 287.15 174 278.13 174L271 174L271 199.13L271 224.25L279.36 223.81C285.87 223.47 288.97 222.76 293.41 220.59Z"/></svg>
+<span>JINJIARAN<span class="sub"> · 个人作品站</span></span></a><nav class="nav" aria-label="主导航"><a href="/?browse=1">首页</a><a href="/projects">项目</a><a href="/gallery">图片</a><a href="/videos">视频</a><a href="/docs">文档</a><a href="/models">模型</a><a href="/tools" aria-current="page">工具</a><a href="/about">关于</a></nav><button class="icon-btn" type="button" data-search-open aria-label="站内搜索" title="搜索（按 / ）" aria-expanded="false" aria-controls="site-search" data-astro-cid-av774hkb><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" data-astro-cid-av774hkb><circle cx="11" cy="11" r="7" data-astro-cid-av774hkb></circle><path d="m20 20-3.5-3.5" data-astro-cid-av774hkb></path></svg></button><button class="icon-btn" id="theme-toggle" type="button" aria-label="切换深浅色主题" aria-pressed="false"><svg class="sun" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"></path></svg><svg class="moon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"></path></svg></button><!--
+          主题切换的状态播报（2026-10-19 审计 D3）。
+          按钮本身只管"按下去了没有"（aria-pressed），**说不清现在是什么主题** ——
+          读屏用户听到"切换深浅色主题，已按下"，还是不知道屏幕上到底变深了还是变浅了。
+          所以另起一个 role="status" 的区域，切换后把结果念出来。
+          role="status" 自带 aria-live="polite"；这里两个都写，是为了兼容只认其一的读屏。
+          它必须常驻 DOM（不能切换时才插入），否则播报不会触发。
+        --><p class="sr-only" role="status" aria-live="polite" data-theme-status></p></div></header><main id="main" data-pagefind-body><header class="page-head is-tight"><div class="wrap"><nav class="crumb" aria-label="面包屑"><a href="/tools">工具</a><span aria-hidden="true">/</span><span>矢量图分组导出工具</span></nav><h1>矢量图分组导出工具</h1><p class="lede">驱动本机 Illustrator，把 .ai 矢量文件里编好组的图形批量拆成透明 PNG —— 一个分组一张图，300 PPI，自动裁到图形边界。已打包成免安装 EXE。</p><div class="tool-meta" data-astro-cid-crwazthf><span class="chip" data-astro-cid-crwazthf>已完成</span><span data-astro-cid-crwazthf>2026/9/22 更新</span><span class="chip" data-astro-cid-crwazthf>工具</span><span class="chip" data-astro-cid-crwazthf>Illustrator</span><span class="chip" data-astro-cid-crwazthf>批量导出</span><span class="chip" data-astro-cid-crwazthf>Python</span><span class="chip" data-astro-cid-crwazthf>已完成</span></div><p style="margin:16px 0 0" data-astro-cid-crwazthf><a class="btn btn-primary" href="/files/ai_png_exporter.exe" download data-astro-cid-crwazthf>下载这个工具</a><span class="dl-note" data-astro-cid-crwazthf>主程序，双击即用，无需安装 Python</span></p></div></header><div class="wrap" style="padding-block:30px 0" data-astro-cid-crwazthf><article class="prose glass-sheet" style="--i:1" data-astro-cid-crwazthf><h2 id="一句话">一句话</h2>
+<p>把 Illustrator 里已经编好组的矢量图形，一次性拆成一张张透明 PNG。</p>
+<blockquote>
+<p><strong>名字里的「矢量图」指的是 Adobe Illustrator 的 <code>.ai</code> 矢量文件</strong>，不是“人工智能”。
+这个工具原来叫「AI 分组导出工具」—— 那个 AI 是 Illustrator 的缩写，
+但十个人里有九个会读成人工智能，所以改成了现在这个名字。</p>
+</blockquote>
+<h2 id="要解决的事">要解决的事</h2>
+<p>矢量素材（图标、字标、装饰元素…）常常是<strong>一个 <code>.ai</code> 文件里躺着几十个图形</strong>，
+每个都编好了组，但 Illustrator 本身没有「把每个组各存一张图」这个功能。</p>
+<p>手工做法是：选中一个组 → 新建文档 → 粘贴 → 把画板裁到图形边界 → 导出 → 关掉文档。
+一个图形六步，几十个就是几百次点击，而且<strong>手一抖裁歪一个就得重来</strong>。</p>
+<p>这个工具把这一串动作交给脚本：<strong>打开文件 → 遍历组 → 每个组独立成图</strong>。
+全程不碰源文件 —— 所有文档（包括临时新建的那些）都以「不保存」方式关闭。</p>
+<h2 id="能力一览">能力一览</h2>
+<table>
+<thead>
+<tr>
+<th>能力</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>批量</td>
+<td>一次处理<strong>整个文件夹</strong>的 <code>.ai</code>，或单个文件内的全部对象</td>
+</tr>
+<tr>
+<td>两种范围</td>
+<td><strong>按分组</strong>（一个组一张图）/ <strong>按单个图形</strong>（没编组的散图形也各出一张）</td>
+</tr>
+<tr>
+<td>分辨率</td>
+<td>PPI 任意填，默认 300（72 PPI ≈ 1:1，300 ≈ 4.17 倍线长）</td>
+</tr>
+<tr>
+<td>格式</td>
+<td>PNG（透明 PNG24）/ PNG8（8 位透明，更小）/ JPG（不透明）/ SVG（矢量）</td>
+</tr>
+<tr>
+<td>裁剪</td>
+<td>以 <code>controlBounds</code> 裁画板 → <strong>尊重裁剪蒙版</strong>，得到紧贴图形的透明图</td>
+</tr>
+<tr>
+<td>过滤</td>
+<td>最小边长过滤（丢掉碎屑）、跳过与画板同尺寸的「整版背景组」</td>
+</tr>
+<tr>
+<td>图层</td>
+<td>自动解锁 / 显示所有图层，藏在锁定图层上的组也能导出</td>
+</tr>
+<tr>
+<td>命名</td>
+<td>模板化，<code>{doc}</code> <code>{i}</code> <code>{i2}</code> <code>{i3}</code> <code>{i4}</code> <code>{name}</code>，重名自动去重</td>
+</tr>
+<tr>
+<td>两种入口</td>
+<td>图形界面（tkinter）与命令行（argparse），同一套内核</td>
+</tr>
+</tbody>
+</table>
+<h2 id="下载">下载</h2>
+<table>
+<thead>
+<tr>
+<th>文件</th>
+<th>体积</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="/files/ai_png_exporter.exe" download>ai_png_exporter.exe</a></td>
+<td>10.9 MiB</td>
+<td><strong>主程序</strong>，双击即用，无需安装 Python</td>
+</tr>
+<tr>
+<td><a href="/files/ai_group_exporter.py" download>ai_group_exporter.py</a></td>
+<td>32 KB</td>
+<td>源码（图形界面 + 命令行 + COM 内核，全在一个文件里）</td>
+</tr>
+<tr>
+<td><a href="/files/export_groups.jsx" download>export_groups.jsx</a></td>
+<td>4 KB</td>
+<td>兜底脚本，直接在 Illustrator 里运行，不需要 Python</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>EXE 里已经把 <strong>Python 运行时、tkinter、pywin32、Pillow</strong> 全部打进包里了。
+唯一的前置条件是本机装了 <strong>Adobe Illustrator（2020 及以上）</strong> —— 工具是
+用 Windows 的 COM 接口遥控 Illustrator 干活的，Illustrator 本身必须在场。</p>
+</blockquote>
+<p>EXE 与窗口图标是同一份素材（<code>app_icon.ico</code>，由白底 LOGO 转透明生成），
+打包时一起进了 <code>--icon</code> 和 <code>--add-data</code>：</p>
+<img src="/media/vector-group-exporter/icon-preview.png" width="1120" height="500" alt="程序图标在 5 档尺寸下的样子，上下两行分别是浅色底与深色底" loading="lazy">
+<h2 id="快速上手exe">快速上手（EXE）</h2>
+<ol>
+<li>双击 <code>ai_png_exporter.exe</code>，先读面板顶部那段「使用说明（导出前必读）」</li>
+<li>选「单个文件」或「文件夹（批量）」→「浏览…」选中 <code>.ai</code></li>
+<li>点「分析文件」可以先看它认出了多少个对象（会临时启动 Illustrator，看完自动关）</li>
+<li>在「导出参数」里选<strong>导出范围</strong>：按分组（默认）/ 按单个图形</li>
+<li>设分辨率、留白、格式、输出目录、命名模板</li>
+<li>点「开始导出」，日志区实时滚动（每个对象一行，带导出后的像素尺寸）</li>
+</ol>
+<h3 id="界面2026-09-22-更新">界面（2026-09-22 更新）</h3>
+<p>窗口现在<strong>可以自由缩放</strong>，全部内容装在一个可滚动的画布里 —— 把窗口拉矮、或者屏幕本来就不大时，
+<strong>右侧滚动条和鼠标滚轮都能用</strong>，不会再出现“下面半截点不到”。</p>
+<p>启动时窗口会按内容所需高度自动定尺寸，<strong>上限是屏幕高度的 92%</strong>，超出的部分交给滚动条。
+（旧版是写死的 <code>760×640</code> + 一段固定 10 行高的说明框，小屏上底部的按钮会被裁掉 —— 这一版就是冲着这个改的。）</p>
+<p>面板自上而下：<strong>使用说明（导出前必读）</strong> → <strong>导出操作</strong> → <strong>选择要导出的 .ai</strong> → <strong>导出参数</strong> → 日志区。
+「开始导出 / 停止 / 打开输出目录」这回单独拎成一块、<strong>紧贴在说明下方</strong>，不用再拖到最后去找。</p>
+<h2 id="两种导出范围">两种导出范围</h2>
+<p>这是整个工具里最需要说清楚的一个选项 —— 它决定了「什么算一张图」。</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th><strong>按分组</strong>（默认）</th>
+<th><strong>按单个图形</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>遍历的是</td>
+<td>文档的顶层 <code>GroupItems</code></td>
+<td>每个图层的顶层 <code>PageItems</code></td>
+</tr>
+<tr>
+<td>一个已编组的图标</td>
+<td>整组一张图</td>
+<td>整组一张图</td>
+</tr>
+<tr>
+<td>一个没编组的散图形</td>
+<td><strong>不会被单独导出</strong></td>
+<td>自己一张图</td>
+</tr>
+<tr>
+<td>适合</td>
+<td>文件已经规规矩矩分好组</td>
+<td>文件是散的，想全量拆出来</td>
+</tr>
+<tr>
+<td>「递归导出嵌套分组」</td>
+<td>有效（可以连子组也各出一张）</td>
+<td>自动失效（已经是逐对象了）</td>
+</tr>
+</tbody>
+</table>
+<h2 id="导出参数命令行">导出参数（命令行）</h2>
+<p>图形界面里的每一项，命令行都有对应参数 —— 适合挂到批处理里跑。</p>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>含义</th>
+<th>默认</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>-i</code> / <code>--input</code></td>
+<td>输入 <code>.ai</code> 文件或文件夹</td>
+<td>必填</td>
+</tr>
+<tr>
+<td><code>-o</code> / <code>--out</code></td>
+<td>输出目录</td>
+<td>必填</td>
+</tr>
+<tr>
+<td><code>--ppi</code></td>
+<td>分辨率</td>
+<td><code>300</code></td>
+</tr>
+<tr>
+<td><code>--pad</code></td>
+<td>四周留白（pt）</td>
+<td><code>0</code></td>
+</tr>
+<tr>
+<td><code>--template</code></td>
+<td>命名模板</td>
+<td><code>{doc}_{i3}</code></td>
+</tr>
+<tr>
+<td><code>--recursive</code></td>
+<td>递归导出嵌套分组（仅 <code>scope=group</code> 有效）</td>
+<td>关</td>
+</tr>
+<tr>
+<td><code>--min-size</code></td>
+<td>最小边长（pt），小于则跳过</td>
+<td><code>0</code>（不过滤）</td>
+</tr>
+<tr>
+<td><code>--skip-full-artboard</code></td>
+<td>跳过与画板同尺寸的背景组</td>
+<td>关</td>
+</tr>
+<tr>
+<td><code>--no-aa</code></td>
+<td>关闭抗锯齿</td>
+<td>关</td>
+</tr>
+<tr>
+<td><code>--format</code></td>
+<td><code>png</code> / <code>png8</code> / <code>jpg</code> / <code>svg</code></td>
+<td><code>png</code></td>
+</tr>
+<tr>
+<td><code>--scope</code></td>
+<td><code>group</code> / <code>item</code></td>
+<td><code>group</code></td>
+</tr>
+<tr>
+<td><code>--visible</code></td>
+<td>显示 Illustrator 窗口（默认后台静默）</td>
+<td>关</td>
+</tr>
+</tbody>
+</table>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#6A737D"># 一个文件夹里的 .ai 全拆成 PNG</span></span>
+<span class="line"><span style="color:#B392F0">python</span><span style="color:#9ECBFF"> ai_group_exporter.py</span><span style="color:#79B8FF"> -i</span><span style="color:#9ECBFF"> "D:/图标源文件"</span><span style="color:#79B8FF"> -o</span><span style="color:#9ECBFF"> "D:/导出"</span><span style="color:#79B8FF"> --ppi</span><span style="color:#79B8FF"> 300</span><span style="color:#79B8FF"> --template</span><span style="color:#9ECBFF"> "{doc}_{i3}"</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># 文件没编组？换「按单个图形」，散图形也会各出一张</span></span>
+<span class="line"><span style="color:#B392F0">python</span><span style="color:#9ECBFF"> ai_group_exporter.py</span><span style="color:#79B8FF"> -i</span><span style="color:#9ECBFF"> "图标.ai"</span><span style="color:#79B8FF"> -o</span><span style="color:#9ECBFF"> "导出"</span><span style="color:#79B8FF"> --scope</span><span style="color:#9ECBFF"> item</span></span></code></pre>
+<h2 id="命名模板">命名模板</h2>
+<table>
+<thead>
+<tr>
+<th>变量</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>{doc}</code></td>
+<td>源文件名（不含扩展名）</td>
+</tr>
+<tr>
+<td><code>{i}</code></td>
+<td>序号，从 1 开始，不补零</td>
+</tr>
+<tr>
+<td><code>{i2}</code> / <code>{i3}</code> / <code>{i4}</code></td>
+<td>序号补零到 2 / 3 / 4 位</td>
+</tr>
+<tr>
+<td><code>{name}</code></td>
+<td>分组在 Illustrator 里的名字（为空时退回 <code>groupN</code>）</td>
+</tr>
+</tbody>
+</table>
+<p>模板 <code>{doc}_{i3}</code> → <code>SSS_001.png</code>、<code>SSS_002.png</code>…… 分组名里的
+<code>\ / : * ? " &lt; &gt; |</code> 与换行制表符会被换成 <code>_</code>，超过 60 字截断 —— 免得导出一个
+Windows 上根本存不下去的文件名。</p>
+<h2 id="导出成果">导出成果</h2>
+<p>下面这张是拿 <code>SSS.ai</code> 跑完整批的结果：40 个分组 → 40 张图，按导出顺序排开。
+每一张都是透明背景、各自裁到自己的图形边界：</p>
+<img src="/media/vector-group-exporter/sheet.png" width="992" height="1105" alt="40 张导出成果拼版：斜条纹、箭头、粗箭形、栅格、二维码、靶心、多边形等黑色几何图形" loading="lazy">
+<p>单独看几张的成品质量 —— 下面这几张的浅色底只是为了<strong>让透明 PNG 看得清</strong>，
+文件本身没有背景：</p>
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin:16px 0">
+  <div style="background:#f2f4f7;border-radius:10px;padding:10px">
+    <img src="/media/vector-group-exporter/sss-005.png" width="1179" height="1179" alt="导出成品：斜条纹与嵌套箭头组成的方形图形" loading="lazy">
+  </div>
+  <div style="background:#f2f4f7;border-radius:10px;padding:10px">
+    <img src="/media/vector-group-exporter/sss-006.png" width="1179" height="1179" alt="导出成品：同款图形旋转 45° 后的版本" loading="lazy">
+  </div>
+  <div style="background:#f2f4f7;border-radius:10px;padding:10px">
+    <img src="/media/vector-group-exporter/sss-034.png" width="675" height="675" alt="导出成品：同心圆靶心" loading="lazy">
+  </div>
+  <div style="background:#f2f4f7;border-radius:10px;padding:10px">
+    <img src="/media/vector-group-exporter/sss-040.png" width="750" height="746" alt="导出成品：黑色几何图形，透明背景" loading="lazy">
+  </div>
+</div>
+<p>同一个文件里图形的<strong>比例差得很远</strong> —— 有 354×354 的正方形小图标，也有 3467×675
+的长条（那排箭头和条纹）。它们各自按自己的边界裁切，所以同一次导出里
+「一张 600×600、下一张 3500×680」是正常的，居中、留白都各归各的。</p>
+<h2 id="前置操作导出前必做">前置操作（导出前必做）</h2>
+<p>工具不猜你的意图，它只认 Illustrator 里的结构。所以导出前：</p>
+<ul>
+<li><strong>按分组模式要先编组</strong>：在 Illustrator 里选中一个图标的全部图形，<code>Ctrl+G</code>。
+没编组的图形在「按分组」模式下会被直接跳过（不是丢失，是它不属于任何组）。</li>
+<li><strong>别把整版底纹留在文件里</strong>：如果文件里有个覆盖整张画板的背景 / 底纹分组，
+它会作为「一个分组」被导出成一张巨图 —— 本次的示例文件里就有这么一组
+（序号 1，8000×4500 的满画板斜条纹）。要么在 Illustrator 里删掉它，
+要么勾上 <code>--skip-full-artboard</code> / 界面上的同名选项。</li>
+<li><strong>锁定 / 隐藏图层不用管</strong>：工具会先把所有图层解锁并显示，导出完不影响源文件
+（不保存关闭）。</li>
+</ul>
+<h2 id="已知的坑写给下一个改这份代码的人">已知的坑（写给下一个改这份代码的人）</h2>
+<p>几个都是踩过才写下来的，见模块页里的完整拆解。</p>
+<ul>
+<li><strong><code>UserInteractionLevel = 2</code> 才是「静默全部弹窗」</strong>。直觉上「1 = 少弹」，
+实际 1 反而会弹，2（<code>aiSilenceAll</code>）才安静 —— 否则缺字体、缺链接的对话框
+会在无人值守时把批处理卡死。</li>
+<li><strong>选中对象要用列表</strong>：<code>app.Selection = [g]</code>。直接传单个对象在部分版本上对
+散落的 <code>PathItem</code> 会复制失败。</li>
+<li><strong>下标从 1 开始</strong>（COM），而同一套逻辑写成 JSX 时是<strong>从 0 开始</strong> ——
+两份实现对拷时这是最容易错的一处。</li>
+<li><strong><code>ControlBounds</code> 而不是 <code>VisibleBounds</code></strong>：前者尊重裁剪蒙版，后者会把
+被蒙版裁掉的部分也算进边界，导出的图四周会多出一圈空白。</li>
+<li><strong><code>--skip-full-artboard</code> 的判据是「尺寸近似 + 原点近似」</strong>：容差 2pt。
+背景组几乎都是严格贴画板的，所以这个宽松判据够用，也不会误伤真的贴边图形。</li>
+<li><strong>兜底脚本里 <code>{i4}</code> 没实现</strong>：JSX 版只做了 <code>{i}</code> <code>{i2}</code> <code>{i3}</code> <code>{name}</code>，
+够用就没补。</li>
+</ul>
+<h2 id="常见问题">常见问题</h2>
+<p><strong>提示找不到 Illustrator / pywin32？</strong>
+EXE 版只可能是没装 Illustrator（或者装的是很老的版本）。源码版则是
+<code>pip install pywin32</code> 没成功 —— 注意要在<strong>跑脚本的那个 Python 环境</strong>里装。</p>
+<p><strong>有些分组没导出？</strong>
+先看日志里的「跳过」行：多半是尺寸小于最小边长过滤、或者与画板同尺寸被当成
+背景组跳过了。如果不是这两种，常常是空分组（里面什么都没有），读不到边界。</p>
+<p><strong>导出很慢？</strong>
+正常。每个对象都要「新建文档 → 粘贴 → 光栅化 → 导出 → 关闭」一轮，
+组越多、文件越大越慢。命令行模式放后台跑就行。</p>
+<p><strong>能在 Mac 上用吗？</strong>
+不能。整条链路建立在 Windows COM 上。Mac 上可以用 <code>export_groups.jsx</code>
+那条路（Illustrator 自带的 ExtendScript，两端都能跑）。</p>
+<h2 id="想自己重新打包-exe">想自己重新打包 EXE</h2>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#B392F0">pyinstaller</span><span style="color:#79B8FF"> --onefile</span><span style="color:#79B8FF"> --windowed</span><span style="color:#79B8FF"> --name</span><span style="color:#9ECBFF"> ai_png_exporter</span><span style="color:#9ECBFF"> ^</span></span>
+<span class="line"><span style="color:#B392F0">  --icon</span><span style="color:#9ECBFF"> app_icon.ico</span><span style="color:#79B8FF"> --add-data</span><span style="color:#9ECBFF"> "app_icon.ico;."</span><span style="color:#9ECBFF"> ^</span></span>
+<span class="line"><span style="color:#B392F0">  --distpath</span><span style="color:#9ECBFF"> dist</span><span style="color:#79B8FF"> --workpath</span><span style="color:#9ECBFF"> build</span><span style="color:#9ECBFF"> ai_group_exporter.py</span></span></code></pre>
+<p>⚠️ <strong>必须用「带 tkinter 的 Python」来打包</strong>。精简版 Python（比如各种嵌入式 /
+托管发行版）不含 tcl-tk，PyInstaller 会报 <code>tkinter installation is broken</code>
+然后把它排除掉，生成的 EXE 一启动就崩。用本机标准安装的 Python
+（自带 tcl/tk 8.6）建个 venv，装 <code>pyinstaller pywin32 pillow</code> 再打。</p>
+<!-- 以下两节原是 projects 集合下的两个模块（modules/exporter.md + modules/jsx-fallback.md），
+     迁到 tools 后它们成了孤立页：tools 没有「模块」概念，tools 详情模板也不内联源码段。
+     按用户 2026-09-20 意图「Python 导出内核 / JSX 兜底脚本都是该工具的产物」，
+     合并到主文档里，标题下沉一级避免与上面用户导向的章节混层级。 -->
+<h2 id="python-导出内核">Python 导出内核</h2>
+<blockquote>
+<p>一个 775 行的文件里装着图形界面、命令行与 COM 内核三套东西。这里是它怎么把「选中一个组」变成「一张透明 PNG」的完整拆解。</p>
+</blockquote>
+<h3 id="一个文件三种身份">一个文件，三种身份</h3>
+<p><code>ai_group_exporter.py</code> 里同时住着三套东西，靠 <code>main()</code> 一次分流：</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#F97583">def</span><span style="color:#B392F0"> main</span><span style="color:#E1E4E8">():</span></span>
+<span class="line"><span style="color:#6A737D">    # 提供 --input 即进入命令行模式；--help / -h 也走 CLI 以显示参数说明</span></span>
+<span class="line"><span style="color:#F97583">    if</span><span style="color:#9ECBFF"> "--input"</span><span style="color:#F97583"> in</span><span style="color:#E1E4E8"> sys.argv </span><span style="color:#F97583">or</span><span style="color:#9ECBFF"> "-i"</span><span style="color:#F97583"> in</span><span style="color:#E1E4E8"> sys.argv </span><span style="color:#F97583">or</span><span style="color:#E1E4E8"> \</span></span>
+<span class="line"><span style="color:#9ECBFF">       "--help"</span><span style="color:#F97583"> in</span><span style="color:#E1E4E8"> sys.argv </span><span style="color:#F97583">or</span><span style="color:#9ECBFF"> "-h"</span><span style="color:#F97583"> in</span><span style="color:#E1E4E8"> sys.argv:</span></span>
+<span class="line"><span style="color:#E1E4E8">        run_cli()</span></span>
+<span class="line"><span style="color:#F97583">    else</span><span style="color:#E1E4E8">:</span></span>
+<span class="line"><span style="color:#E1E4E8">        run_gui()</span></span></code></pre>
+<p>双击 EXE → 无参数 → 图形界面；带 <code>--input</code> → 命令行。两边共用同一套内核
+（<code>connect_illustrator</code> / <code>collect_targets</code> / <code>export_group</code> / <code>run_export</code>），
+所以「界面上能做的事」和「脚本里能做的事」永远是同一件事，不会出现
+「GUI 有的功能 CLI 没有」这种分叉。</p>
+<h3 id="数据流">数据流</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>选中的 .ai</span></span>
+<span class="line"><span>   │</span></span>
+<span class="line"><span>   ├─ app.Open(path) ─────────── 打开源文档（全程不保存）</span></span>
+<span class="line"><span>   │</span></span>
+<span class="line"><span>   ├─ unlock_layers(doc) ─────── 所有图层 visible=True, locked=False</span></span>
+<span class="line"><span>   │</span></span>
+<span class="line"><span>   ├─ collect_targets(doc, scope, recursive)</span></span>
+<span class="line"><span>   │        ├─ scope=group → doc.GroupItems 递归遍历（可选进子分组）</span></span>
+<span class="line"><span>   │        └─ scope=item  → 每个 layer.PageItems（顶层图元）</span></span>
+<span class="line"><span>   │</span></span>
+<span class="line"><span>   └─ for 每个对象 ───────────── export_group()</span></span>
+<span class="line"><span>            │</span></span>
+<span class="line"><span>            │  ① app.Selection = [g]      选中</span></span>
+<span class="line"><span>            │  ② app.Copy()              复制</span></span>
+<span class="line"><span>            │  ③ Documents.Add(RGB)      新建临时文档</span></span>
+<span class="line"><span>            │  ④ Paste() + 量边界 + 裁画板</span></span>
+<span class="line"><span>            │  ⑤ Export(path, type, opt) 导出</span></span>
+<span class="line"><span>            │  ⑥ Close(不保存)            关掉临时文档</span></span>
+<span class="line"><span>            │</span></span>
+<span class="line"><span>            └─ 回到源文档继续下一个 …… 最后 doc.Close(不保存)</span></span></code></pre>
+<p><strong>注意整条链路里没有任何一步写源文件</strong> —— 打开它、读完、不保存关掉。
+临时文档也只活在 ④ 到 ⑥ 之间。</p>
+<h3 id="逐个函数拆">逐个函数拆</h3>
+<h4 id="connect_illustratorvisible--连接与静默"><code>connect_illustrator(visible)</code> —— 连接与静默</h4>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#E1E4E8">app </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> win32com.client.gencache.EnsureDispatch(</span><span style="color:#9ECBFF">"Illustrator.Application"</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#F97583">try</span><span style="color:#E1E4E8">:</span></span>
+<span class="line"><span style="color:#E1E4E8">    app.UserInteractionLevel </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 2</span><span style="color:#6A737D">      # 2 = aiSilenceAll</span></span>
+<span class="line"><span style="color:#F97583">except</span><span style="color:#79B8FF"> Exception</span><span style="color:#E1E4E8">:</span></span>
+<span class="line"><span style="color:#F97583">    pass</span></span></code></pre>
+<p><code>gencache.EnsureDispatch</code> 而不是 <code>Dispatch</code>：前者会<strong>生成类型库缓存</strong>，
+后面 <code>app.Documents.Add(AI_RGB, 100, 100)</code> 这类调用才能按真实签名传参，
+不然得靠位置参数硬试。</p>
+<p><code>UserInteractionLevel = 2</code> 是这里唯一一个<strong>反直觉</strong>的常量：直觉上「1 少弹、
+2 全弹」，实际相反 —— <code>1</code> 会弹对话框，<code>2</code>（<code>aiSilenceAll</code>）才静默。批处理里
+但凡漏掉这一句，遇到缺字体 / 缺链接的 <code>.ai</code> 就会停在弹窗上无人值守地卡死。</p>
+<h4 id="unlock_layersdoc--先解放图层"><code>unlock_layers(doc)</code> —— 先解放图层</h4>
+<p>遍历 <code>doc.Layers</code>，逐个 <code>Visible = True</code>、<code>Locked = False</code>。</p>
+<p>听起来像副作用很大的操作，其实不是：文档最后是「不保存」关闭的，
+这些改动不会落盘。但少了它，<strong>锁定或隐藏图层上的分组既枚举不到、也复制不了</strong>
+（<code>doc.GroupItems</code> 会跳过它们），会出现「我文件里明明有 40 个图标，只导出了 12 个」
+这种最难排查的问题。</p>
+<h4 id="collect_targetsdoc-scope-recursive--两种什么算一张图"><code>collect_targets(doc, scope, recursive)</code> —— 两种「什么算一张图」</h4>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#F97583">if</span><span style="color:#E1E4E8"> scope </span><span style="color:#F97583">==</span><span style="color:#9ECBFF"> "item"</span><span style="color:#E1E4E8">:</span></span>
+<span class="line"><span style="color:#6A737D">    # 逐图层取顶层图元：分组（整体）+ 未编组的散落图形</span></span>
+<span class="line"><span style="color:#F97583">    for</span><span style="color:#E1E4E8"> L </span><span style="color:#F97583">in</span><span style="color:#79B8FF"> range</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, doc.Layers.Count </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">):</span></span>
+<span class="line"><span style="color:#E1E4E8">        lay </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> doc.Layers.Item(L)</span></span>
+<span class="line"><span style="color:#F97583">        for</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">in</span><span style="color:#79B8FF"> range</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, lay.PageItems.Count </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">):</span></span>
+<span class="line"><span style="color:#E1E4E8">            result.append(lay.PageItems.Item(i))</span></span>
+<span class="line"><span style="color:#F97583">    return</span><span style="color:#E1E4E8"> result</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D"># group 模式：递归遍历文档全部顶层分组</span></span>
+<span class="line"><span style="color:#F97583">def</span><span style="color:#B392F0"> walk</span><span style="color:#E1E4E8">(container):</span></span>
+<span class="line"><span style="color:#F97583">    for</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">in</span><span style="color:#79B8FF"> range</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, container.GroupItems.Count </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">):</span></span>
+<span class="line"><span style="color:#E1E4E8">        g </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> container.GroupItems.Item(i)</span></span>
+<span class="line"><span style="color:#E1E4E8">        result.append(g)</span></span>
+<span class="line"><span style="color:#F97583">        if</span><span style="color:#E1E4E8"> recursive:</span></span>
+<span class="line"><span style="color:#E1E4E8">            walk(g)</span></span></code></pre>
+<ul>
+<li><code>scope=group</code> 走 <code>GroupItems</code>，<strong>只认组</strong>。未编组的散图形不属于任何组，
+于是不会被导出 —— 这是设计如此，不是 bug。</li>
+<li><code>scope=item</code> 走 <code>layer.PageItems</code>（图层的<strong>顶层</strong>图元）。一个组本身也是一个
+顶层图元，所以「已编组的图标整组出一张 + 散图形各出一张」可以同时成立。</li>
+<li>两个分支都用 <code>range(1, Count + 1)</code> —— <strong>COM 的集合下标从 1 开始</strong>。</li>
+</ul>
+<h4 id="export_groupapp-g-out_path-opts--六步的核心"><code>export_group(app, g, out_path, opts)</code> —— 六步的核心</h4>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#E1E4E8">app.Selection </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> [g]              </span><span style="color:#6A737D"># ① 用列表，见下</span></span>
+<span class="line"><span style="color:#E1E4E8">app.Copy()                       </span><span style="color:#6A737D"># ②</span></span>
+<span class="line"><span style="color:#E1E4E8">newdoc </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> app.Documents.Add(</span><span style="color:#79B8FF">AI_RGB</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">100</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">100</span><span style="color:#E1E4E8">)   </span><span style="color:#6A737D"># ③ 100×100pt 只是个临时画布</span></span>
+<span class="line"><span style="color:#F97583">try</span><span style="color:#E1E4E8">:</span></span>
+<span class="line"><span style="color:#E1E4E8">    newdoc.Paste()               </span><span style="color:#6A737D"># ④</span></span>
+<span class="line"><span style="color:#79B8FF">    ...</span></span>
+<span class="line"><span style="color:#F97583">    for</span><span style="color:#E1E4E8"> i </span><span style="color:#F97583">in</span><span style="color:#79B8FF"> range</span><span style="color:#E1E4E8">(</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, newdoc.PageItems.Count </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">):</span></span>
+<span class="line"><span style="color:#E1E4E8">        bb </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> list</span><span style="color:#E1E4E8">(it.ControlBounds)      </span><span style="color:#6A737D"># 尊重裁剪蒙版</span></span>
+<span class="line"><span style="color:#E1E4E8">        xs </span><span style="color:#F97583">+=</span><span style="color:#E1E4E8"> [bb[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">], bb[</span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">]]; ys </span><span style="color:#F97583">+=</span><span style="color:#E1E4E8"> [bb[</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">], bb[</span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">]]</span></span>
+<span class="line"><span style="color:#E1E4E8">    l, tp, r, bo </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> min</span><span style="color:#E1E4E8">(xs), </span><span style="color:#79B8FF">max</span><span style="color:#E1E4E8">(ys), </span><span style="color:#79B8FF">max</span><span style="color:#E1E4E8">(xs), </span><span style="color:#79B8FF">min</span><span style="color:#E1E4E8">(ys)</span></span>
+<span class="line"><span style="color:#F97583">    if</span><span style="color:#E1E4E8"> r </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> l </span><span style="color:#F97583">&lt;</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">: r </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> l </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span><span style="color:#6A737D">              # 兜底：零尺寸对象</span></span>
+<span class="line"><span style="color:#F97583">    if</span><span style="color:#E1E4E8"> tp </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> bo </span><span style="color:#F97583">&lt;</span><span style="color:#79B8FF"> 1</span><span style="color:#E1E4E8">: tp </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> bo </span><span style="color:#F97583">+</span><span style="color:#79B8FF"> 1</span></span>
+<span class="line"><span style="color:#E1E4E8">    rect </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> [l </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> pad, tp </span><span style="color:#F97583">+</span><span style="color:#E1E4E8"> pad, r </span><span style="color:#F97583">+</span><span style="color:#E1E4E8"> pad, bo </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> pad]</span></span>
+<span class="line"><span style="color:#E1E4E8">    newdoc.Artboards.Item(</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">).ArtboardRect </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> rect     </span><span style="color:#6A737D"># ⑤ 画板裁到图形</span></span>
+<span class="line"><span style="color:#E1E4E8">    etype, _ext, exp </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> build_export_options(opts)</span></span>
+<span class="line"><span style="color:#E1E4E8">    newdoc.Export(out_path, etype, exp)              </span><span style="color:#6A737D"># ⑥</span></span>
+<span class="line"><span style="color:#F97583">finally</span><span style="color:#E1E4E8">:</span></span>
+<span class="line"><span style="color:#E1E4E8">    newdoc.Close(</span><span style="color:#79B8FF">AI_DO_NOT_SAVE</span><span style="color:#E1E4E8">)         </span><span style="color:#6A737D"># 无论成败都关掉，别攒一堆临时文档</span></span></code></pre>
+<p>四个细节值得留一句：</p>
+<ol>
+<li><strong><code>app.Selection = [g]</code> 必须是列表</strong>。传裸对象 <code>g</code> 在部分 Illustrator 版本上
+对散落的 <code>PathItem</code> 会静默复制失败，然后你得到一张空白图。代码里做了三级兜底
+（列表 → 裸对象 → <code>g.Selected = True</code>），任何一级成功就继续。</li>
+<li><strong>边界取 <code>ControlBounds</code> 而不是 <code>VisibleBounds</code></strong>。前者把裁剪蒙版算进去，
+后者会把被蒙版裁掉的部分也算进包围盒 —— 用后者导出的图四周会多出一圈透明留白。</li>
+<li><strong>裁的是新建文档的第 1 个画板</strong>，不是源文档的。源文件是几块画板都不影响：
+多画板文件以第 1 块为基准，每个分组各成一张图，互不干扰。</li>
+<li><strong><code>finally</code> 里关文档</strong>。导出抛异常时如果不关，批处理跑几十个组会攒出几十个
+未保存的临时文档，Illustrator 会越来越慢直到内存吃满。</li>
+</ol>
+<h4 id="build_export_optionsopts--一张格式表--一堆-try"><code>build_export_options(opts)</code> —— 一张格式表 + 一堆 <code>try</code></h4>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#79B8FF">EXPORT_FORMATS</span><span style="color:#F97583"> =</span><span style="color:#E1E4E8"> {</span></span>
+<span class="line"><span style="color:#9ECBFF">    "png"</span><span style="color:#E1E4E8">:  (</span><span style="color:#79B8FF">5</span><span style="color:#E1E4E8">, </span><span style="color:#9ECBFF">"png"</span><span style="color:#E1E4E8">, </span><span style="color:#9ECBFF">"PNG24"</span><span style="color:#E1E4E8">),   </span><span style="color:#6A737D"># 透明 PNG（默认）</span></span>
+<span class="line"><span style="color:#9ECBFF">    "png8"</span><span style="color:#E1E4E8">: (</span><span style="color:#79B8FF">4</span><span style="color:#E1E4E8">, </span><span style="color:#9ECBFF">"png"</span><span style="color:#E1E4E8">, </span><span style="color:#9ECBFF">"PNG8"</span><span style="color:#E1E4E8">),    </span><span style="color:#6A737D"># 8 位透明，体积更小</span></span>
+<span class="line"><span style="color:#9ECBFF">    "jpg"</span><span style="color:#E1E4E8">:  (</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">, </span><span style="color:#9ECBFF">"jpg"</span><span style="color:#E1E4E8">, </span><span style="color:#9ECBFF">"JPEG"</span><span style="color:#E1E4E8">),    </span><span style="color:#6A737D"># 不支持透明，背景为白</span></span>
+<span class="line"><span style="color:#9ECBFF">    "svg"</span><span style="color:#E1E4E8">:  (</span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">, </span><span style="color:#9ECBFF">"svg"</span><span style="color:#E1E4E8">, </span><span style="color:#9ECBFF">"SVG"</span><span style="color:#E1E4E8">),     </span><span style="color:#6A737D"># 矢量</span></span>
+<span class="line"><span style="color:#E1E4E8">}</span></span></code></pre>
+<p>整数是 Illustrator 类型库里的 <code>AiExportType</code> 实测值（PNG24 = 5）。
+<code>ExportOptions</code> 类的名字也是字符串拼出来的：<code>"Illustrator.ExportOptions%s" % cls</code>
+—— 四种格式各对应一个类，属性各不相同（PNG 有 <code>Transparency</code>、
+JPEG 有 <code>Quality</code>、SVG 有 <code>EmbedRasterImages</code>）。</p>
+<p><strong>所有属性赋值都包在 <code>try/except</code> 里</strong>，看起来像偷懒，其实是必须的：
+不同 Illustrator 版本暴露的属性集不一样，某个属性不存在时 COM 会直接抛异常。
+这里的选择是「属性不存在就跳过」而不是「整体失败」—— 因为多数属性只是锦上添花
+（抗锯齿、<code>SaveAsHTML=False</code>），真正决定成败的是 <code>ExportType</code> 和画板尺寸。</p>
+<p>分辨率走的是<strong>缩放</strong>而不是 DPI 元数据：</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#E1E4E8">scale </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> opts.ppi </span><span style="color:#F97583">/</span><span style="color:#79B8FF"> 72.0</span><span style="color:#F97583"> *</span><span style="color:#79B8FF"> 100.0</span><span style="color:#6A737D">     # PostScript 1pt = 1/72 英寸</span></span>
+<span class="line"><span style="color:#E1E4E8">exp.HorizontalScale </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> scale</span></span>
+<span class="line"><span style="color:#E1E4E8">exp.VerticalScale </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> scale</span></span></code></pre>
+<p>72 PPI 就是 100%（1:1），300 PPI 是 417%。光栅格式才设缩放，SVG 是矢量，
+设了也没意义。</p>
+<h4 id="命名sanitize--make_name--dedupe">命名：<code>sanitize</code> / <code>make_name</code> / <code>dedupe</code></h4>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#79B8FF">_BAD</span><span style="color:#F97583"> =</span><span style="color:#E1E4E8"> re.compile(</span><span style="color:#F97583">r</span><span style="color:#9ECBFF">'</span><span style="color:#79B8FF">[</span><span style="color:#85E89D;font-weight:bold">\\</span><span style="color:#79B8FF">/:*?"&lt;&gt;|</span><span style="color:#85E89D;font-weight:bold">\r\n\t</span><span style="color:#79B8FF">]</span><span style="color:#F97583">+</span><span style="color:#9ECBFF">'</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#F97583">def</span><span style="color:#B392F0"> make_name</span><span style="color:#E1E4E8">(template, doc_base, idx, gname):</span></span>
+<span class="line"><span style="color:#E1E4E8">    raw </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> (gname </span><span style="color:#F97583">or</span><span style="color:#9ECBFF"> ""</span><span style="color:#E1E4E8">).strip() </span><span style="color:#F97583">or</span><span style="color:#E1E4E8"> (</span><span style="color:#9ECBFF">"group</span><span style="color:#79B8FF">%d</span><span style="color:#9ECBFF">"</span><span style="color:#F97583"> %</span><span style="color:#E1E4E8"> idx)</span></span>
+<span class="line"><span style="color:#E1E4E8">    safe </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> sanitize(raw)</span></span>
+<span class="line"><span style="color:#F97583">    return</span><span style="color:#E1E4E8"> (template.replace(</span><span style="color:#9ECBFF">"</span><span style="color:#79B8FF">{doc}</span><span style="color:#9ECBFF">"</span><span style="color:#E1E4E8">, doc_base)</span></span>
+<span class="line"><span style="color:#E1E4E8">                    .replace(</span><span style="color:#9ECBFF">"</span><span style="color:#79B8FF">{i4}</span><span style="color:#9ECBFF">"</span><span style="color:#E1E4E8">, </span><span style="color:#9ECBFF">"</span><span style="color:#79B8FF">%04d</span><span style="color:#9ECBFF">"</span><span style="color:#F97583"> %</span><span style="color:#E1E4E8"> idx)</span></span>
+<span class="line"><span style="color:#E1E4E8">                    .replace(</span><span style="color:#9ECBFF">"</span><span style="color:#79B8FF">{i3}</span><span style="color:#9ECBFF">"</span><span style="color:#E1E4E8">, </span><span style="color:#9ECBFF">"</span><span style="color:#79B8FF">%03d</span><span style="color:#9ECBFF">"</span><span style="color:#F97583"> %</span><span style="color:#E1E4E8"> idx)</span></span>
+<span class="line"><span style="color:#E1E4E8">                    .replace(</span><span style="color:#9ECBFF">"</span><span style="color:#79B8FF">{i2}</span><span style="color:#9ECBFF">"</span><span style="color:#E1E4E8">, </span><span style="color:#9ECBFF">"</span><span style="color:#79B8FF">%02d</span><span style="color:#9ECBFF">"</span><span style="color:#F97583"> %</span><span style="color:#E1E4E8"> idx)</span></span>
+<span class="line"><span style="color:#E1E4E8">                    .replace(</span><span style="color:#9ECBFF">"</span><span style="color:#79B8FF">{i}</span><span style="color:#9ECBFF">"</span><span style="color:#E1E4E8">, </span><span style="color:#79B8FF">str</span><span style="color:#E1E4E8">(idx))</span></span>
+<span class="line"><span style="color:#E1E4E8">                    .replace(</span><span style="color:#9ECBFF">"</span><span style="color:#79B8FF">{name}</span><span style="color:#9ECBFF">"</span><span style="color:#E1E4E8">, safe))</span></span></code></pre>
+<ul>
+<li>正则里那串字符是 Windows 文件名非法字符 + 换行制表符，替换成 <code>_</code>；
+再长截 60 字。</li>
+<li>替换顺序 <strong><code>{i4}</code> → <code>{i3}</code> → <code>{i2}</code> → <code>{i}</code></strong> 不能反。反了的话 <code>{i3}</code> 会先被
+<code>%03d</code> 的产物污染（<code>{i}</code> 是 <code>{i3}</code> 的前缀，先替短的会毁掉长的）。</li>
+<li>分组名可能是空的（Illustrator 允许无名组），退回 <code>groupN</code>。</li>
+<li><code>dedupe</code> 用字典记数，重名变成 <code>名字_2</code>、<code>名字_3</code> —— 不然同一次导出会互相覆盖。</li>
+</ul>
+<h4 id="process_file--过滤与编排"><code>process_file(...)</code> —— 过滤与编排</h4>
+<p>在真正导出之前拦两道：</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#E1E4E8">w, h </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> b[</span><span style="color:#79B8FF">2</span><span style="color:#E1E4E8">] </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> b[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">], b[</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">] </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> b[</span><span style="color:#79B8FF">3</span><span style="color:#E1E4E8">]</span></span>
+<span class="line"><span style="color:#F97583">if</span><span style="color:#E1E4E8"> opts.min_size </span><span style="color:#F97583">and</span><span style="color:#79B8FF"> max</span><span style="color:#E1E4E8">(w, h) </span><span style="color:#F97583">&lt;</span><span style="color:#E1E4E8"> opts.min_size:</span></span>
+<span class="line"><span style="color:#79B8FF">    ...</span><span style="color:#E1E4E8"> 跳过（尺寸过小）</span></span>
+<span class="line"><span style="color:#F97583">if</span><span style="color:#E1E4E8"> opts.skip_full_artboard </span><span style="color:#F97583">and</span><span style="color:#E1E4E8"> aw </span><span style="color:#F97583">&gt;</span><span style="color:#79B8FF"> 0</span><span style="color:#F97583"> and</span><span style="color:#E1E4E8"> ah </span><span style="color:#F97583">&gt;</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">:</span></span>
+<span class="line"><span style="color:#F97583">    if</span><span style="color:#E1E4E8"> (</span><span style="color:#79B8FF">abs</span><span style="color:#E1E4E8">(w </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> aw) </span><span style="color:#F97583">&lt;</span><span style="color:#79B8FF"> 2</span><span style="color:#F97583"> and</span><span style="color:#79B8FF"> abs</span><span style="color:#E1E4E8">(h </span><span style="color:#F97583">-</span><span style="color:#E1E4E8"> ah) </span><span style="color:#F97583">&lt;</span><span style="color:#79B8FF"> 2</span><span style="color:#F97583"> and</span></span>
+<span class="line"><span style="color:#79B8FF">            abs</span><span style="color:#E1E4E8">(b[</span><span style="color:#79B8FF">0</span><span style="color:#E1E4E8">]) </span><span style="color:#F97583">&lt;</span><span style="color:#79B8FF"> 2</span><span style="color:#F97583"> and</span><span style="color:#79B8FF"> abs</span><span style="color:#E1E4E8">(b[</span><span style="color:#79B8FF">1</span><span style="color:#E1E4E8">]) </span><span style="color:#F97583">&lt;</span><span style="color:#79B8FF"> 2</span><span style="color:#E1E4E8">):</span></span>
+<span class="line"><span style="color:#79B8FF">        ...</span><span style="color:#E1E4E8"> 跳过（与画板同尺寸的背景分组）</span></span></code></pre>
+<p>「最小边长」用的是 <code>max(w, h)</code> —— 阈值只卡最长边，所以一根细长的竖条不会被
+误杀（它的最大边很长）。而「跳过背景组」的判据是<strong>尺寸近似 + 原点近似</strong>
+（容差 2pt）：背景矩形几乎都是严格贴死画板的，这个宽松判据够用，也不会误伤
+恰好贴边的小图形。</p>
+<h4 id="run_gui--为什么所有导出都在后台线程里"><code>run_gui()</code> —— 为什么所有导出都在后台线程里</h4>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="python"><code><span class="line"><span style="color:#F97583">def</span><span style="color:#B392F0"> start</span><span style="color:#E1E4E8">():</span></span>
+<span class="line"><span style="color:#E1E4E8">    stop_event.clear()</span></span>
+<span class="line"><span style="color:#E1E4E8">    threading.Thread(</span><span style="color:#FFAB70">target</span><span style="color:#F97583">=</span><span style="color:#E1E4E8">worker, </span><span style="color:#FFAB70">daemon</span><span style="color:#F97583">=</span><span style="color:#79B8FF">True</span><span style="color:#E1E4E8">).start()</span></span></code></pre>
+<p>tkinter 是单线程的：主线程跑 <code>mainloop()</code> 负责界面响应。导出动辄几分钟，
+直接在按钮回调里写循环，界面会整个冻住（连「停止」都点不动）。</p>
+<p>所以 <code>worker()</code> 里做三件事：解析参数 → <code>connect_illustrator(visible=False)</code>
+→ <code>run_export(...)</code>，日志通过 <code>log_msg</code> 回调回主线程。跨线程更新控件在这里
+没做 <code>after()</code> 排队 —— 因为 <code>log_msg</code> 只往 <code>ScrolledText</code> 里 append 文本，
+是实测稳定的一条路（真出问题再加队列）。</p>
+<ul>
+<li><strong><code>visible=False</code></strong>：GUI 模式默认让 Illustrator 在后台跑，屏幕上不会闪出一堆窗口。</li>
+<li><strong><code>stop_event</code></strong>：一个 <code>threading.Event</code>。导出循环每一轮开头检查一次，
+所以点「停止」是<strong>在完成当前分组之后</strong>停下 —— 中断时机落在对象边界上，
+不会留下半张损坏的图片。</li>
+<li><strong><code>daemon=True</code></strong>：关窗口时线程跟着进程一起结束，不会挂住。</li>
+</ul>
+<p>「分析文件」按钮是同样的套路：另起一条线程打开文件数一遍对象，数完关掉、把
+数字回填到标签上，并且<strong>顺手先把 Illustrator 起来</strong> —— 后面真导出时就不用再等启动。</p>
+<h3 id="三处常量各自有出处">三处常量，各自有出处</h3>
+<table>
+<thead>
+<tr>
+<th>常量</th>
+<th>值</th>
+<th>出处</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>AI_PNG24</code></td>
+<td><code>5</code></td>
+<td><code>AiExportType.aiPNG24</code>，本机 Illustrator 2020 类型库实测</td>
+</tr>
+<tr>
+<td><code>AI_RGB</code></td>
+<td><code>1</code></td>
+<td><code>AiDocumentColorSpace.aiRGB</code> —— 导出用的临时文档必须建在 RGB 下</td>
+</tr>
+<tr>
+<td><code>AI_DO_NOT_SAVE</code></td>
+<td><code>2</code></td>
+<td><code>AiDocumentSaveOptions.aiDoNotSaveChanges</code></td>
+</tr>
+<tr>
+<td><code>UserInteractionLevel</code></td>
+<td><code>2</code></td>
+<td><code>aiSilenceAll</code>（<strong>1 不是</strong>，见上）</td>
+</tr>
+</tbody>
+</table>
+<p>代码里特意注释了「BMP / PDF 的 <code>ExportOptions</code> 类在本机不可用，故不提供」——
+这就是那份格式表只有四项的原因，不是漏了。</p>
+<h2 id="jsx-兜底脚本">JSX 兜底脚本</h2>
+<blockquote>
+<p>同一套导出逻辑的 ExtendScript 版本。不装 Python、不用 Windows，直接在 Illustrator 里跑 —— 代价是参数写死在文件顶部。</p>
+</blockquote>
+<h3 id="为什么还要留一份-jsx">为什么还要留一份 JSX</h3>
+<p>Python 那套是主力，但它有两个死条件：<strong>Windows</strong>（COM 只在 Windows 上存在）
+和<strong>装 Python</strong>（虽然打包成 EXE 之后这条免了）。<code>export_groups.jsx</code> 是这两条
+都不成立时的退路：</p>
+<ul>
+<li>在 <strong>Mac</strong> 上也能用（Illustrator 的 ExtendScript 两端通用）</li>
+<li><strong>不用装任何东西</strong> —— Illustrator 自己就是运行时</li>
+<li>Python/COM 出问题（类型库缓存坏了、杀软拦了 COM 调用）时的替代路径</li>
+</ul>
+<p>代价很明确：<strong>参数写在文件顶部，改一次要编辑源文件</strong>。没有界面，没有命令行，
+没有格式选择。</p>
+<h3 id="怎么跑">怎么跑</h3>
+<p><code>文件 &gt; 脚本 &gt; 其他脚本...</code> 选中 <code>export_groups.jsx</code>，然后：</p>
+<ol>
+<li>弹窗选「输入文件夹」（里面放 <code>.ai</code>）</li>
+<li>弹窗选「输出文件夹」</li>
+<li>跑完弹一个「导出完成：成功 N / 失败 M」</li>
+</ol>
+<p>顶部三个常量就是全部可调项：</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="javascript"><code><span class="line"><span style="color:#F97583">var</span><span style="color:#79B8FF"> PPI</span><span style="color:#F97583"> =</span><span style="color:#79B8FF"> 300</span><span style="color:#E1E4E8">;                 </span><span style="color:#6A737D">// 导出分辨率</span></span>
+<span class="line"><span style="color:#F97583">var</span><span style="color:#79B8FF"> PAD</span><span style="color:#F97583"> =</span><span style="color:#79B8FF"> 0</span><span style="color:#E1E4E8">;                   </span><span style="color:#6A737D">// 四周留白（pt）</span></span>
+<span class="line"><span style="color:#F97583">var</span><span style="color:#79B8FF"> TEMPLATE</span><span style="color:#F97583"> =</span><span style="color:#9ECBFF"> "{doc}_{i3}"</span><span style="color:#E1E4E8">;   </span><span style="color:#6A737D">// 命名模板：{doc}文件名 {i}序号 {i3}补零</span></span></code></pre>
+<h3 id="与-python-版的关系同一套算法两套下标">与 Python 版的关系：同一套算法，两套下标</h3>
+<p>两份实现是<strong>逐行对应</strong>的 —— 同样的「选中 → 复制 → 新建 RGB 文档 → 粘贴 →
+按 controlBounds 裁画板 → 导出 PNG24 透明 → 关掉不保存」。差异集中在三处：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Python 版（COM）</th>
+<th>JSX 版</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>集合下标</td>
+<td><strong>从 1 开始</strong>，<code>loop(1, Count+1)</code></td>
+<td><strong>从 0 开始</strong>，<code>loop(0, length)</code></td>
+</tr>
+<tr>
+<td>选中对象</td>
+<td><code>app.Selection = [g]</code>（列表更稳）</td>
+<td><code>app.selection = g</code>（替换式选择）</td>
+</tr>
+<tr>
+<td>导出调用</td>
+<td><code>doc.Export(路径, ExportType, opts)</code></td>
+<td><code>doc.exportFile(new File(路径), ExportType.PNG24, opts)</code></td>
+</tr>
+<tr>
+<td>常量</td>
+<td>类里查（<code>AI_PNG24 = 5</code>）</td>
+<td>全局枚举（<code>ExportType.PNG24</code>）</td>
+</tr>
+<tr>
+<td>关文档</td>
+<td><code>Close(AI_DO_NOT_SAVE)</code></td>
+<td><code>close(SaveOptions.DONOTSAVECHANGES)</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>下标这把刀最容易割手</strong>：把 Python 版逻辑搬到 JSX 时如果忘了 <code>-1</code>，
+最轻是漏掉第一个对象，最重是最后一次循环越界抛异常。文件顶部专门留了一行注释
+钉这件事：</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="javascript"><code><span class="line"><span style="color:#6A737D">// 注意：JSX 中集合下标从 0 开始（COM/Python 从 1 开始）。</span></span></code></pre>
+<h3 id="少了什么和-python-版对比">少了什么（和 Python 版对比）</h3>
+<p>JSX 版是<strong>够用就好</strong>的那一档，刻意没做的：</p>
+<table>
+<thead>
+<tr>
+<th>功能</th>
+<th>Python 版</th>
+<th>JSX 版</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>按单个图形导出（<code>--scope item</code>）</td>
+<td>有</td>
+<td>无（只遍历顶层 <code>groupItems</code>）</td>
+</tr>
+<tr>
+<td>递归嵌套分组</td>
+<td>有</td>
+<td>无</td>
+</tr>
+<tr>
+<td>格式选择（PNG8 / JPG / SVG）</td>
+<td>有</td>
+<td>无（固定 PNG24 透明）</td>
+</tr>
+<tr>
+<td>最小边长过滤 / 跳过背景组</td>
+<td>有</td>
+<td>无</td>
+</tr>
+<tr>
+<td>进度日志</td>
+<td>有（逐对象一行）</td>
+<td>无（只在过程中看 Illustrator，结束时弹总数）</td>
+</tr>
+<tr>
+<td><code>{i4}</code> 变量</td>
+<td>有</td>
+<td><strong>无</strong>（只做到 <code>{i3}</code>）</td>
+</tr>
+</tbody>
+</table>
+<p>原因就是它的定位：<strong>兜底</strong>。真要用到按图形导出、格式转换、过滤这些，
+说明你在批量处理一批不太规整的素材 —— 那种活本来就该用 Python 版
+（或者干脆挂到命令行里跑）。</p>
+<h3 id="有一处它反而更稳">有一处它反而更稳</h3>
+<p><code>exportGroup</code> 里量边界的那段：</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="javascript"><code><span class="line"><span style="color:#F97583">var</span><span style="color:#E1E4E8"> bb </span><span style="color:#F97583">=</span><span style="color:#E1E4E8"> nd.pageItems[i].controlBounds;   </span><span style="color:#6A737D">// [l, t, r, b]</span></span></code></pre>
+<p>JSX 里 <code>controlBounds</code> 是<strong>普通属性</strong>，<code>nd.pageItems[i]</code> 直接能读。
+Python 走 COM 时必须 <code>list(it.ControlBounds)</code> 转一下 —— COM 返回的是一个
+代理对象，不转成 Python 列表，后面 <code>min()/max()</code> 会得到意料之外的结果。</p>
+<p>另外 JSX 的 <code>controlBounds</code> 和 COM 的 <code>ControlBounds</code> 语义完全一致
+（都尊重裁剪蒙版），所以两条路导出的图是同一张图 —— 这一点在
+「Python 版导出结果和 JSX 版对不上」的排查里很关键：<strong>如果对不上，
+先看是不是下标差 1，而不是去怀疑裁剪逻辑</strong>。</p>
+</article></div></main><footer class="site-footer"><div class="wrap row"><p style="margin:0">© 2024–2026  内容版权归作者所有</p><p style="margin:0"><span class="chip">静态站</span><span class="chip" style="margin-left:6px">CDN 直出</span><span class="chip" style="margin-left:6px">0 台服务器</span></p></div></footer><!--
+      搜索面板挂在 </body> 前，不能放进页头：
+      页头有 backdrop-filter，它会让后代里的 position: fixed 以页头为包含块，
+      面板会被裁在页头那条 60px 的带子里。
+    --><div class="search-layer" id="site-search" data-search-layer hidden data-astro-cid-av774hkb><div class="search-backdrop" data-search-close aria-hidden="true" data-astro-cid-av774hkb></div><div class="search-panel" role="dialog" aria-modal="true" aria-label="站内搜索" data-astro-cid-av774hkb><div class="search-bar" data-astro-cid-av774hkb><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" data-astro-cid-av774hkb><circle cx="11" cy="11" r="7" data-astro-cid-av774hkb></circle><path d="m20 20-3.5-3.5" data-astro-cid-av774hkb></path></svg><input type="search" data-search-input placeholder="搜项目、模块、图集、蓝图…" autocomplete="off" spellcheck="false" aria-label="搜索关键词" data-astro-cid-av774hkb><kbd data-astro-cid-av774hkb>Esc</kbd></div><div class="search-body" data-search-body data-astro-cid-av774hkb><p class="search-tip" data-astro-cid-av774hkb>输入关键词开始搜索。按 <b data-astro-cid-av774hkb>/</b> 或 <b data-astro-cid-av774hkb>Ctrl</b>+<b data-astro-cid-av774hkb>K</b> 随时打开。</p></div></div></div><script>
+      ;(() => {
+        const layer = document.querySelector('[data-search-layer]')
+        if (!layer) return
+
+        const input = layer.querySelector('[data-search-input]')
+        const body = layer.querySelector('[data-search-body]')
+        const TIP =
+          '<p class="search-tip">输入关键词开始搜索。按 <b>/</b> 或 <b>Ctrl</b>+<b>K</b> 随时打开。</p>'
+
+        /* ---------------- Pagefind 懒加载 ---------------- */
+        let enginePromise = null
+        const loadEngine = () => {
+          if (!enginePromise) {
+            enginePromise = import('/pagefind/pagefind.js')
+              .then(async (pf) => {
+                try {
+                  await pf.options({ excerptLength: 24 })
+                } catch {
+                  /* 老版本没有 options，忽略 */
+                }
+                return pf
+              })
+              .catch((err) => {
+                enginePromise = null // 允许下次重试
+                throw err
+              })
+          }
+          return enginePromise
+        }
+
+        /* ---------------- 渲染 ---------------- */
+        const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
+
+        const setTip = (html) => {
+          body.innerHTML = html
+        }
+
+        const render = (items, query) => {
+          if (!items.length) {
+            setTip(`<p class="search-tip">没有找到和「${esc(query)}」相关的内容。</p>`)
+            return
+          }
+
+          const ul = document.createElement('ul')
+          ul.className = 'search-list'
+
+          for (const it of items) {
+            const a = document.createElement('a')
+            a.href = it.url || '/'
+
+            const t = document.createElement('span')
+            t.className = 'search-item-title'
+            t.textContent = (it.meta && it.meta.title) || it.url || '未命名'
+            a.append(t)
+
+            if (it.excerpt) {
+              const e = document.createElement('span')
+              e.className = 'search-item-excerpt'
+              // Pagefind 给的片段已经转义过，只有 <mark> 是高亮标签
+              e.innerHTML = it.excerpt
+              a.append(e)
+            }
+
+            const li = document.createElement('li')
+            li.append(a)
+            ul.append(li)
+          }
+
+          body.textContent = ''
+          body.append(ul)
+        }
+
+        /* ---------------- 搜索 ---------------- */
+        let seq = 0
+        const run = async (raw) => {
+          const mine = ++seq
+          const query = raw.trim()
+
+          if (!query) {
+            setTip(TIP)
+            return
+          }
+
+          setTip('<p class="search-tip">搜索中…</p>')
+
+          let pf
+          try {
+            pf = await loadEngine()
+          } catch {
+            setTip(
+              '<p class="search-tip">搜索索引暂时用不了。<br />索引是构建期生成的，' +
+                '<b>本地开发模式（pnpm dev）下没有</b>，跑一次 <b>pnpm build</b> 或 <b>pnpm preview</b> 就有了。</p>',
+            )
+            return
+          }
+          if (mine !== seq) return
+
+          try {
+            const res = await pf.search(query)
+            if (mine !== seq) return
+            const items = await Promise.all(res.results.slice(0, 8).map((r) => r.data()))
+            if (mine !== seq) return
+            render(items, query)
+          } catch {
+            setTip('<p class="search-tip">搜索出错了，换几个词再试试。</p>')
+          }
+        }
+
+        let timer
+        input.addEventListener('input', () => {
+          clearTimeout(timer)
+          timer = setTimeout(() => run(input.value), 130)
+        })
+
+        /* ---------------- 开关 ----------------
+         * 焦点闭环（2026-10-19 审计 D2）。此前的问题：
+         *   · 点开搜索、Esc 关掉之后，焦点落在 <body> 上 —— 键盘用户等于被扔回页首，
+         *     得从头 Tab 一遍才能回到刚才那颗放大镜；
+         *   · Tab 能一路走出面板、跑到页头导航和页脚链接上，而背景还盖着，
+         *     人是"看不见自己在哪"的。
+         *
+         * 做法分两层：
+         *   ① `inert` 给面板以外的所有 body 子节点 —— 一整片区域不可聚焦、不可点、
+         *     读屏也跳过。这是浏览器原生的"这块不参与交互"，比自己数可聚焦元素可靠；
+         *   ② Tab 在面板内显式循环 —— inert 已经挡住了外面的元素，但焦点走到最后
+         *     一个链接后浏览器会把焦点交给地址栏，再 Tab 回来就出了面板。显式兜一圈。
+         */
+        const isTyping = (el) =>
+          el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)
+
+        const trigger = document.querySelector('[data-search-open]')
+        /* 面板以外的所有 body 直接子节点（含 skip-link / header / main / footer）。
+           脚本标签也在里面 —— 给 <script> 设 inert 没有任何副作用。 */
+        const background = () => [...document.body.children].filter((el) => el !== layer)
+
+        /** 记住"打开之前焦点在哪"，关的时候还回去 */
+        let lastFocus = null
+
+        const focusables = () => {
+          const list = [...layer.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])')]
+          /* 结果列表是动态渲染的，用 offsetParent 过滤掉 [hidden] 与非可见项 */
+          return list.filter((el) => el === input || el.offsetParent !== null)
+        }
+
+        const open = () => {
+          lastFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
+          layer.hidden = false
+          document.body.style.overflow = 'hidden'
+          background().forEach((el) => el.setAttribute('inert', ''))
+          trigger?.setAttribute('aria-expanded', 'true')
+          input.focus()
+          input.select()
+          // 打开的那一刻就把索引拉起来，等"输入完再等下载"会显得卡
+          loadEngine().catch(() => {})
+        }
+
+        const close = () => {
+          layer.hidden = true
+          document.body.style.overflow = ''
+          background().forEach((el) => el.removeAttribute('inert'))
+          trigger?.setAttribute('aria-expanded', 'false')
+          /* 还焦点之前确认它还在文档里 —— 面板里点链接跳走时焦点目标可能是旧元素 */
+          if (lastFocus && document.contains(lastFocus)) lastFocus.focus()
+          lastFocus = null
+        }
+
+        /* Tab 在面板里循环。Shift+Tab 从第一个回到最后一个，Tab 从最后一个回到第一个。 */
+        layer.addEventListener('keydown', (e) => {
+          if (e.key !== 'Tab') return
+          const list = focusables()
+          if (!list.length) return
+          const first = list[0]
+          const last = list[list.length - 1]
+          if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault()
+            last.focus()
+          } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault()
+            first.focus()
+          }
+        })
+
+        document.addEventListener('click', (e) => {
+          if (e.target.closest('[data-search-open]')) {
+            e.preventDefault()
+            layer.hidden ? open() : close()
+            return
+          }
+          if (e.target.closest('[data-search-close]')) {
+            e.preventDefault()
+            close()
+          }
+        })
+
+        document.addEventListener('keydown', (e) => {
+          const open_ = !layer.hidden
+
+          if (e.key === 'Escape' && open_) {
+            close()
+            return
+          }
+          if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+            e.preventDefault()
+            open_ ? close() : open()
+            return
+          }
+          if (e.key === '/' && !open_ && !isTyping(e.target) && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            e.preventDefault()
+            open()
+          }
+        })
+
+        /* 上下键在结果里走 */
+        input.addEventListener('keydown', (e) => {
+          if (e.key !== 'ArrowDown') return
+          e.preventDefault()
+          body.querySelector('a')?.focus()
+        })
+        body.addEventListener('keydown', (e) => {
+          const links = [...body.querySelectorAll('a')]
+          const i = links.indexOf(document.activeElement)
+          if (e.key === 'ArrowDown') {
+            e.preventDefault()
+            links[Math.min(i + 1, links.length - 1)]?.focus()
+          } else if (e.key === 'ArrowUp') {
+            e.preventDefault()
+            i <= 0 ? input.focus() : links[i - 1].focus()
+          }
+        })
+      })()
+    </script><script>
+      // 主题切换：写 data-theme + 地址栏染色 + 记住选择 + 告诉读屏
+      ;(() => {
+        const btn = document.getElementById('theme-toggle')
+        if (!btn) return
+        const status = document.querySelector('[data-theme-status]')
+
+        /* 初值：<head> 里那段脚本已经把最终主题写进 data-theme 了，
+           这里只负责让按钮的 aria-pressed 跟它对齐（不能写死在 HTML 里 ——
+           首屏主题有一半概率来自系统偏好，服务端并不知道）。 */
+        const sync = (theme) => {
+          btn.setAttribute('aria-pressed', theme === 'dark' ? 'true' : 'false')
+        }
+        sync(document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light')
+
+        btn.addEventListener('click', () => {
+          const root = document.documentElement
+          const next = root.dataset.theme === 'dark' ? 'light' : 'dark'
+          root.dataset.theme = next
+          /* 地址栏跟着变，否则在深色系统里手动切到浅色后，浏览器顶上还是深色 */
+          document
+            .querySelector('meta[data-theme-color]')
+            ?.setAttribute('content', next === 'dark' ? '#0d1117' : '#f6f7f9')
+          sync(next)
+          try {
+            localStorage.setItem('theme', next)
+          } catch {
+            /* 忽略 */
+          }
+          /* 播报结果。先清空再写，是为了让"浅→深→浅"这种连续切换每次都念 ——
+             内容没变化时 aria-live 不会重复播报。 */
+          if (status) {
+            status.textContent = ''
+            requestAnimationFrame(() => {
+              status.textContent = next === 'dark' ? '已切换到深色主题' : '已切换到浅色主题'
+            })
+          }
+        })
+      })()
+    </script><script>
+          /* 两个小动作（关掉不影响阅读）：
+             1) 顶部的阅读进度线 → 往 .read-progress 上写 --p
+             2) 侧栏目录的滚动高亮 → 给当前章节的链接打 aria-current="true"
+             2026-10-19 第二版：删掉了「指针跟随的镜面高光」。
+             背景从彩色极光换成纸 + 单色暗记之后，那圈白斑在纸上没有任何东西可以反射，
+             只剩一层脏雾 —— 与其留着凑数，不如不要。 */
+          ;(() => {
+            const root = document.documentElement
+
+            /* ---------- 1. 阅读进度 ---------- */
+            const bar = document.querySelector('.read-progress')
+            if (bar) {
+              let raf2 = 0
+              const calc = () => {
+                raf2 = 0
+                const max = root.scrollHeight - root.clientHeight
+                const p = max > 0 ? Math.min(1, Math.max(0, root.scrollTop / max)) : 0
+                bar.style.setProperty('--p', p.toFixed(4))
+              }
+              addEventListener(
+                'scroll',
+                () => {
+                  if (!raf2) raf2 = requestAnimationFrame(calc)
+                },
+                { passive: true },
+              )
+              addEventListener('resize', calc, { passive: true })
+              calc()
+            }
+
+            /* ---------- 2. 目录滚动高亮 ---------- */
+            const links = [...document.querySelectorAll('.side nav a[href^="#"]')]
+            const targets = links
+              .map((a) => ({ a, el: document.getElementById(decodeURIComponent(a.hash.slice(1))) }))
+              .filter((x) => x.el)
+            if (targets.length && 'IntersectionObserver' in window) {
+              const setActive = (a) => {
+                for (const { a: l } of targets) l.removeAttribute('aria-current')
+                if (a) a.setAttribute('aria-current', 'true')
+              }
+              const visible = new Set()
+              const io = new IntersectionObserver(
+                (entries) => {
+                  for (const en of entries) {
+                    const hit = targets.find((t) => t.el === en.target)
+                    if (!hit) continue
+                    if (en.isIntersecting) visible.add(hit.a)
+                    else visible.delete(hit.a)
+                  }
+                  /* 同时有多个章节在视口里时，取文档顺序最靠前的那个 —— 与阅读方向一致 */
+                  setActive(links.find((l) => visible.has(l)) || null)
+                },
+                /* 顶部留出吸顶页头的高度，底部只认 30%：这样"刚滚到"就算当前章 */
+                { rootMargin: '-84px 0px -70% 0px', threshold: 0 },
+              )
+              for (const t of targets) io.observe(t.el)
+            }
+          })()
+        </script></body></html>

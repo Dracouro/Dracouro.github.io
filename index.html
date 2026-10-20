@@ -1,0 +1,3265 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>JINJIARAN · 个人作品站</title>
+<meta name="description" content="收纳并展示我制作的 UE5 项目、3D 模型、图片、文档与思维导图——含蓝图存档可视化、C++ 源码、模型在线旋转查看与下载。" />
+<!-- 图标组（2026-10-21：换成 R 标）。首页不走 BaseLayout，所以这里要自己声明一遍 ——
+     否则只有浏览器"猜"的 /favicon.ico 生效，SVG 版永远轮不到。
+     全部由 `node tmp/make-brand-icons.mjs` 生成，别手工换图。 -->
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="icon" type="image/x-icon" href="/favicon.ico" sizes="16x16 24x24 32x32 48x48" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
+<link rel="manifest" href="/site.webmanifest" />
+<!-- 首屏关键路径：第一屏的 WELCOME 三维字母要用 three。
+     2026-10-20 起改为预加载 **tree-shaken 精简包**（scripts/build-three-letters.mjs）：
+     只含本页用到的 20 个符号 + mergeGeometries，496 KB（br 104 KB），
+     取代原来的 module 359 KB + core 383 KB + addons 35 KB（br 156 KB）。
+     ⚠️ 这里**只能**预加载精简包 —— 同时预加载完整版等于白发请求：
+        实测三个文件会一起下 1.2 MB，省下的 52 KB 原封不动还回来。
+     ⚠️ 完整版仍在 importmap 的 "three" 上（第二屏 archive.js 要用），
+        它会在滚到第二屏时才按需加载。
+     ⚠️ importmap 的路径必须是**站点绝对路径**：相对路径（./lib/…）在根路径 `/` 下
+     会解析成 `/lib/…` → 404 → 第一屏只剩一个空背景。src/pages/index.astro 里有断言守着。 -->
+<link rel="modulepreload" href="/proto/lib/three-letters.r183.min.js" />
+<script type="importmap">
+{
+  "imports": {
+    "three": "/proto/lib/three.module.min.js",
+    "three/addons/": "/proto/lib/addons/"
+  }
+}
+</script>
+<!-- 「直接落到第二屏」标记（2026-09-22 加）。
+     详情页（以及其它走站内导航的页面）右上角的「首页」现在指向 `/?browse` ——
+     那条路径要的是**第二屏**（滚轴选盒体那屏），不是第一屏的三维字母。
+     这里刻意放在解析 <body> 之前：先给 <html> 打标记，下面的 CSS 才能从**首帧**
+     就把第一屏藏掉，不然会"闪一下字母屏再进第二屏"。
+     ⚠️ 和那 10 个 ?xxx 调试出口不同，这是**真功能**，交付时不要跟着一起删。
+     为什么用 <html> 上的类而不是 <body>：<body> 这时还不存在。 -->
+<script>
+  try {
+    if (new URLSearchParams(location.search).has('browse')) {
+      document.documentElement.classList.add('direct-browse');
+    }
+  } catch (err) {
+    /* 读不到 query（异常环境）就当普通入口 —— 退回老行为，不值得把首页拖垮 */
+  }
+</script>
+<style>
+  /* ============================================================
+     概念原型：新首页结构
+       第一屏（stage）：顶部「文字滚动条」+ 液体玻璃 hover
+       第二屏（browse）：RhineLabUI 式「滚轴选页」= 纵向瀑布 + 右侧详情
+       衔接（handoff）：第一屏缩退 / 第二屏升起（igloo 式"潜入"）
+       点击选中项 → 详情过渡（View Transitions 共享元素形变，igloo 式）
+     ------------------------------------------------------------
+     2026-09-18：本文件**已经是根路径 `/` 的唯一来源** —— src/pages/index.astro
+     在构建期把这份文件原样内联（不做任何改写），所以改这里 = 改首页。
+     `/proto/home.html` 仍可单独打开，用于和线上做 A/B 对照。
+     正因如此，下面所有资源一律写成**站点绝对路径**（/proto/three-archive/…），
+     两个入口（/ 与 /proto/home.html）解析结果一致，不依赖页面所在层级。
+     ============================================================ */
+
+  /* ============================================================
+     主界面 → 接管层的「渐变过渡」
+     ------------------------------------------------------------
+     为什么要 @property：普通的 linear-gradient 里，色标百分比**不可插值** ——
+     写 transition 也不会动。把它提升成一个注册过的自定义属性（syntax: <percentage>）
+     之后，浏览器才肯对它的数值做插值，于是"渐变带扫过整屏"这件事能用一条
+     transition 表达，而不是靠 JS 每帧改 style。
+     ============================================================ */
+  @property --reveal {
+    syntax: '<percentage>';
+    inherits: false;
+    initial-value: 0%;
+  }
+
+  :root {
+    --bg: #0b0f14;
+    --surface: #151b23;
+    --surface-2: #1c232d;
+    /* 2026-09-19 按要求：文字**统一纯白**（正文/次级/三级三档全改 #fff）。
+       起因：第二屏的字是压在亮色三维卡上的，--fg-3 (#6d7787) 在那种底上基本看不见。
+       ⚠️ 层级现在只靠字号 + 字重表达，不再靠颜色深浅；
+          要还原成"三档灰"就把 --fg-2/--fg-3 改回 #a2acb9 / #6d7787。 */
+    --fg: #ffffff;
+    --fg-2: #ffffff;
+    --fg-3: #ffffff;
+    --line: rgba(255, 255, 255, 0.09);
+    --line-strong: rgba(255, 255, 255, 0.18);
+    --accent: #6a9bff;
+    --accent-soft: rgba(106, 155, 255, 0.14);
+    --radius: 14px;
+    /* 版心宽度 —— .wrap 与顶部那层（.browse-top）共用同一个数，
+       所以导航的右边缘永远落在版心线上，改一处两处一起动。
+       ⚠️ 2026-09-19：第二屏不再用这个 1180 版心，改用下面的 --sheet-pad（见 .wrap 注释）。
+          这两个数先留着（`/classic` 与其它页面各有一套自己的），别删。 */
+    --wrap-max: 1180px;
+    --wrap-pad: 20px;
+    /* 第二屏的「贴边留白」：mockup#2 里大标题贴左、预览框与「查看详情」箭头共用同一条
+       右边缘，而那条右边缘距视口 62px（不是版心线）。
+       ⚠️ 1920 宽下算出来正好 61.4px —— 这是照 mockup 反推的档位，改它等于改取景。 */
+    --sheet-pad: clamp(20px, 3.2vw, 62px);
+    /* 第二屏「栏目大标题」的字号 —— 用户 2026-09-19 要求「放大三倍」：
+       基准是原 h2 的 `clamp(40px, 6.6vw, 84px)`，这里 vw 与上限都 ×3（下限另按窄屏收）。
+       抽成变量是因为「放大后竖向再压 0.5 倍」那步要按同一个数算留白，改一处即可。 */
+    --title-size: clamp(120px, 19.8vw, 252px);
+    /* 大标题的「竖向压缩系数」——放大三倍之后再乘这个数，就是最终字高。
+       0.5   → 净高 1.5 倍（2026-09-19 首版，用户反馈"有些太扁了"）
+       0.6667 → 净高 **2 倍**（2026-09-19 22:39 用户拍板，2/3）
+       ⚠️ 改这一个数就行：下面 h2 的负 margin 是用 `(系数 - 1)` 现算的，会自动跟着变。 */
+    --title-squash: 0.6667;
+    /* 第二屏标题栏的上移量（见 .browse-head 注释）。之所以要抽成变量 + 按视口高度分档：
+       `.browse` 是垂直居中的，内容越矮、被推得越靠下，所以同一段位移在不同屏高上
+       效果差别很大；矮视口（≤900px）必须收着用，否则标题会被顶到视口上沿之外。 */
+    /* 上移量 = −(用户要的位移 50px) − (内容高度相对"原图片版"的变化量 / 2)。
+       内容高度会随标题字号/压缩系数变，所以**每次改标题尺寸都要重算这一项**。
+       原始基准：图片版内容 837px。
+       ① 图片→文字(高126) 时内容 754 → −(754−837)/2 = +41.5 → −91.6
+       ② 压缩系数 0.5→0.667（标题高 126→168，内容 754→796）→ −(796−837)/2 = +20.5 → **−70.6**
+       ⚠️ 不补这一项的话，改标题尺寸会顺带把标题栏自己挪位置（②这步实测被推高了 21px）。 */
+    --head-lift: -70.6px;
+    /* motion tokens（取自 motion-web，收敛到 MeWeb） */
+    --dur-fast: 180ms;
+    --dur-std: 320ms;
+    --dur-med: 480ms;
+    --dur-slow: 760ms;              /* 整屏级过渡（进场/退场）专用 */
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-dive: cubic-bezier(0.32, 0, 0.16, 1);   /* 更"沉"的一条，配渐变扫过 */
+  }
+
+  * { box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', sans-serif;
+    font-size: 15px;
+    line-height: 1.7;
+    overflow-x: clip;
+  }
+
+  /* ============================================================
+     第一屏 —— 空舞台 + 顶部文字滚动条（液体玻璃）
+     ============================================================ */
+  .stage {
+    position: relative;
+    min-height: 100svh;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;      /* 跑马灯要贴顶，不能居中 */
+    padding-top: clamp(28px, 9vh, 104px);
+    overflow: hidden;
+    isolation: isolate;
+  }
+
+  /* 第一屏（WELCOME）背景图 —— 2026-09-19 加。
+     为什么这么简单就够：字母画布是 alpha:true 的**透明**层（见下面 new THREE.WebGLRenderer），
+     场景里没有 scene.background / 雾 / 清屏色，所以画布只画那几片字母，其余像素全透明 ——
+     在这里放一张图，字母自然就浮在图上，**不用动任何 WebGL 代码**。
+     换图：把图覆盖到 public/proto/bg/welcome.png + welcome.webp 两个文件（**两个都要换**）。
+     2026-10-20：加了 WebP 孪生（37 KB → 16 KB，首屏关键路径 -21 KB）。用 image-set 做格式协商，
+     支持 WebP 的浏览器只下 webp，老浏览器回落到下面那行 PNG，**不会重复下载**。
+     ⚠️ 路径必须是站点绝对路径（/proto/…）—— 见 src/pages/index.astro 的"零改写"约束，
+        写 ./bg/… 时 /proto/home.html 看着正常、只有线上根路径是坏的。
+     不想用背景图：整块删掉即可（或把 background-image 改回 none）。 */
+  .stage {
+    background-image: url('/proto/bg/welcome.png');   /* 兜底：不支持 image-set 的浏览器 */
+    background-image: image-set(
+      url('/proto/bg/welcome.webp') type('image/webp'),
+      url('/proto/bg/welcome.png') type('image/png')
+    );
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+
+  /* 第一屏的字母画布。
+     用 absolute + inset:0 填满 .stage（它是 relative），而不是 fixed 贴视口 ——
+     这样 onScroll / diveOut 写在它上面的 scale / opacity 会跟第一屏一起"沉入景深"，
+     不需要再单独驱动一次三维。will-change 是因为这两个属性会被逐帧改。 */
+  .letter-stage {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: block;
+    will-change: transform, opacity;
+  }
+  .letter-stage canvas { display: block; width: 100%; height: 100%; }
+
+  /* ---------- 米米世界入口（点 WELCOME 字母 → 围成圆环 → 中间浮出方块图标） ----------
+     2026-10-19 加。为什么是 DOM 而不是三维物体：
+       ① 图标下面那行「米米世界.exe」要清晰可读、可选中，三维里做文字得另拉字体/贴图；
+       ② 点击目标得是 <button>，天然可聚焦、可被 Enter 触发、屏幕阅读器能念出来；
+       ③ 只在环形排列时出现，直线排列时必须**彻底不可点**（pointer-events:none）——
+          否则它会横在第一屏中间，把任意位置的点击都吃掉。
+     三种"不可点"要一起关：opacity 只解决"看不见"，pointer-events 解决鼠标，
+     tabindex/aria-hidden 解决键盘与读屏。 */
+  .world-entry {
+    position: absolute;
+    inset: 0;
+    z-index: 3;                        /* 压住字母画布(1)，被左上角品牌(4)压住 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;              /* 隐藏时不吃事件 */
+    opacity: 0;
+    transform: translateY(12px) scale(0.94);
+    transition: opacity 340ms var(--ease-out), transform 340ms var(--ease-out);
+  }
+  .world-entry.is-open { opacity: 1; transform: none; }
+
+  .world-entry-btn {
+    /* <button> 的 UA 默认样式全清掉 */
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    pointer-events: none;              /* 由 .is-open 打开，见下 */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: clamp(8px, 1.4vh, 18px);
+    border-radius: 16px;
+  }
+  .world-entry.is-open .world-entry-btn { pointer-events: auto; }
+
+  .world-entry-icon {
+    display: block;
+    /* 尺寸要跟着"圆环的洞"走，不能只看视口高度：
+       环形排列的世界半径固定 2.55，手机竖屏（390×844）上整圈投影下来直径只有 ~236px，
+       洞内径约 186px —— 只按 19vh 算会得到 160px，图标几乎顶到字母上。
+       所以取 min(视口高度, 视口宽度的 30%)：横屏 1440×900 仍是 180px（不受影响），
+       竖屏自动收到 117px，四面都留出气口。 */
+    width: clamp(84px, min(20vh, 30vw), 208px);
+    height: auto;
+    image-rendering: pixelated;        /* 像素画：放大别糊 */
+    transition: transform 220ms var(--ease-out), filter 220ms var(--ease-out);
+    filter: drop-shadow(0 10px 22px rgba(0, 0, 0, 0.45));
+  }
+  .world-entry-btn:hover .world-entry-icon,
+  .world-entry-btn:focus-visible .world-entry-icon {
+    transform: translateY(-5px) scale(1.045);
+    filter: drop-shadow(0 18px 30px rgba(0, 0, 0, 0.6));
+  }
+  .world-entry-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 10px; }
+  /* 按下时给一点回弹，说明"这一下点到了" */
+  .world-entry-btn:active .world-entry-icon { transform: scale(0.97); }
+
+  .world-entry-name {
+    margin: 0;
+    font-size: clamp(12px, 1.5vh, 17px);
+    letter-spacing: 0.06em;
+    color: #fff;
+    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.8);
+    white-space: nowrap;
+    user-select: none;
+  }
+
+  /* 直接落到第二屏时（`/?browse`，标记由 <head> 里那段小脚本打），第一屏整块不露脸。
+     用 visibility 而不是 display：.stage 是 100svh 的文档流元素，display:none 会把它
+     从布局里摘掉（高度变 0），而后面 `stage.offsetHeight || window.innerHeight` 这类
+     按屏高算阈值的代码就全靠兜底了 —— 留着布局，语义干净。
+     letterStage 的 clientWidth/Height 同样不受影响（visibility 不动布局），
+     所以延后构建的字母场景量尺寸也是准的。 */
+  html.direct-browse .stage { visibility: hidden; }
+
+  /* 第一屏原来那条「文字滚动条」（跑马灯 + 液体玻璃底座 + 跟随指针的镜面高光）
+     在 2026-09-18 换第一屏时整块撤掉了 —— 第一屏现在是 WELCOME 三维字母。
+     一起撤掉的规则：.marquee / .marquee:hover / .track / .track .word / .track .dot /
+     .sheen / @keyframes marquee，以及再上面那团极光 .aurora / @keyframes drift。
+     要找回来：tmp/backup/home.pre-letters.html（有完整旧版）。 */
+
+  /* 左上角品牌 —— 2026-09-20 起**是一个可点的按钮**：LOGO_WHITE.png + 名字「金佳燃」，
+     点它就地弹出个人简介小窗（`.meview`，**不跳页**）。
+     三条版式要求来自用户：
+       ① 名字字号 = logo **渲染高度的一半**；② 紧挨着 logo；③ 名字**底边**与 logo 底边对齐。
+     第三条用 `align-items: flex-end` —— 不用 baseline：logo 是图片，没有文字基线可对。
+
+     ⚠️ 2026-09-20 晚：用户要求**删掉玻璃底**（"把左上角 logo 按钮下面的玻璃底删掉"）——
+        原来的 `.stage-brand::before`（宽 200% 的胶囊 + blur(14px) 玻璃 + 呼吸动效）
+        连同 `@keyframes brandBreathe`、hover/窄屏/reduced-motion 那几条 ::before 规则一起撤了；
+        `isolation: isolate` 也删了，它本来只为托住 `z-index:-1` 的玻璃底。
+        现在是**纯 logo + 名字**：悬停反馈只剩名字上那层柔光，键盘聚焦仍是描边。
+        ⚠️ 若以后要加回任何"底"：本元素**不能有 padding**，否则 `width:200%` / `height:100%`
+           量的会是含 padding 的外盒，跟"2 倍 / 一致"对不上。
+        找回旧版：tmp/backup/home.html.20260920-022308.bak。 */
+  .stage-brand {
+    /* logo 宽度基准 —— 名字字号也按它算，抽成变量一处改两处跟。
+       mockup#1 实测 logo 可见宽 203px @1920（=10.6% 屏宽），几乎贴着左上角（边距 1~5px）。 */
+    --logo-w: clamp(104px, 10.6vw, 204px);
+    position: absolute;
+    top: clamp(8px, 1.1vh, 16px);
+    left: clamp(10px, 0.95vw, 18px);
+    z-index: 4;                     /* 必须压过字母画布（.letter-stage 是 z-index:1） */
+    display: inline-flex;
+    align-items: flex-end;          /* ③ 名字底边贴 logo 底边 */
+    gap: clamp(5px, 0.45vw, 11px);  /* ② 紧挨着，只留一点气口 */
+    padding: 0;
+    /* <button> 的 UA 默认样式要全清掉 —— 不清的话它会带自己的背景/边框/字体。 */
+    background: none;
+    border: 0;
+    font: inherit;
+    color: #fff;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .stage-logo {
+    display: block;
+    width: var(--logo-w);
+    /* 素材 524×438 自带透明通道 → 渲染高 = 宽 × (438/524) ≈ 宽 × 0.836 */
+    height: auto;
+    user-select: none;
+  }
+  .brand-name {
+    /* ① 字号 = logo 渲染高的一半 = 宽 × 0.836 ÷ 2 ≈ 宽 × 0.418 */
+    font-size: calc(var(--logo-w) * 0.418);
+    line-height: 1;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    color: #fff;
+    transition: text-shadow var(--dur-med) var(--ease-out);
+  }
+
+  /* 悬停 / 键盘聚焦反馈 —— 玻璃底删掉后只剩这两条：
+     鼠标悬停时给名字加一层柔光；键盘聚焦时给外描边（`:focus-visible` 只在键盘导航时触发，鼠标点击不会）。 */
+  .stage-brand:hover .brand-name { text-shadow: 0 0 18px rgba(255, 255, 255, 0.6); }
+  .stage-brand:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+  /* 第一屏底部的「向下翻页」提示 —— 2026-09-19 换成 DOWN.png。
+     DOWN.png 是左右两枚 X（中间留空），文字正好落在中间的空档里。
+     整体做一个很轻的上下浮动（±6px）提示可以往下滚，刻意不做夸张动效。 */
+  .stage-foot {
+    position: absolute;
+    left: 0; right: 0;
+    /* mockup#1 实测：DOWN.png 底边距视口下沿 32px @960 高 */
+    bottom: clamp(14px, 3.3vh, 36px);
+    z-index: 2;
+    display: flex;
+    justify-content: center;
+    color: var(--fg-3);
+    font-size: 13px;
+    letter-spacing: 0.04em;
+  }
+  .foot-marker {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    animation: footBob 2.2s ease-in-out infinite;
+  }
+  /* 素材 419×88 原生尺寸渲染（mockup#1 实测整条 415px @1920），不再缩小 */
+  .foot-marker img { display: block; width: clamp(220px, 21.8vw, 419px); height: auto; opacity: 0.9; }
+  /* 文字落在左右两枚 X 中间的空档里（素材中间 60% 是全透明的），约 12px */
+  .foot-marker span {
+    position: absolute;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    white-space: nowrap;
+    font-size: clamp(10px, 0.63vw, 12px);
+  }
+  @keyframes footBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(6px); } }
+  @media (prefers-reduced-motion: reduce) { .foot-marker { animation: none; } }
+
+  /* ============================================================
+     第二屏 —— 滚轴选页：按种类分列（每列一条纵向瀑布）+ 右侧详情
+     ============================================================ */
+  /* 卷轴「接管层」：滚下去进入后固定盖满整屏，全盘接管滚轮 */
+  .browse-spacer { height: 100svh; }
+  /* 接管层：不再是"整体 opoacity 淡入"，而是**自上而下的渐变揭示**。
+     遮罩 = linear-gradient(to bottom, #000 (reveal-band), transparent reveal)：
+       · --reveal = 0%   → 实心区在 -28%（即屏幕上方之外），整层被透明覆盖 = 完全不可见
+       · --reveal = 128% → 实心区到 100%，渐变带落在屏幕下沿之外 = 完全显形
+     中间过程就是一条 28% 高的软带自上而下扫过，把第一屏"化开"成接管层。
+     比整体淡入更接近 igloo 那种"潜入"的观感：光是扫过去的，不是整块浮上来的。 */
+  .browse {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    overflow: hidden;
+    /* 上下留白收了一档（96/48 → 86/38 @960）：放大后的预览 + 大字说明把内容堆高了，
+       不改的话底部那行 .reel-hint 会被 overflow:hidden 裁掉。 */
+    padding: clamp(60px, 9vh, 96px) 0 clamp(24px, 4vh, 44px);
+    background: var(--bg);
+    --reveal: 0%;
+    transform: translateY(2.5%);          /* 很轻的下沉，只为了有点纵深，不再用 7% */
+    pointer-events: none;
+    -webkit-mask-image: linear-gradient(to bottom, #000 calc(var(--reveal) - 28%), transparent var(--reveal));
+            mask-image: linear-gradient(to bottom, #000 calc(var(--reveal) - 28%), transparent var(--reveal));
+    transition: --reveal var(--dur-slow) var(--ease-dive),
+                transform var(--dur-slow) var(--ease-dive);
+  }
+  .browse.active {
+    --reveal: 128%;
+    transform: none;
+    pointer-events: auto;
+  }
+  /* 揭示跑完之后把遮罩摘掉。
+     不是为了好看，是为了**性能**：遮罩层里是实时渲染的 WebGL 画布，
+     留着 mask 会让合成器每帧都多做一次遮罩合成；揭完就没必要继续付这个钱。 */
+  .browse.revealed { -webkit-mask-image: none; mask-image: none; }
+
+  /* ============================================================
+     三维档案阵列层（叠加在接管层底部，整屏铺满）
+     ------------------------------------------------------------
+     为什么整屏铺满、而不是塞进左栏那块：
+       · 原版 RhineLabUI 的阵列本来就是"整屏白棚里的一整面档案墙"，塞进一个
+         760×520 的小格子里会让 1920×1080 舞台缩放到很小、卡片挤成一团；
+       · 已定稿的取景微调（左移 320 / 下移 114）本来就是按"整屏 + 面板浮在右侧 +
+         返回条浮在顶部"量出来的，铺满整屏这些数才成立。
+     DOM 版的卷轴不去掉，只是让位（无 WebGL / 加载失败时它就是回退）。
+     ============================================================ */
+  .arch3d {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    opacity: 0;
+    transition: opacity var(--dur-med) var(--ease-out);
+  }
+  .arch3d > canvas { display: block; }
+  .arch3d.ready { opacity: 1; }
+  /* 三维在场时，DOM 卷轴让位。
+     ⚠️ 必须用 visibility 而不是 display：卷轴占着 .browse-grid 的第一列（1fr），
+     一旦 display:none，那一列就塌了，右侧面板会被挤到左边 —— 已定稿的取景微调
+     （左移 320）正是按"面板在右边 1150→1530"量的，面板一挪位整套数就废了。 */
+  .browse.has3d .cols-viewport { visibility: hidden; }
+  /* 三维载入提示（模型有 7 MB，冷启动要等几秒）
+     ⚠️ 它是 .browse 的直接子元素，**不在 .arch3d 里** —— .arch3d 是 opacity:0、
+     要三维就绪才变 1，提示放里面就是永远看不见（见标记处的注释）。
+     正因为它在外层，z-index 必须自己盖过内容层 .browse .wrap(1)，取 2。
+
+     落点：**顶部返回条与内容标题之间那条空白带**，不是屏幕正中。
+     正中是 DOM 卷轴的卡片区 —— 提示会正好压住一张卡（实测居中压 4478 px²、
+     底部各档 1200~4000 px²，而这条带是 **0**）。
+     基准与 .browse-top 的 top 同一公式，视口高度变了整条带跟着走。
+     +96 是量出来的：1440×900 / 1920×1080 / 390×844 三档都落在零重叠区
+     （移动端上这条带更窄，96 会压到站内导航、140 会压到「6 个条目」那行，只有 118 这档干净）。 */
+  .arch3d-status {
+    position: absolute;
+    left: 50%;
+    top: calc(clamp(12px, 2.6vh, 24px) + 96px);
+    transform: translateX(-50%);
+    z-index: 2;
+    pointer-events: none;        /* 纯提示，不挡下面卷轴的点击/滚动 */
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 10px 20px; border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--fg-2); font-size: 13px;
+    transition: opacity 320ms var(--ease-out);
+  }
+  /* ⚠️ 收掉时除了 opacity 还要 visibility:hidden —— 只做 opacity:0 的话，
+     这段文字**仍留在页面的 innerText 里**（innerText 认 visibility、不认 opacity），
+     于是首页的文本里永远挂着一句"三维阵列载入中…"：搜索引擎、读屏、复制粘贴都会带上它。
+     同一个坑之前在 #boot 的 LOADING 上踩过一次。
+     visibility 延后 320ms 再翻，否则淡出会被腰斩。 */
+  .arch3d-status.done {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 320ms var(--ease-out), visibility 0s linear 320ms;
+  }
+  .arch3d-status .spin {
+    width: 13px; height: 13px; flex: none;
+    border: 2px solid var(--line-strong);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: archspin 0.9s linear infinite;
+  }
+  .arch3d-status.done .spin { display: none; }
+  @keyframes archspin { to { transform: rotate(360deg); } }
+  /* 内容层浮在三维之上（返回条自己的 z-index 更高，见上） */
+  .browse .wrap { position: relative; z-index: 1; }
+
+  /* ============================================================
+     顶端那一层：**居中的返回条** + **靠右的站内导航**
+     ------------------------------------------------------------
+     结构：.browse-top 是一整行（absolute 贴顶、flex 居中），
+       返回条是它唯一参与布局的孩子 → 居中由 flex 保证，不会被导航挤偏；
+       导航绝对定位在这一行的右侧 → 完全不参与返回条的布局。
+     为什么这点较真：三维取景的 ?pan=370,280 是**照返回条的位置**调出来的
+       （让预选主卡避开返回条与右侧面板）。返回条一旦被挤偏，取景就白调了。
+       实测改造前后返回条都是 x=660.2 y=24 119.6×42.9，中心 720.0 正中。
+     ------------------------------------------------------------
+     导航右边缘对齐「版心线」而不是视口边（padding-inline 用与 .wrap 同一套公式），
+       否则宽屏下它会浮在版心外面，看着散。
+     ============================================================ */
+  .browse-top {
+    /* ⚠️ absolute 子元素的含块是祖先的 **padding box**，祖先的 padding 推不开它。
+       所以导航不能写 right:0，得自己用同一个公式缩进 —— 抽成 --edge 一处维护。
+       （踩过：写 right:0 时导航右边线贴在视口边上 = 1440，而不是版心线 1290。） */
+    --edge: var(--sheet-pad);
+    position: absolute;
+    top: clamp(12px, 2.6vh, 24px);
+    left: 0;
+    right: 0;
+    z-index: 5;
+    display: flex;
+    justify-content: center;
+    padding-inline: var(--edge);
+  }
+
+  /* 顶端返回条 —— 唯一的出口，最外层也做成液体玻璃。位置交给上面的 flex，自己不再定位 */
+  .return-bar {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 20px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: rgba(255, 255, 255, 0.06);
+    -webkit-backdrop-filter: blur(14px) saturate(170%);
+    backdrop-filter: blur(14px) saturate(170%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 12px 40px -20px rgba(0, 0, 0, 0.85);
+    color: var(--fg);
+    font: inherit;
+    font-size: 13.5px;
+    cursor: pointer;
+    transition: background var(--dur-fast) linear, border-color var(--dur-fast) linear;
+  }
+  .return-bar:hover { background: rgba(255, 255, 255, 0.13); border-color: rgba(255, 255, 255, 0.32); }
+  .return-bar:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* 站内导航（.topnav / 那组「项目 图片 文档 3D 模型 关于」）已于 2026-09-19 按要求删除：
+     标记与样式一起撤掉，第二屏现在只有顶部居中的「返回主界面」一个出口。
+     要找回来：tmp/backup/home.pre-welcome-bg.html 里有整套。 */
+
+  /* 接管期间锁住页面滚动，连触控板的橡皮筋也一起挡掉 */
+  body.browsing { overflow: hidden; overscroll-behavior: none; }
+
+  /* ⚠️ 2026-09-19：.wrap 目前**只被第二屏用**（`grep 'class="wrap"'` 只有一处），
+     所以这里直接把它从"1180 居中版心"改成"贴着视口两侧、只留一条窄边"。
+     原因是 mockup#2 要求把右侧预览放大到 709×389 @1920（≈37vw），
+     塞进 1180 版心会把左边的卷轴挤到只剩 430px。 */
+  .wrap { width: 100%; max-width: none; margin-inline: 0; padding-inline: var(--sheet-pad); }
+
+  /* 标题栏「整体上移」（2026-09-19 两次累加：先 20px，再 +30px → 用户要的位移 = 50px，
+     外加 41.6px 的居中补偿，合计 -91.6px。下详。）
+     ⚠️ 必须用 position/top 这种**不参与布局**的挪法：
+     ① 写 `margin-top` 会把它后面的兄弟节点（卷轴…）一起拽走，还会改变 `.col-main` 的高度；
+     ② `.col-main` 是 grid item（独立格式化上下文），负 margin 不外泄，只改它自己的高度。
+     ⚠️ **那 41.6px 的补偿是怎么来的**：`.browse` 是 `overflow:hidden` + `justify-content:center`，
+        内容比容器矮时会被**垂直居中**。大标题从 209px 高的图片换成 126px 高的文字后，
+        `.col-main` 从 837 掉到 754，居中就把整块内容**往下推了 41.6px**
+        （实测 head 顶边 85.4 → 127.0）。不减掉这一项，用户要的"再上移 30px"
+        在屏幕上会表现为"标题反而下沉 11.6px"。
+     ⚠️ **判据**：head 的视觉 top 应 = 上一版位置 − 30（上一版 65.4 → 现在的目标 35.4）。
+        内容高度一变（改字号/改卷轴高/标题换行）这个数就得重新量，别当常数。
+     ⚠️ **矮视口要收着用**：`.browse` 是垂直居中的，内容越矮被推得越靠下；
+        1366×768 下上一版的 head 就已经贴到 y=6.7，物理上不可能再上移 30px，
+        硬上就会把大标题顶出视口上沿（实测 -23.6）。所以下面按 max-height 分档递减。 */
+  .browse-head { position: relative; top: var(--head-lift); margin-bottom: 20px; }
+
+  /* 上移量的分档保护（配合 :root 的 --head-lift）。
+     数值由"head 视觉 top 必须为正、且尽量贴近上一版 − 30"两条约束反推：
+     ≥901px 用满；801~900 收到 -62；≤800 收到 -34。 */
+  @media (max-height: 900px) { :root { --head-lift: -62px; } }
+  @media (max-height: 800px) { :root { --head-lift: -34px; } }
+  /* 720 高度这档再收一次：-34 会让 head 顶到 y=1.6（"全部内容"那行贴死视口上沿，像 bug）。
+     ⚠️ 这档本来就已经"内容正好铺满、余量 0"，属既有现象，不是这次改出来的。 */
+  @media (max-height: 740px) { :root { --head-lift: -18px; } }
+  .eyebrow {
+    font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--fg-3); margin: 0 0 6px;
+  }
+  .head-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  /* 大标题 = 纯文字（2026-09-19 用户拍板：**不再使用图片**，
+     第一栏「项目」和其余栏目走完全一样的文字标题）。
+     原来的「有素材的栏目用图片」机制（`.col-title-img` + JS 里的 COL_TITLE 映射表）已整体删除。 */
+  /* 大标题字号：`--title-size` 已经是"其余栏目标题文字的 3 倍"（见 :root）。
+     再按 `--title-squash` 竖向压缩 → 现在是 **宽 ×3 / 高 ×2**（0.6667 × 3）。
+     ⚠️ 压扁只能靠 transform —— 字号没法只压一个方向。
+     ⚠️ 而 transform **不参与布局**：压缩后视觉高度只剩一部分，布局盒却还是整行高，
+        所以必须用等量的负 margin 把多出来的那部分行高"还回去"，
+        否则标题与标签行之间会凭空多出一段空白。
+        负值 = 字号 ×(系数 − 1)，由变量现算，以后只改 :root 那个系数即可。 */
+  .browse-head h2 {
+    font-size: var(--title-size);
+    line-height: 1;                        /* =1 才让"压掉的高度"精确等于 (1 - 系数) 个字号 */
+    white-space: nowrap;                   /* 标题一律不换行 —— 一换行上面的 top 补偿量就失效了 */
+    /* 负 margin 把"压掉的那部分行高"还给布局。系数由 --title-squash 控制，
+       这里写 (系数 − 1) 而不是写死的 -0.5，改压缩系数时不用回来改这里。 */
+    margin: 0 0 calc(var(--title-size) * (var(--title-squash) - 1));
+    font-weight: 800; letter-spacing: -0.03em;
+    transform: scaleY(var(--title-squash));
+    transform-origin: left top;            /* 从顶端压：压扁后的字形仍顶住标题行上沿 */
+  }
+  .browse-head h2[hidden] { display: none; }
+  .col-count { font-size: 13px; color: var(--fg-3); }
+
+  /* 标签行：栏目标签在左，左右切换按钮（.colswitch）在右 */
+  .head-tabs-row { display: flex; align-items: center; gap: 16px; margin-top: 16px; }
+
+  /* 列切换控件：左右按钮（主入口）+ 栏目名标签（点一下直接跳过去） */
+  /* 2026-09-19：从「标签行右端」挪到「提示行正上方」。它现在是 .col-main 的独立一块，
+     不再在 flex 行里，所以 margin-left:auto（靠右）没意义了，改掉。 */
+  .colswitch { display: inline-flex; align-items: center; gap: 10px; margin: 14px 0 0; flex: none; }
+  .colnav {
+    width: 42px; height: 42px; flex: none;
+    display: grid; place-items: center;
+    border-radius: 999px;
+    border: 1px solid var(--line-strong);
+    background: var(--surface);
+    color: var(--fg); font: inherit; font-size: 17px; line-height: 1;
+    cursor: pointer;
+    transition: background var(--dur-fast) linear, border-color var(--dur-fast) linear,
+                transform var(--dur-fast) var(--ease-out);
+  }
+  .colnav:hover { background: var(--surface-2); border-color: var(--accent); }
+  .colnav:active { transform: translateY(1px); }
+  .colnav:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .colpos { font-size: 14px; color: var(--fg-3); font-variant-numeric: tabular-nums; min-width: 4.5em; text-align: center; }
+
+  .coltabs { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0; }
+  /* mockup#2 里这行栏目标签明显比原来（19px 上限）大一档，实测 ≈ 32px；
+     未选中的颜色也从 --fg-3 提到 --fg-2 —— 字号放大后它正好压在亮色三维卡上，
+     --fg-3 在那种底上基本看不见（mockup 里四个标签都是亮的）。 */
+  .coltab {
+    padding: 8px 18px; border-radius: 999px;
+    border: 1px solid transparent; background: transparent;
+    color: var(--fg-2); font: inherit; font-size: clamp(17px, 1.85vw, 32px);
+    cursor: pointer;
+    transition: color var(--dur-fast) linear, background var(--dur-fast) linear, border-color var(--dur-fast) linear;
+  }
+  .coltab:hover { color: var(--fg); }
+  .coltab[aria-selected='true'] {
+    color: var(--fg); background: var(--accent-soft); border-color: rgba(106, 155, 255, 0.5);
+  }
+  .coltab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .browse-grid {
+    display: grid;
+    /* 右栏再放大一档：mockup#2 里的「(图片占位)」是 709×389 @1920（=36.9% 屏宽、16:9）。
+       配合 .wrap 改成贴边版式后，左栏仍能剩 ~1000px 给卷轴。
+       ⚠️ 三维阵列（.arch3d）是绝对定位铺满 .browse 的，不受这里影响；
+       但面板变宽后可能会和已调好的取景微调（pan 370,280）在视觉上更挤，
+       真觉得挤就重跑 tmp/lusion/probe-pan.mjs 换档。 */
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 36vw);
+    gap: 30px;
+    align-items: start;
+    /* 2026-09-19 按要求：右侧展示栏（含预览图）整体**再左移 30px**。
+       用 padding-right 而不是给 .panel 加 margin-right —— 后者会把右栏自身压窄，
+       这里是"宽度不变、只挪位置"，所以得从格子的内容盒右边界上让。 */
+    padding-right: clamp(0px, 1.6vw, 30px);
+  }
+  /* 左栏：标题栏 / 卷轴 / 提示行竖着叠。min-width:0 是 minmax(0,1fr) 里
+     "别让内容撑破格子"的前提（少了它长标题会把右栏挤出去）。 */
+  .col-main { min-width: 0; }
+
+  /* 栏目轨道：一列 = 一个种类。整条轨道横向平移，一屏只显示当前列。 */
+  .cols-viewport { overflow: hidden; min-width: 0; }
+  .cols {
+    display: flex;
+    align-items: flex-start;
+    transition: transform var(--dur-med) var(--ease-out);
+    will-change: transform;
+  }
+  .col { flex: 0 0 100%; min-width: 0; }
+
+  /* 每列内部的纵向「卷轴」—— RhineLabUI 的滚轴选页，改成纵向 + 无限循环
+     条目是绝对定位的 DOM，纵向位置由 JS 每帧写 transform（不走原生滚动，
+     这样才能"取模回绕"、滚不到底）。 */
+  .reel {
+    position: relative;
+    /* 520 → 440 → 410：左栏现在要装标题栏（标题图 209px 高）+ 卷轴 + 左右按钮 + 提示行，
+       960 高的视口里每加一行都得从卷轴身上让，否则底部的提示行会被挤出屏幕。 */
+    height: min(44svh, 410px);
+    overflow: hidden;
+    outline: none;
+    cursor: ns-resize;
+    -webkit-mask-image: linear-gradient(180deg, transparent, #000 20%, #000 80%, transparent);
+    mask-image: linear-gradient(180deg, transparent, #000 20%, #000 80%, transparent);
+  }
+  /* ⚠️ 矮视口让位：卷轴是左栏里最大的一块，而且**三维就绪后它就被阵列盖住、根本看不见**
+     （`has3d`），所以矮屏上收它没有任何视觉代价，却能给"三倍大 + 压扁"的标题腾出空间。
+     不收的话 1280×720 下内容会超出视口、底部提示行被 `overflow:hidden` 裁掉 21px。
+     ⚠️ 这几条必须写在 .reel 基础规则**之后** —— 媒体查询不提升优先级，
+        同优先级比的是源码先后，写前面会被上面那条 `min(44svh,410px)` 覆盖掉。 */
+  @media (max-height: 820px) { .reel { height: min(38svh, 360px); } }
+  @media (max-height: 700px) { .reel { height: min(30svh, 260px); } }
+  .item {
+    position: absolute;
+    left: 0; right: 0; top: 50%;
+    height: 72px;
+    margin-top: -36px;
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 14px;
+    padding: 0 18px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+    font: inherit;
+    will-change: transform, opacity;
+    transform-origin: center;
+    backface-visibility: hidden;
+    /* transform 由 JS 每帧写，所以这里只过渡描边/底色 */
+    transition: border-color var(--dur-fast) linear, background var(--dur-fast) linear;
+  }
+  .item .no { font-size: 13px; color: var(--fg-3); font-variant-numeric: tabular-nums; }
+  .item .name { font-weight: 600; }
+  .item .sub { display: block; color: var(--fg-3); font-size: 13px; margin-top: 3px; font-weight: 400; }
+  .item .chip {
+    font-size: 11.5px; padding: 3px 10px; border-radius: 999px;
+    border: 1px solid var(--line); color: var(--fg-2); background: var(--surface-2);
+    white-space: nowrap;
+  }
+  /* 选中项：荧光边（它永远停在卷轴正中） */
+  .item[aria-current='true'] {
+    border-color: rgba(106, 155, 255, 0.6);
+    background: rgba(106, 155, 255, 0.12);
+  }
+  .item[aria-current='true'] .no { color: var(--accent); }
+  /* 6px：紧贴上一行的左右按钮（原来 16px 是直接贴着卷轴时的间距） */
+  /* ⚠️ position:relative 是给里面的 .lane-hint 当定位基准的，别删。 */
+  .reel-hint { position: relative; margin: 6px 0 0; color: var(--fg-3); font-size: 12.5px; }
+  /* 提示行两套文案：宽屏用长版，手机竖屏（≤640px）换成短版，见后面的窄屏档。
+     短版默认 display:none —— 读屏不会念到它，也保证横屏的 innerText 一个字没变。 */
+  .hint-narrow { display: none; }
+
+  /* 「这一栏只有 1 条」提示条（2026-09-30）。
+     绝对定位、不占布局 —— 出现和消失都不许推挤任何东西。
+     pointer-events:none：它只是通知，不该抢点击，也不该挡住三维的悬停。
+     ⚠️ 作者样式会盖掉 [hidden]（上面 .reel-hint 的兄弟规则同理），
+        所以最后那条 `.lane-hint[hidden]` 必须留着，否则空药丸会一直挂在页面上。 */
+  .lane-hint {
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 10px);
+    transform: translateX(-50%) translateY(4px);
+    width: max-content;
+    max-width: 82vw;
+    padding: 8px 15px;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    background: var(--surface-2);
+    color: var(--fg);
+    font-size: 12.5px;
+    line-height: 1.4;
+    white-space: nowrap;
+    text-align: center;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 200ms var(--ease-out), transform 200ms var(--ease-out);
+  }
+  .lane-hint.is-on { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .lane-hint[hidden] { display: none; }
+  @media (prefers-reduced-motion: reduce) {
+    .lane-hint { transition: none; transform: translateX(-50%); }
+  }
+
+  /* 右：选中项详情（sticky）
+     2026-09-19 按要求改成**无边框**：去掉外框与底色，预览放大，文字收进一张暗色说明卡。 */
+  .panel {
+    position: sticky;
+    top: 90px;
+    border: 0;
+    background: transparent;
+    padding: 0;
+  }
+  .panel-media {
+    aspect-ratio: 16 / 9;          /* mockup#2 占位框实测 709×389 ≈ 1.82 */
+    border-radius: 14px;
+    border: 0;
+    background: var(--surface-2);
+    overflow: hidden;
+    display: grid; place-items: center;
+    color: var(--fg-3); font-size: 12px;
+  }
+  /* 真封面（2026-09-19 接线）：填满 16:9 的框。
+     ⚠️ 必须 object-fit:cover —— 封面比例五花八门（实测那张是 1600×730），拉伸会变形。
+     ⚠️ 必须显式给 width/height 100% —— 容器是 place-items:center 的 grid，
+        不给尺寸的话图片就按原始像素摆放，直接把框撑爆。 */
+  .panel-media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  /* ⚠️ 上面那句 `display: block` 会让 `hidden` 属性**失效** ——
+     hidden 只是 UA 样式表里的 `display: none`，一条作者样式就盖掉了。
+     后果：切到「没有封面」的条目时图片该藏没藏（框里留一块空白占位），
+     而且没了 src 的 <img> 会把**上一条目的 alt** 当文字画出来
+     （实测面板上会冒出「VOLT 系列武器设定」这种上一张的名字）。
+     图片自己藏不干净，就在 CSS 这层摁回去。 */
+  .panel-media img[hidden] { display: none; }
+  /* 说明卡：mockup#2 里紧贴图片下沿的那块暗色圆角框。
+     左边缘与图片对齐，而且**比图片窄**（mockup 实测 386~456px，图片 709px）——
+     这个"台阶感"是刻意的，别顺手改成 100%。 */
+  .panel-caption {
+    margin-top: 6px;
+    max-width: 62%;
+    border-radius: 14px;
+    background: var(--surface);
+    padding: 12px 16px 16px;
+  }
+  .panel h3 { margin: 0 0 4px; font-size: clamp(17px, 1.1vw, 21px); }
+  .panel-meta { margin: 0; color: var(--fg-3); font-size: 13px; }
+  /* mockup#2 里正文是 22px @1920 的「大字说明」，两行就占满整块 —— 别按 14px 老值来 */
+  .panel-desc { margin: 8px 0 0; color: var(--fg-2); font-size: clamp(14px, 1.15vw, 22px); line-height: 1.6; }
+  /* 面板下载按钮：紧贴说明卡下方，左对齐；自带 .btn 样式，仅 downloadable 时由 JS 取消 hidden */
+  .panel-dl { margin-top: 14px; }
+
+  /* 「查看详情」按钮：Arrow.png 作箭头，**文字在箭头左边**（与箭头底边齐平，2026-09-19 改）。
+     位置照 mockup#2：右边缘与右侧预览框**同一条线**（--sheet-pad），
+     底边距视口下沿 87px @960。Arrow.png 原生 149×151，mockup 里就是原生尺寸，不再缩小。
+     ⚠️ 按钮是 inline-flex 且整组右对齐（right: --sheet-pad）→ 换顺序后**箭头仍贴右边缘**，
+     文字往左伸；整组宽度不变，所以不会多占地方。 */
+  .detail-arrow {
+    position: absolute;
+    right: var(--sheet-pad);
+    bottom: clamp(24px, 9.1vh, 87px);
+    z-index: 6;
+    display: inline-flex;
+    align-items: flex-end;
+    gap: 14px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--fg-2);
+    font: inherit;
+    font-size: clamp(14px, 0.95vw, 18px);
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition: color var(--dur-fast) linear;
+  }
+  .detail-arrow img { display: block; width: clamp(72px, 7.7vw, 148px); height: auto; transition: transform var(--dur-std) var(--ease-out); }
+  .detail-arrow span { padding-bottom: 2px; }
+  .detail-arrow:hover { color: var(--fg); }
+  .detail-arrow:hover img { transform: translate(3px, 3px); }
+  .detail-arrow:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+  .btn {
+    margin-top: 18px;
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 18px; border-radius: 999px; border: 1px solid transparent;
+    background: var(--accent); color: #08111f; font-weight: 600; font-size: 14px;
+    cursor: pointer; font: inherit;
+    transition: transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-std) var(--ease-out);
+  }
+  .btn:hover { box-shadow: 0 14px 40px -18px var(--accent); }
+  .btn:active { transform: translateY(1px); }
+  /* ⚠️ 必须显式写：作者样式里的 display（上面那条 inline-flex）优先级高于 UA 的
+     [hidden] { display: none }，只挂 hidden 属性的话按钮照样显示出来。
+     这条是"没有 href 就别显示入口"能生效的前提。 */
+  .btn[hidden] { display: none; }
+  /* 详情页里"打开站内真实页面"的次要按钮：同尺寸、描边式，别抢主按钮的视觉权重 */
+  .btn-ghost { background: transparent; color: var(--fg-2); border-color: var(--line-strong); }
+  .btn-ghost:hover { color: var(--fg); box-shadow: none; }
+  /* 面板切换：交叉淡入 */
+  .panel-media, .panel h3, .panel-meta, .panel-desc { transition: opacity var(--dur-med) var(--ease-out); }
+  .panel.swapping .panel-media,
+  .panel.swapping h3,
+  .panel.swapping .panel-meta,
+  .panel.swapping .panel-desc { opacity: 0; }
+
+  /* ============================================================
+     详情页（点击选中项后）—— 过渡用共享元素
+     ============================================================ */
+  .detailview {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    background: var(--bg);
+    overflow-y: auto;
+    padding: clamp(40px, 8vh, 96px) 0;
+  }
+  .detailview[hidden] { display: none; }
+  .detail-hero {
+    view-transition-name: vt-card;              /* 与卡片同名 → 形变 */
+    width: min(920px, 88vw);
+    margin: 0 auto 28px;
+    aspect-ratio: 16 / 9;
+    border-radius: 18px;
+    border: 1px solid var(--line);
+    background:
+      radial-gradient(60% 90% at 30% 20%, rgba(106, 155, 255, 0.45), transparent 70%),
+      radial-gradient(60% 90% at 80% 80%, rgba(196, 120, 255, 0.34), transparent 72%),
+      var(--surface-2);
+    display: grid; place-items: center;
+  }
+  .detail-hero span { font-size: clamp(28px, 5vw, 56px); font-weight: 700; letter-spacing: -0.02em; }
+  .detail-body { width: min(920px, 88vw); margin: 0 auto; }
+  .detail-body h1 { font-size: 26px; margin: 0 0 10px; }
+  .detail-body p { color: var(--fg-2); }
+
+  ::view-transition-old(vt-card),
+  ::view-transition-new(vt-card) {
+    animation-duration: 520ms;
+    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  ::view-transition-old(root),
+  ::view-transition-new(root) { animation-duration: 420ms; }
+
+  /* ============================================================
+     个人简介小窗口 —— 点左上角品牌**就地打开**（不跳页）
+     ------------------------------------------------------------
+     玻璃材质与第二屏的「返回主界面」(.return-bar) 同源
+     （同一组 rgba + `blur(14px) saturate(170%)`），所以是一套观感。
+     内容是活的：`/profile.json` ← 构建期由 content/profile/profile.md 出。
+     ============================================================ */
+  .meview {
+    position: fixed;
+    inset: 0;
+    z-index: 60;                    /* 要压过 .detailview 的 40 */
+    display: grid;
+    place-items: center;
+    padding: 5vh 4vw;
+    background: rgba(4, 6, 10, 0.55);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    animation: meviewIn 240ms var(--ease-out);
+  }
+  .meview[hidden] { display: none; }
+  @keyframes meviewIn { from { opacity: 0; } to { opacity: 1; } }
+
+  .meview-card {
+    position: relative;
+    width: min(880px, 92vw);
+    max-height: 86vh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: clamp(20px, 3.6vh, 34px) clamp(20px, 3vw, 36px);
+    border-radius: 22px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: rgba(17, 21, 28, 0.72);
+    -webkit-backdrop-filter: blur(14px) saturate(170%);
+    backdrop-filter: blur(14px) saturate(170%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 40px 90px -40px rgba(0, 0, 0, 0.9);
+    animation: meviewCardIn 260ms var(--ease-out);
+  }
+  @keyframes meviewCardIn {
+    from { opacity: 0; transform: translateY(14px) scale(0.985); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  .meview-close {
+    position: absolute;
+    top: 12px; right: 12px;
+    width: 34px; height: 34px;
+    display: grid; place-items: center;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--fg);
+    font: inherit;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background var(--dur-fast) linear, border-color var(--dur-fast) linear;
+  }
+  .meview-close:hover { background: rgba(255, 255, 255, 0.14); border-color: rgba(255, 255, 255, 0.3); }
+  .meview-close:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* 第一版排版：左栏 3:4 照片 + 右栏文字（与 /me/ 同一套比例） */
+  .meview-grid {
+    display: grid;
+    grid-template-columns: minmax(160px, 240px) 1fr;
+    gap: 28px;
+    align-items: start;
+  }
+  .meview-photo img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+  }
+  .meview-photo-empty {
+    aspect-ratio: 3 / 4;
+    border: 1px dashed rgba(255, 255, 255, 0.22);
+    border-radius: 14px;
+    display: grid;
+    place-content: center;
+    gap: 8px;
+    padding: 16px;
+    text-align: center;
+    color: var(--fg-3);
+    font-size: 12.5px;
+    line-height: 1.6;
+  }
+  .meview-photo-empty code { font-size: 11px; opacity: 0.85; }
+
+  .meview-body h2 { margin: 0; font-size: 26px; letter-spacing: 0.01em; }
+  .meview-role { margin: 7px 0 0; font-size: 13.5px; color: var(--fg-3); }
+  .meview-prose { margin-top: 16px; color: var(--fg-2); font-size: 14.5px; line-height: 1.8; }
+  .meview-prose h3 { margin: 20px 0 8px; font-size: 15.5px; color: var(--fg); }
+  .meview-prose p { margin: 0 0 10px; }
+  .meview-prose ul { margin: 0 0 12px; padding-left: 20px; }
+  .meview-prose blockquote {
+    margin: 14px 0;
+    padding: 9px 14px;
+    border-left: 2px solid rgba(255, 255, 255, 0.18);
+    color: var(--fg-3);
+  }
+  .meview-prose code {
+    font-size: 12.5px;
+    padding: 1px 5px;
+    border-radius: 5px;
+    background: rgba(255, 255, 255, 0.09);
+  }
+  .meview-links { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+
+  @media (max-width: 640px) {
+    .meview-grid { grid-template-columns: 1fr; gap: 20px; }
+    .meview-photo { max-width: 220px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .meview, .meview-card { animation: none; }
+  }
+
+  @media (max-width: 820px) {
+    /* 窄屏下 reel + 面板要竖着堆，总高会超过一屏。原来 .browse 是
+       overflow:hidden + 垂直居中 → 顶部标题和栏目标签直接被裁到视口外。
+       改成贴顶 + 内部可滚（触屏能滚，滚轮本来就被接管）。 */
+    .browse {
+      justify-content: flex-start;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      /* 顶端那层窄屏只留返回条了（导航已于 2026-09-19 删掉），留白收一档；
+         否则它会压到 h2 与栏目标签上。 */
+      padding-top: clamp(104px, 15vh, 132px);
+    }
+    .browse-top { flex-direction: column; align-items: center; gap: 8px; }
+    /* 窄屏是竖着堆的，"面板右移 30px" 那条没有意义，撤掉 */
+    .browse-grid { grid-template-columns: 1fr; gap: 20px; padding-right: 0; }
+    .panel { position: static; }
+    .reel { height: 34svh; }
+    .colswitch { margin-left: 0; }
+    .panel-media { aspect-ratio: 16 / 9; }
+    /* 窄屏字号回落，否则 32px 的栏目标签会换行成两排 */
+    .coltab { font-size: 15px; padding: 6px 12px; }
+    .colnav { width: 34px; height: 34px; font-size: 15px; }
+    .colpos { font-size: 12.5px; }
+    /* 窄屏大标题：仍是"其余栏目标题文字的 3 倍"（窄屏基准 40px → 120px），
+       但上限收到 168，免得在 820px 宽的临界档上把栏目标签挤换行。 */
+    :root { --title-size: clamp(120px, 19.8vw, 168px); }
+    /* 窄屏是竖着堆 + 内部可滚的另一种版式，顶部留白是按"避开返回条"专门调过的，
+       这里把桌面那套上移量撤掉，免得把它顶穿。 */
+    :root { --head-lift: 0px; }
+    /* 窄屏是竖着堆的，说明卡下面还有箭头但要再往下两屏 —— 不冲突，让它铺满 */
+    .panel-caption { max-width: 100%; }
+    .detail-arrow { bottom: clamp(16px, 4vh, 40px); }
+    .detail-arrow img { width: clamp(56px, 15vw, 96px); }
+  }
+
+  /* 手机竖屏（≤640px）再收一档。
+     上面那档（≤820px）是按 700~820 的横屏手机 / 小平板调的；到 390px 上实测：
+     大标题 120px → 「项目」两字 240px = 62% 屏宽，还和右侧「N 个条目」挤在一行；
+     再叠上 5 个栏目标签 + 两行长提示，卡片区被整个挤出视口。
+     ⚠️ 只动这一档里的值，横屏（>640px）一条都没碰。 */
+  @media (max-width: 640px) {
+    /* 顶端只剩返回条（底边 y≈65），上下留白各收一档。
+       2026-10-20 再收一档：390×844 实测 .browse 的 scrollHeight 857 > clientHeight 844，
+       溢出的那 13px 正好把底部「查看详情」推出视觉区（按钮 802~847，屏高 844）——
+       第二屏唯一的主行动点落在折线上，是这一档最该修的问题。
+       配合下面 .reel 20svh→18svh，共腾出约 28px。 */
+    .browse { padding: clamp(58px, 7vh, 76px) 0 8px; }
+    /* 大标题仍保持「其余栏目标题文字的 3 倍」那档感觉，只是整体降一档 */
+    :root { --title-size: clamp(60px, 17.5vw, 84px); }
+    .browse-head { margin-bottom: 10px; }
+
+    /* ============================================================
+       竖屏专属的**堆叠顺序**（2026-10-21 用户拍板）
+       ------------------------------------------------------------
+       要求原话：「将封面和描述放在上面与栏目行"项目，图片，文档等"挨着。
+       三维阵列的位置不动，左右切换栏目的按钮放在封面和描述下方。」
+
+       目标自上而下：
+         .browse-head（大标题 + 栏目标签）
+         .panel（封面 + 标题/描述）
+         .colswitch（← 1/5 →）
+         .cols-viewport（阵列露出带）
+         .reel-hint
+
+       ⚠️ 为什么用 `display:contents` 而不是搬 DOM：
+         `.panel` 是 `.browse-grid` 的第二个子元素，`.cols-viewport` / `.colswitch`
+         都在 `.col-main` 里面 —— 两边不在同一层，光靠 `order` 排不出交错顺序。
+         把 `.col-main` 拆成 `display:contents`，这些块就都变成 `.browse-grid` 的直接
+         子元素，`order` 才管得到。**桌面版完全不受影响**（整段都在 ≤640 里），
+         也就不存在"搬了 DOM 把 1440 双栏布局搞坏"的风险。
+
+       ⚠️ 三维阵列本身是 `position:absolute; inset:0` 铺满 `.browse` 的，跟这里的
+         文档流无关 —— 所以"阵列位置不动"自动成立：`PORTRAIT_PAN_LEFT/DOWN`
+         （180/280）和 `setViewOffset` 一个数都没碰。这里动的只是**文字层**。
+       ⚠️ 顺序靠 `order` 而不是 DOM，所以读屏/键盘 Tab 顺序仍是 DOM 顺序
+         （标题 → 标签 → 卷轴 → 换栏 → 提示 → 封面），与桌面对齐，不制造无障碍回归。
+       ============================================================ */
+    .browse-grid { display: flex; flex-direction: column; gap: 0; }
+    .col-main { display: contents; }
+    .browse-head { order: 1; }
+    .panel { order: 2; margin-top: 2px; }
+    .colswitch { order: 3; margin-top: 10px; }
+    .cols-viewport { order: 4; margin-top: 10px; }
+    .reel-hint { order: 5; }
+    /* 计数从标题右侧挪到标题下方 —— 竖屏没有横向余量可抢 */
+    .head-row { flex-direction: column; align-items: flex-start; gap: 4px; }
+    .head-tabs-row { margin-top: 8px; }
+    .coltabs { gap: 4px; }
+    .coltab { font-size: 14px; padding: 5px 10px; }
+    /* 栏目标签实测 50×36、换栏按钮 34×34 —— 竖屏上最常点的两处都低于 44px。
+       同样用伪元素补命中区：标签只往**竖直**扩（水平扩会和邻居重叠），按钮四周各 3px。
+       视觉一个像素不动，所以不影响上面那条"要压进一屏"的高度账。 */
+    .coltab { position: relative; }
+    .coltab::after { content: ''; position: absolute; inset: -6px 0; }
+    .colnav { position: relative; }
+    .colnav::after { content: ''; position: absolute; inset: -6px -3px; }
+    /* 提示行换短版（长版藏起来），字号行高各收一点 */
+    .hint-wide { display: none; }
+    .hint-narrow { display: inline; }
+    .reel-hint { margin-top: 4px; font-size: 12px; line-height: 1.55; }
+    /* 卷轴区收一档：三维阵列是整屏铺满的（不受这里影响），
+       这一档只决定 DOM 版卷轴 / 说明面板的位置。
+       20svh → 18svh 是给底部「查看详情」腾地方（见上面 .browse 那条）。 */
+    .reel { height: 17svh; }
+    .panel-media { aspect-ratio: 2.2 / 1; }
+    /* 「查看详情」：竖屏从"浮在右下角"改成**静态一行**排在说明面板下方。
+       浮动版在 390px 上正好压在描述文字最后一行上（实测箭头 751~810
+       与描述文字 740~800 重叠），静态化之后位置稳定、也不再遮字。 */
+    .detail-arrow {
+      position: static;
+      align-self: center;
+      margin: 6px auto 0;
+      gap: 8px;
+      font-size: 13px;
+    }
+    .detail-arrow img { width: 44px; }
+  }
+
+  /* 短屏再收一档（≤640 宽 且 ≤780 高）—— 360×740 这类安卓机。
+     实测 360×740：整摞内容 803px 高，而 .browse 只有 740，
+     底部「查看详情」落在 758~803（整条在折线外），要滑 52px 才看得见。
+     844 高的机型上不需要这一档（那里已经刚好压进一屏），所以用高度条件限住，
+     **不联动上面的宽度档**。收紧的都是留白/比例，不动任何文字内容。 */
+  @media (max-width: 640px) and (max-height: 780px) {
+    .browse { padding-top: 52px; }
+    .browse-head { margin-bottom: 8px; }
+    /* ⚠️ 这里原来是 `.browse-grid { gap: 14px }`。竖屏改成 flex + `display:contents`
+       之后，gap 会插在**全部 5 个块**之间（原来只在左栏和面板之间插一次），
+       14×4 = 56px 白给出去。撤掉，改由下面各块的 margin 单独控。 */
+    .panel { margin-top: 0; }
+    .colswitch { margin-top: 8px; }
+    .cols-viewport { margin-top: 8px; }
+    .reel-hint { margin-top: 2px; }
+    .reel { height: 15svh; }
+    /* 封面框 2.2:1 → 3:1：矮屏上这个框只是"有条目就有图"的示意，占比可以小一档 */
+    .panel-media { aspect-ratio: 3 / 1; }
+  }
+
+  /* 无障碍：关掉动效时一切照常可读，不做滚动劫持 */
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    /* 第一屏现在是三维字母，它自己的动效由 JS 管，这里只剩底部那个滚动提示 */
+    .foot-marker { animation: none !important; }
+    *, *::before, *::after { transition-duration: 0.01ms !important; }
+    /* 渐变揭示整套关掉，退回"能看见/看不见"两态。
+       ⚠️ 这时**必须**靠 opacity 来藏：遮罩一旦摘掉，接管层就是常驻铺满视口的，
+       没有 opacity 当开关它会一直盖在第一屏上。 */
+    .browse {
+      -webkit-mask-image: none !important;
+              mask-image: none !important;
+      opacity: 0;
+      transform: none;
+    }
+    .browse.active { opacity: 1; }
+  }
+</style>
+
+<link rel="canonical" href="https://jinjiaran.com/" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="JINJIARAN" />
+<meta property="og:title" content="JINJIARAN · 个人作品站" />
+<meta property="og:description" content="收纳并展示我制作的 UE5 项目、3D 模型、图片、文档与思维导图——含蓝图存档可视化、C++ 源码、模型在线旋转查看与下载。" />
+<meta property="og:url" content="https://jinjiaran.com/" />
+<meta property="og:image" content="https://jinjiaran.com/og.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="https://jinjiaran.com/og.png" />
+<meta name="theme-color" content="#0d1117" />
+</head>
+<body>
+
+  <!-- ================= 第一屏：空舞台 + 顶部文字滚动条 ================= -->
+  <section class="stage" id="stage">
+    <!-- 左上角品牌 —— 可点按钮，**就地打开个人简介小窗口**（不跳页，见下面的 .meview）。
+         alt 留空是有意的：语义由 button 的 aria-label 提供，图片重复一遍反而啰嗦。 -->
+    <button class="stage-brand" id="brandBtn" type="button" aria-haspopup="dialog" aria-label="金佳燃 · 个人简介">
+      <img class="stage-logo" src="/proto/ui/LOGO_WHITE.png" alt="" />
+      <span class="brand-name">金佳燃</span>
+    </button>
+
+    <!-- 字母画布：三维场景由下面的 JS 挂进来。aria-hidden 是因为它是纯装饰，
+         真正的内容在第二屏。 -->
+    <div class="letter-stage" id="letterStage" aria-hidden="true"></div>
+
+    <!-- 米米世界入口：点 WELCOME 字母 → 字母围成圆环 → 这里浮出方块图标 + 「米米世界.exe」。
+         默认 opacity:0 / pointer-events:none / tabindex=-1，只有环形排列（.is-open）时才能点。
+         图标是拿游戏自己的草方块材质画的（见 scripts/make-mimi-world-icon.py）。 -->
+    <div class="world-entry" id="worldEntry" aria-hidden="true">
+      <button class="world-entry-btn" id="worldEntryBtn" type="button" tabindex="-1">
+        <!-- src 延迟到「环形排列后真的浮出来」时才赋值（见 setWorldEntry 的 show()）：
+             这张 22 KB 的贴图只有点了 WELCOME 才会被看到，不该算进首屏。
+             慢链路上实测它要占 4.6 秒带宽（22 KB @ ~7 KB/s），白白拖着首屏。
+             width/height 照写（512×512 原始像素），避免赋值时布局跳动。 -->
+        <img class="world-entry-icon" id="worldEntryIcon" data-src="/proto/ui/MIMI_WORLD.png" alt=""
+             width="512" height="512" decoding="async" />
+        <span class="world-entry-name">米米世界.exe</span>
+      </button>
+    </div>
+
+    <!-- 向下翻页提示：DOWN.png（左右两枚 X）+ 中间的文字 -->
+    <div class="stage-foot">
+      <div class="foot-marker">
+        <img src="/proto/ui/DOWN.png" alt="" />
+        <span>向下滚动进入内容</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 占位：撑出可滚动空间，滚到这里就"进入"选页 ================= -->
+  <section class="browse-spacer" aria-hidden="true"></section>
+
+  <!-- ================= 第二屏：按种类分列的滚轴选页（进入后全盘接管滚轮，只有返回条能退出） ================= -->
+  <section class="browse" id="browse">
+    <!-- 三维档案阵列（懒加载：进入本屏后才 import 那个 1.2 MB 的模块 + 7 MB 模型） -->
+    <div class="arch3d" id="arch3d" aria-hidden="true"></div>
+
+    <!-- 三维载入提示。**刻意放在 .arch3d 外面**：
+         .arch3d 是 opacity:0、要到三维就绪才变 1，提示放里面等于永远看不见 ——
+         于是"三维还没接管"的那段窗口里，屏幕上就是一个没有任何解释的初版列表，
+         看起来像页面坏了或者回到了老版本。搬出来它就跟 .arch3d 的透明度脱钩了。 -->
+    <div class="arch3d-status" id="archStatus" aria-hidden="true">
+      <span class="spin"></span><span id="archStatusText">三维阵列载入中…</span>
+    </div>
+    <!-- 顶端那一层：只有居中的返回条。
+         2026-09-19 按要求删掉了右侧那组「项目 / 图片 / 文档 / 3D 模型 / 关于」快速导览栏。 -->
+    <div class="browse-top">
+      <button class="return-bar" id="returnBar" type="button">↑ 返回主界面</button>
+    </div>
+    <div class="wrap">
+      <div class="browse-grid">
+        <!-- 左栏：标题栏 + 卷轴 + 提示行。
+             2026-09-19 照 mockup#2 把标题栏从"整行宽"收进左栏 —— mockup 里右侧预览框
+             是从顶部（y=196）开始的，头顶上并没有压着一整条标题带。收进来之后
+             ① 版式与 mockup 一致，② 竖向省下 ~324px，放大后的预览 + 大字说明才装得下。 -->
+        <div class="col-main">
+          <header class="browse-head">
+            <p class="eyebrow">全部内容</p>
+            <!-- 大标题 = 纯文字，所有栏目一视同仁（2026-09-19 起不再用图片） -->
+            <div class="head-row">
+              <h2 id="colName">—</h2>
+              <span class="col-count"><span id="count">0</span> 个条目</span>
+            </div>
+            <div class="head-tabs-row">
+              <!-- 栏目标签：点一下直接切到那一列（与左右按钮等价） -->
+              <div class="coltabs" id="colTabs" role="tablist" aria-label="切换栏目"></div>
+            </div>
+          </header>
+
+          <div class="cols-viewport">
+            <div class="cols" id="cols"></div>
+          </div>
+
+          <!-- 左右切换按钮：2026-09-19 按要求从「标签行右端」挪到**提示行正上方、紧挨着**
+               （功能不变：← → 切换栏目，与栏目标签等价） -->
+          <div class="colswitch">
+            <button class="colnav" id="colPrev" type="button" aria-label="上一列">←</button>
+            <span class="colpos" id="colPos">1 / 4</span>
+            <button class="colnav" id="colNext" type="button" aria-label="下一列">→</button>
+          </div>
+          <!-- 提示条挂进 .reel-hint 里：一个**绝对定位的 span**，完全不占布局（不会推挤任何东西），
+               位置就在「← → 切换栏目」这行提示的正上方 —— 说的正好是同一件事。
+               起因（2026-09-30 用户拍板「栏与栏严格隔离，滚轮绝不跨栏」）：
+               只有 1 条的栏滚轮会原地不动，必须把原因讲出来，
+               否则就退化回 2026-09-21 用户报的「滚轮完全没反应」那个状态。
+               ⚠️ 只能用 span：<p> 里放 <div> 会被浏览器提前闭合。 -->
+          <p class="reel-hint"><span class="hint-wide">← → 或两侧按钮切换栏目 · 滚轮 / ↑↓ 切换条目 · 点击进入详情 · 退出点顶部「返回主界面」</span><span class="hint-narrow">← → 换栏目 · 上下滑换条目 · 点按看详情</span><span class="lane-hint" id="laneHint" role="status" aria-live="polite" hidden></span></p>
+        </div>
+
+        <aside class="panel" id="panel">
+          <!-- 预览框（2026-09-19 接真封面）：条目自带封面图就放 <img>，
+               没有就显示这句占位文字。两者由 applyPanel() 切换，图片元素在这里预建。 -->
+          <div class="panel-media" id="panelMedia"><span id="panelMediaText">封面 / 预览</span></div>
+          <div class="panel-caption">
+            <h3 id="panelTitle">—</h3>
+            <p class="panel-meta" id="panelMeta">—</p>
+            <p class="panel-desc" id="panelDesc">—</p>
+          </div>
+          <!-- 下载入口：只有当构建期确认文件存在时才显示（gen-archives 已查过） -->
+          <a class="panel-dl btn btn-ghost" id="panelDownload" href="#" download hidden>下载</a>
+        </aside>
+      </div>
+    </div>
+
+    <!-- 「查看详情」按钮：Arrow.png 作箭头，**文字在箭头左侧**（与箭头底边齐平）。
+         2026-09-19 按要求把文字从右侧挪到左侧。
+         点击＝打开当前聚焦条目的站内详情页（没有 href 时才回落到二级层）。 -->
+    <button class="detail-arrow" id="openBtn" type="button">
+      <span>查看详情</span>
+      <img src="/proto/ui/Arrow.png" alt="" />
+    </button>
+  </section>
+
+  <!-- ================= 详情页（点击后） ================= -->
+  <div class="detailview" id="detailview" hidden>
+    <div class="detail-hero" id="detailHero"><span id="detailHeroTitle">—</span></div>
+    <div class="detail-body">
+      <h1 id="detailTitle">—</h1>
+      <p id="detailText">—</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <!-- 站内真实页面的入口。内容来自 content/ 生成的数据，所以每条记录都有 href；
+             没有 href 时（例如手工塞进来的条目）这个按钮自己藏起来。 -->
+        <a class="btn btn-ghost" id="detailOpen" href="#" hidden>打开页面 →</a>
+        <button class="btn" id="detailBack" type="button">← 返回</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 个人简介小窗口（点左上角品牌打开，**不跳页**） =================
+       内容来自 `/profile.json` —— 构建期由 `src/pages/profile.json.ts` 从
+       `content/profile/profile.md` 出（与 `/me/` 页面是同一份源，两处不会走偏）。
+       版式 = /me/ 的第一版：左栏 3:4 照片 + 右栏文字。 -->
+  <div class="meview" id="meview" hidden>
+    <div class="meview-card" role="dialog" aria-modal="true" aria-labelledby="meviewName">
+      <button class="meview-close" id="meviewClose" type="button" aria-label="关闭">✕</button>
+      <div class="meview-grid">
+        <div class="meview-photo" id="meviewPhoto"></div>
+        <div class="meview-body">
+          <h2 id="meviewName">—</h2>
+          <p class="meview-role" id="meviewRole" hidden></p>
+          <div class="meview-prose" id="meviewProse"></div>
+          <div class="meview-links" id="meviewLinks" hidden></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(async () => {
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const $ = (s) => document.querySelector(s);
+
+  /* 三维档案阵列的挂载句柄。声明在最前面，好让下面所有函数都能引用它。
+     挂载前为 null；`archOn()` 就是"三维有没有接管这一步"的唯一判据。 */
+  let arch = null;
+  const archOn = () => !!arch;
+
+  /* ---------- 1. 第一屏：WELCOME 三维字母 ----------
+     这段是从 public/proto/letters.html 移植进来的（材质 / 几何 / 手感都是那一份）。
+     为什么搬进来而不是 iframe 一层：第一屏的"缩退"和"潜入"要和下面的滚动机制
+     共用同一套 onScroll / diveOut —— 它们操作的就是本文件里的 .letter-stage。
+     ⚠️ letters.html 仍保留为**独立单屏原型**（A/B 对照与无头探针都靠它）。
+        两边是有意并存的：那边只有字母屏，这边是"字母屏 + 向下滚进第二屏"。
+        以后改字母手感时两份都要顾。 */
+  const letterStage = $('#letterStage');
+
+  let letters = null;       // 三维修好后的句柄；未就绪时是 null
+  let lettersRun = false;   // 渲染循环在不在跑（进第二屏要停掉，省 GPU）
+
+  /* 先声明后赋值：这两个可能在三维修好之前就被 enterBrowse / exitBrowse 调到，
+     未就绪时是空操作。 */
+  const startLetters = () => {
+    if (!letters || lettersRun) return;
+    lettersRun = true;
+    letters.start();
+  };
+  const stopLetters = () => {
+    if (!letters || !lettersRun) return;
+    lettersRun = false;
+    letters.stop();
+  };
+
+  /* ── 直接落到第二屏（`/?browse`，2026-09-22 加）──────────────────────────
+     全站导航里的「首页」指向 `/?browse`：用户点它要的是**第二屏**（检索滚轴选盒体那屏），
+     不是第一屏的三维字母。标记的读取在 <head>（见 `html.direct-browse` 的 CSS），
+     这里只读结果，保证"看不见第一屏"和"跳过字母构建"用的是同一个判据。 */
+  const DIRECT_BROWSE = document.documentElement.classList.contains('direct-browse');
+
+  /* 字母场景的构建。抽成函数是为了**延后调用** —— 直入第二屏时见下面 lettersReady。 */
+  const buildLetters = async () => {
+    /* 动态 import：2026-10-20 起第一屏改用 **tree-shaken 包**（scripts/build-three-letters.mjs）。
+       原写法 `import * as THREE from 'three'` 拿整个命名空间，打包器摇不了树 →
+       要下 three.module + three.core + addons 三个文件（759 KB 原始 / 156 KB br）。
+       精简包只含本页用到的 20 个符号 + mergeGeometries（496 KB / 104 KB br，-33%）。
+       ⚠️ 它的 default 导出是个普通对象，所以下面 `THREE.Vector3` 这类写法**一行都不用改**。
+       ⚠️ importmap 里的 "three" 仍指向完整版 —— 第二屏 archive.js 与 addons 都依赖完整命名空间，
+          换成精简包会直接崩。
+       ⚠️ 文件名带 REVISION（/proto/lib/* 是 7 天强缓存，three 升级必须换名）。
+       加载失败就回退完整版：宁可多下 52 KB，也不要首屏黑屏。 */
+    let THREE, mergeGeometries;
+    try {
+      THREE = (await import('/proto/lib/three-letters.r183.min.js')).default;
+      mergeGeometries = THREE.mergeGeometries;
+    } catch (err) {
+      THREE = await import('three');
+      ({ mergeGeometries } = await import('three/addons/utils/BufferGeometryUtils.js'));
+    }
+
+    /* ===================== 参数 ===================== */
+    const WORD = 'WELCOME';
+
+    /* 可点击切换的调色板。颜色照搬 lusion 的球体数据表，但只留**缎面（磨砂）**那一档：
+         rough >= 0.5 → 走 matcap 的 G 通道（宽而弱的柔光）＝缎面
+         0.1 那档走 B 通道＝紧高光，连同两类 #111 黑一起已按要求全部移除。
+       刻意不带名字：界面上不出现任何材质文字。 */
+    const MATERIALS = [
+      { color: 0xe9ebee, rough: 0.8 },
+      { color: 0x061dfb, rough: 0.8 },
+      { color: 0xadff00, rough: 0.8 },
+      { color: 0xffc000, rough: 0.8 },
+    ];
+
+    const CFG = {
+      tube: 0.105,          // 笔画粗细（管半径）
+      letterH: 1,           // 字母设计高度
+      tracking: 0.42,       // 字间距
+      tilt: 0.16,           // 每个字母初始的轻微偏转，露出管的厚度
+      zStagger: 0.55,       // 前后错落
+      layout: 'line',       // line | ring
+      spring: 8.6,          // 回位弹簧刚度
+      damping: 3.7,         // 阻尼（比值≈0.63，一两秒内把词拼回来）
+      gravity: 0.30,        // 轻微下坠
+      springRot: 4.6,       // 姿态回正
+      mouseRadius: 0.30,    // 鼠标作用半径（球面）
+      mouseInfluence: 1.15, // 鼠标影响范围
+      mouseForce: 26,       // 鼠标推力
+      mouseSpin: 3.4,       // 鼠标带起的自旋
+      restitution: 0.42,    // 字母互撞弹性
+      aoRange: 2.05,        // 邻居遮蔽范围
+      secF: 1.35,           // 二阶弹簧：频率   ← lusion 原值
+      secZ: 0.5,            //           阻尼比 ← lusion 原值
+      secR: 1.25,           //           响应初速 ← lusion 原值
+    };
+
+    /* ===================== 材质：程序化重建 lusion 的 matcap =====================
+       该站的材质本质是「一张 matcap 贴图，三个通道各管一种光照」：
+           R = 漫反射    G = 粗糙高光（roughness>0.5 时用）    B = 镜面高光（否则）
+       片元里就是：
+           matcapDiff = 0.25 + 0.75 * R;   color = albedo * matcapDiff + spec;
+       那张真图是 512×512 的 EXR。这里不搬它的文件，而是**把它的光照用二阶球谐
+       重建**：对 R/G 通道做 9 项最小二乘（R 的残差 RMS 0.021，G 0.006），
+       B 通道另按「边缘环 + 一个很紧的高光瓣」重建。视觉上与真图一致。 */
+    const SH_R = [0.51737, -0.01844, 0.32871, -0.08260, 0.14880, 0.06755, 0.00665, 0.65190, 0.10040];
+    const SH_G = [0.09436, -0.04474, 0.02401, -0.08077, -0.02070, -0.00013, 0.00753, 0.07704, 0.01168];
+    const B_RIM = { base: 0.025, amp: 0.30, pow: 1.3 };
+    const B_TIGHT = { amp: 0.95, pow: 90, dir: [0.383, 0.321, 0.866] };
+
+    const bakeMatcap = (size = 256) => {
+      const buf = new Uint8Array(size * size * 4);
+      const [tx, ty, tz] = B_TIGHT.dir;
+      for (let py = 0; py < size; py++) {
+        for (let px = 0; px < size; px++) {
+          // 像素 → 球面法线；约定 u=n.x*0.5+0.5, v=n.y*0.5+0.5（顶光）
+          let x = ((px + 0.5) / size) * 2 - 1;
+          let y = ((py + 0.5) / size) * 2 - 1;
+          const r2 = x * x + y * y;
+          let z;
+          if (r2 >= 1) { const k = 1 / Math.sqrt(r2); x *= k; y *= k; z = 0; }
+          else z = Math.sqrt(1 - r2);
+          const b = [1, x, y, z, x * y, y * z, 2 * z * z - x * x - y * y, x * z, x * x - y * y];
+          const sh = (c) => c[0] * b[0] + c[1] * b[1] + c[2] * b[2] + c[3] * b[3] + c[4] * b[4]
+                           + c[5] * b[5] + c[6] * b[6] + c[7] * b[7] + c[8] * b[8];
+          const R = sh(SH_R);
+          const G = sh(SH_G);
+          const dT = Math.max(0, x * tx + y * ty + z * tz);
+          const B = B_RIM.base + B_RIM.amp * Math.pow(1 - z, B_RIM.pow)
+                              + B_TIGHT.amp * Math.pow(dT, B_TIGHT.pow);
+          const i = (py * size + px) * 4;
+          buf[i]     = Math.max(0, Math.min(255, Math.round(255 * R)));
+          buf[i + 1] = Math.max(0, Math.min(255, Math.round(255 * G)));
+          buf[i + 2] = Math.max(0, Math.min(255, Math.round(255 * B)));
+          buf[i + 3] = 255;
+        }
+      }
+      const t = new THREE.DataTexture(buf, size, size, THREE.RGBAFormat);
+      t.minFilter = t.magFilter = THREE.LinearFilter;
+      t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping;
+      t.colorSpace = THREE.NoColorSpace;      // 这是线性光照数据，不是颜色
+      t.needsUpdate = true;
+      return t;
+    };
+
+    const MATCAP = bakeMatcap(256);
+
+    const VERT = /* glsl */`
+      varying vec3 vN;
+      varying float vAo;
+      attribute float aAo;
+      void main() {
+        vN = normalize(normalMatrix * normal);
+        vAo = aAo;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }`;
+
+    const FRAG = /* glsl */`
+      // —— 这一段的公式与 lusion 原版逐项对应 ——
+      uniform sampler2D u_matcap;
+      uniform vec3  u_color;     // 已在线性空间
+      uniform float u_rough;
+      uniform float u_fade;      // 入场淡入
+      varying vec3 vN;
+      varying float vAo;
+
+      vec3 filmicToneMapping(vec3 x) {
+        // ACES 近似：比 Reinhard 型更有对比，白色塑料不会糊成一片
+        return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0);
+      }
+
+      void main() {
+        vec3 n = normalize(vN);
+        vec2 uvPerturbed = vec2(n.x, n.y) * 0.5 + 0.5;      // 视图空间法线 → matcap 坐标
+        vec3 matcapMap  = texture2D(u_matcap, uvPerturbed).rgb;
+        vec3 matcapDiff = vec3(matcapMap.r);
+        vec3 matcapSpec = vec3(u_rough > 0.5 ? matcapMap.g : matcapMap.b);
+        matcapDiff = 0.25 + 0.75 * matcapDiff;
+
+        vec3 color = u_color * matcapDiff + matcapSpec;
+        // lusion 原式后面还有 reflections 与 gi 两项加光。这里没有环境贴图，
+        // 补一口近似环境光顶上，否则白色塑料会偏灰。
+        color += u_color * 0.075;
+        color *= vAo;                                         // 邻居遮蔽
+        float fresnel = pow(1.0 - clamp(n.z, 0.0, 1.0), 3.0);  // 塑料边缘的一点菲涅尔
+        color += fresnel * u_color * 0.09;
+
+        gl_FragColor = vec4(pow(filmicToneMapping(color), vec3(1.0 / 2.2)) * u_fade, 1.0);
+      }`;
+
+    /* ===================== 字母几何：胶囊 + 圆环弧 ===================== */
+    const T = CFG.tube;
+    const PAD = T;              // 端点内缩，避免圆头超出字母框
+    const X0 = PAD, X1 = 1 - PAD;
+    const Y0 = PAD, Y1 = 1 - PAD;
+
+    // 描边坐标写在 0…1 的方框里（y 向上），实际宽度由 w 横向拉伸，管半径不跟着变
+    const GLYPHS = {
+      W: { w: 1.14, strokes: [
+        { t: 'line', a: [X0, Y1], b: [0.300, Y0] },
+        { t: 'line', a: [0.300, Y0], b: [0.500, 0.545] },
+        { t: 'line', a: [0.500, 0.545], b: [0.700, Y0] },
+        { t: 'line', a: [0.700, Y0], b: [X1, Y1] },
+      ]},
+      E: { w: 0.68, strokes: [
+        { t: 'line', a: [X0, Y0], b: [X0, Y1] },
+        { t: 'line', a: [X0, Y0], b: [X1, Y0] },
+        { t: 'line', a: [X0, 0.500], b: [0.80, 0.500] },
+        { t: 'line', a: [X0, Y1], b: [X1, Y1] },
+      ]},
+      L: { w: 0.62, strokes: [
+        { t: 'line', a: [X0, Y0], b: [X0, Y1] },
+        { t: 'line', a: [X0, Y0], b: [X1, Y0] },
+      ]},
+      C: { w: 1.02, strokes: [
+        { t: 'arc', c: [0.5, 0.5], r: 0.5 - PAD * 0.5, a0: 44, a1: 316 },
+      ]},
+      O: { w: 1.02, strokes: [
+        { t: 'arc', c: [0.5, 0.5], r: 0.5 - PAD * 0.5, a0: 0, a1: 360 },
+      ]},
+      M: { w: 1.08, strokes: [
+        { t: 'line', a: [X0, Y0], b: [X0, Y1] },
+        { t: 'line', a: [X0, Y1], b: [0.500, 0.420] },
+        { t: 'line', a: [0.500, 0.420], b: [X1, Y1] },
+        { t: 'line', a: [X1, Y1], b: [X1, Y0] },
+      ]},
+    };
+
+    const buildGlyphGeometry = (def) => {
+      const parts = [];
+      const w = def.w;
+      const up = new THREE.Vector3(0, 1, 0);
+      for (const s of def.strokes) {
+        if (s.t === 'line') {
+          const a = new THREE.Vector3(s.a[0] * w, s.a[1], 0);
+          const b = new THREE.Vector3(s.b[0] * w, s.b[1], 0);
+          const dir = new THREE.Vector3().subVectors(b, a);
+          const len = dir.length();
+          if (len < 1e-5) continue;
+          const g = new THREE.CapsuleGeometry(T, len, 6, 14);
+          const q = new THREE.Quaternion().setFromUnitVectors(up, dir.clone().normalize());
+          const mid = new THREE.Vector3().addVectors(a, b).multiplyScalar(0.5);
+          g.applyQuaternion(q);
+          g.translate(mid.x, mid.y, mid.z);
+          parts.push(g);
+        } else {
+          const sweep = ((s.a1 - s.a0) * Math.PI) / 180;
+          const g = new THREE.TorusGeometry(s.r, T, 10, Math.max(28, Math.round(sweep * 28)), sweep);
+          g.rotateZ((s.a0 * Math.PI) / 180);
+          g.scale(w, 1, 1);                               // 只横向拉伸，管径基本不变
+          g.translate(s.c[0] * w, s.c[1], 0);
+          parts.push(g);
+        }
+      }
+      const merged = mergeGeometries(parts, false);
+      parts.forEach((p) => p.dispose());
+      merged.computeBoundingSphere();
+      return merged;
+    };
+
+    /* ===================== 二阶弹簧（t3ssel8r 那套） =====================
+       lusion 用它把鼠标位置先滤一遍再喂给三维。参数 f=1.35 / z=0.5 / r=1.25 是原值。 */
+    class SecondOrderDynamics {
+      constructor(f, z, r, x0 = 0) {
+        this.k1 = z / (Math.PI * f);
+        this.k2 = 1 / ((2 * Math.PI * f) ** 2);
+        this.k3 = (r * z) / (2 * Math.PI * f);
+        this.xp = x0; this.y = x0; this.yd = 0;
+      }
+      update(dt, x, xd = null) {
+        if (xd === null) { xd = (x - this.xp) / dt; this.xp = x; }
+        const ydd = (x + this.k3 * xd - this.y - this.k1 * this.yd) / this.k2;
+        this.yd += ydd * dt;
+        this.y += this.yd * dt;
+        return this.y;
+      }
+    }
+
+    /* ===================== 场景 ===================== */
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+    renderer.setPixelRatio(Math.min(1.75, window.devicePixelRatio || 1));
+    renderer.outputColorSpace = THREE.LinearSRGBColorSpace;   // 色彩在着色器里自己收尾
+    letterStage.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 200);
+    camera.position.set(0, 0, 12);
+
+    // —— 所有字母共用一份材质（要求：同一材质）
+    const sharedUniforms = {
+      u_matcap: { value: MATCAP },
+      u_color: { value: new THREE.Color(0xffffff) },
+      u_rough: { value: 0.8 },
+      u_fade: { value: 0 },
+    };
+    const materials = [];
+    for (let i = 0; i < WORD.length; i++) {
+      materials.push(new THREE.ShaderMaterial({
+        uniforms: {
+          u_matcap: sharedUniforms.u_matcap,
+          u_color: sharedUniforms.u_color,
+          u_rough: sharedUniforms.u_rough,
+          u_fade: sharedUniforms.u_fade,
+        },
+        vertexShader: VERT, fragmentShader: FRAG,
+      }));
+    }
+
+    /* ---- 装配 7 个字母 ---- */
+    const bodies = [];
+    const layoutInfo = { width: 1, height: 1 };
+
+    const buildWord = () => {
+      let cursor = 0;
+      const widths = [...WORD].map((ch) => GLYPHS[ch].w);
+      const total = widths.reduce((s, w) => s + w, 0) + CFG.tracking * (WORD.length - 1);
+      layoutInfo.width = total;
+      layoutInfo.height = CFG.letterH;
+
+      WORD.split('').forEach((ch, i) => {
+        const geo = buildGlyphGeometry(GLYPHS[ch]);
+        const ao = new Float32Array(geo.attributes.position.count);
+        ao.fill(1);
+        geo.setAttribute('aAo', new THREE.BufferAttribute(ao, 1));
+
+        const mesh = new THREE.Mesh(geo, materials[i]);
+        mesh.frustumCulled = false;
+        scene.add(mesh);
+
+        const centerX = cursor + widths[i] / 2 - total / 2;
+        bodies.push({
+          ch, mesh, geo, aos: geo.attributes.aAo,
+          lineX: centerX,                                 // ← 直线排列的 x 只在这里定一次
+          homePos: new THREE.Vector3(centerX, 0, 0),
+          homeQuat: new THREE.Quaternion(),
+          pos: new THREE.Vector3(), vel: new THREE.Vector3(),
+          quat: new THREE.Quaternion(), angVel: new THREE.Vector3(),
+          radius: (geo.boundingSphere?.radius ?? 0.6) * 0.62,
+          aoRadius: (geo.boundingSphere?.radius ?? 0.6) * 1.55,
+          mass: 1 + widths[i] * 0.5,
+          massInv: 1 / (1 + widths[i] * 0.5),
+          phase: i * 1.7,
+        });
+        cursor += widths[i] + CFG.tracking;
+      });
+      applyLayout();
+      scatter();
+    };
+
+    /* ---- 排布：直线拼词 / 环形 ---- */
+    const applyLayout = () => {
+      const n = bodies.length;
+      const mid = (n - 1) / 2;
+      if (CFG.layout === 'line') {
+        // ⚠️ 直线 x 一律取 lineX（建词时算好的那一个）。
+        // 早先这里读的是 b.homePos.x —— 从环形切回来时那个字段已被环形坐标覆盖，
+        // 于是字母会按环形的顺序落位，WELCOME 就散了。
+        bodies.forEach((b, i) => {
+          const k = mid ? (i - mid) / mid : 0;            // -1 … 1
+          b.homePos.set(b.lineX, -Math.abs(k) * 0.05, -Math.abs(k) * CFG.zStagger);
+          b.homeQuat.setFromEuler(new THREE.Euler(-k * 0.09, k * CFG.tilt, -k * 0.05));
+        });
+        layoutInfo.radius = 0;
+      } else {
+        const total = layoutInfo.width;
+        const R = Math.max(2.55, (total / (Math.PI * 2)) * 1.42);
+        const dTh = (Math.PI * 2) / n;
+        bodies.forEach((b, i) => {
+          const th = Math.PI / 2 - (i - mid) * dTh;
+          b.homePos.set(Math.cos(th) * R, Math.sin(th) * R, Math.sin(th * 2) * CFG.zStagger * 0.5);
+          b.homeQuat.setFromEuler(new THREE.Euler(0, CFG.tilt * 0.7, th - Math.PI / 2));
+        });
+        layoutInfo.radius = R + 0.65;
+      }
+      frameCamera();
+    };
+
+    const frameCamera = () => {
+      const isLine = CFG.layout === 'line';
+      const halfW = isLine ? layoutInfo.width / 2 + 0.35 : layoutInfo.radius + 0.25;
+      const halfH = isLine ? 0.85 : layoutInfo.radius + 0.25;
+      const vFov = (camera.fov * Math.PI) / 180;
+      const dH = halfH / Math.tan(vFov / 2);
+      const hFov = 2 * Math.atan(Math.tan(vFov / 2) * camera.aspect);
+      const dW = halfW / Math.tan(hFov / 2);
+      /* 环形靠竖边顶，留出更多余量，免得转到底部那几个被裁掉 */
+      /* ⚠️ 窄高视口（手机竖屏）单独一档余量：line 布局的 1.04 是按 16:9 量的，
+         在 390×844（aspect 0.46）上左右各只留 ~2%，"WELCOME" 会贴死两侧。
+         判据用宽高比而不是视口宽度 —— 横屏（1440×900 = 1.6）**仍是原来的 1.04，
+         数值一个没动**；竖屏给 1.16，字母整体缩一档、两侧留白对称。 */
+      const pad = isLine ? (camera.aspect < 0.9 ? 1.16 : 1.04) : 1.16;
+      const d = Math.max(dH, dW) * pad;
+      camera.position.set(0, 0, d);
+      camera.lookAt(0, 0, 0);
+    };
+
+    /* ---- 开场：先散开，再让弹簧把它们"拼"回词 ---- */
+    const scatter = () => {
+      const n = bodies.length;
+      bodies.forEach((b, i) => {
+        const a = (i / n) * Math.PI * 2 + 0.6;
+        const r = 5.5 + Math.random() * 3.5;
+        b.pos.set(Math.cos(a) * r, Math.sin(a) * r * 0.75, (Math.random() - 0.5) * 6);
+        b.vel.set(0, 0, 0);
+        b.quat.setFromEuler(new THREE.Euler(
+          (Math.random() - 0.5) * 2.4,
+          (Math.random() - 0.5) * 2.4,
+          (Math.random() - 0.5) * 3.2,
+        ));
+        b.angVel.set(0, 0, 0);
+      });
+    };
+
+    /* ===================== 交互 ===================== */
+    const input = {
+      ndc: new THREE.Vector2(0, 0),       // 原始鼠标（NDC）
+      smooth: new THREE.Vector2(0, 0),    // 二阶弹簧滤波后
+      active: false,
+    };
+    const sx = new SecondOrderDynamics(CFG.secF, CFG.secZ, CFG.secR, 0);
+    const sy = new SecondOrderDynamics(CFG.secF, CFG.secZ, CFG.secR, 0);
+
+    // 用容器的实际矩形换算 NDC（不用 window）—— 第一屏滚上去之后
+    // 它就不再贴视口了，拿视口尺寸算会偏。
+    const toNdc = (cx, cy) => {
+      const r = letterStage.getBoundingClientRect();
+      return [((cx - r.left) / r.width) * 2 - 1, -((cy - r.top) / r.height) * 2 + 1];
+    };
+
+    /* ⚠️ 只有"还在第一屏"时才响应。第二屏是 fixed 层盖在上面，
+       鼠标事件照样会冒到 window —— 不加这道门，点第二屏的导航会顺带换一次材质。 */
+    const onFirstScreen = () => !document.body.classList.contains('browsing');
+
+    const onMove = (cx, cy) => {
+      if (!onFirstScreen()) return;
+      const [x, y] = toNdc(cx, cy);
+      input.ndc.set(x, y);
+      input.active = true;
+    };
+
+    window.addEventListener('pointermove', (e) => onMove(e.clientX, e.clientY), { passive: true });
+    window.addEventListener('pointerleave', () => { input.active = false; });
+    window.addEventListener('touchmove', (e) => {
+      const t = e.touches[0]; if (t) onMove(t.clientX, t.clientY);
+    }, { passive: true });
+
+    /* ---- 排列切换 / 复位 ----
+       2026-10-19：加了 onLayout 订阅。首页那个「米米世界」入口的显示与否**只认排列状态**，
+       所以不管是谁把排列改掉的（点字母 / 按 L / 复位 / 进第二屏时收摊），
+       图标都不会和排列对不上。 */
+    const layoutListeners = [];
+    const emitLayout = () => { for (const fn of layoutListeners) fn(CFG.layout); };
+    const getLayout = () => CFG.layout;
+    const setLayout = (mode) => {
+      if (mode !== 'line' && mode !== 'ring') return false;
+      if (CFG.layout === mode) return false;
+      CFG.layout = mode;
+      applyLayout();          // 直线一律用 lineX 落位，来回切不会把词打乱
+      emitLayout();
+      return true;
+    };
+    const toggleLayout = () => setLayout(CFG.layout === 'line' ? 'ring' : 'line');
+    const onLayout = (fn) => {
+      layoutListeners.push(fn);
+      fn(CFG.layout);         // 立刻同步一次当前状态（订阅者可能在 ring 状态下才挂上来）
+    };
+
+    /* 点击落在字母身上吗？（判定用投影后的屏幕圆，半径为字母半径 + 一点余量）
+       ⚠️ 2026-10-20：**这个函数已经不再决定"能不能点"了** —— 用户拍板改成整屏可点
+       （见下面 CLICK_ANYWHERE）。留着它有三个用处：① 调试出口 / 探针要用；
+       ② 整屏可点这个开关可以随时改回去；③ 它记录着"字母被鼠标顶跑"这条实测结论。
+       为什么不直接删：删了以后想退回"只点字母"就得重新推一遍那套双锚点。
+
+       为什么不直接判定"点在屏幕上"（历史）：需求原本是「点 WELCOME 字符」，而第一屏
+       整块都可点（背景图、留白）—— 全屏判定会让随便点一下背景也触发。这条 2026-10-20 反转。
+
+       ⚠️ 每个字母认**两个**位置 —— **现在在哪**（pos）和**该在哪**（homePos）。
+       原因是实测出来的"点空"：鼠标推力会把光标底下的字母顶跑。光标停在字母落脚点不动，
+       1000ms 后那个字母已经偏出 154px，远超它自己约 80px 的命中半径 ——
+       于是"盯着字母看一会儿再点"就会打空，用户读作"点了没反应"。
+       homePos 是弹簧的目标，鼠标推力改不动它，所以它对光标是个稳定的锚点。
+       证据与成功率见 tmp/probe-click-reliability.mjs。 */
+    const _hitV = new THREE.Vector3();
+    const _hitDistAt = (p, clientX, clientY, rect) => {
+      _hitV.copy(p).project(camera);
+      const sx = rect.left + (_hitV.x * 0.5 + 0.5) * rect.width;
+      const sy = rect.top + (-_hitV.y * 0.5 + 0.5) * rect.height;
+      return Math.hypot(sx - clientX, sy - clientY);
+    };
+    const hitTest = (clientX, clientY) => {
+      const rect = letterStage.getBoundingClientRect();
+      if (!rect.width || !rect.height) return false;
+      // 单位距离处视口的世界高度：世界半径 → 像素半径要用它换算
+      const vh = 2 * Math.tan((camera.fov * Math.PI) / 360);
+      for (const b of bodies) {
+        const dist = Math.max(0.1, camera.position.distanceTo(b.pos));
+        const rpx = ((b.radius * 1.45) / (vh * dist)) * rect.height;
+        const r = Math.max(rpx, 36);
+        if (_hitDistAt(b.pos, clientX, clientY, rect) < r) return true;
+        if (_hitDistAt(b.homePos, clientX, clientY, rect) < r) return true;
+      }
+      return false;
+    };
+
+    // 硬复位：位置 / 速度 / 姿态一律回到当前排列的"家"
+    const resetAll = () => {
+      applyLayout();
+      for (const b of bodies) {
+        b.pos.copy(b.homePos); b.vel.set(0, 0, 0);
+        b.quat.copy(b.homeQuat); b.angVel.set(0, 0, 0);
+      }
+    };
+
+    /* ---- 材质切换 ---- */
+    let matIndex = 0;
+    const applyMaterial = () => {
+      const m = MATERIALS[matIndex];
+      sharedUniforms.u_color.value.setHex(m.color, THREE.SRGBColorSpace);
+      sharedUniforms.u_rough.value = m.rough >= 0.5 ? 1 : 0;
+    };
+    const nextMaterial = () => {
+      matIndex = (matIndex + 1) % MATERIALS.length;
+      applyMaterial();
+    };
+
+    /* ---- 点击：换排列 + 换材质 ----
+       🔑 2026-10-20 用户拍板：**整屏可点**。第一屏任何位置点下去都切换排列，
+       不再要求"点中字母"。
+       为什么改：原来只有字母周围那圈圆可点，7 个圆加起来实测只占屏幕 **9.8%**
+       （见 reports/assets/click/hit-map.webp），点在上下留白、字距空隙里完全没有反馈 ——
+       用户读作"点了没反应"，这才是他真正遇到的问题。
+       仍然是"可点"的三处**不**触发切换，由事件链保证：左上角品牌按钮、个人卡遮罩、
+       米米世界入口按钮 —— 都在冒泡到 window 之前 stopPropagation（见文件末尾 swallowClick
+       与入口那段），所以 `armed` 拿不到它们。
+       想退回"只点字母"：把 CLICK_ANYWHERE 改 false 即可，hitTest 还在、没删。
+
+       判定拆成"按下"和"松手"两步，起因是三种真实的点空（2026-10-20 实测；
+       同一套探针，改之前 42 次真实点击只有 13 次真的换成了圆环，改后 31 次。
+       见 tmp/probe-click-reliability.mjs）：
+         ① **按住超过 300ms 再松 → 被 `dt < 300` 否掉。**
+            对着一个大字按住再松是最常见的点法之一，这条纯属误伤（实测 0/3 全废）。
+            取消时间上限，"拨动"仍然由 40px 位移兜住（`d < 40`），不会把划动误判成点击。
+         ② **悬停一会儿再点 → 字母已被鼠标顶跑**（现在整屏可点，这条不再致命，
+            但按下判一次仍然保留：它让"按下才算数"的语义成立，手感更实）。
+         ③ **80ms 内点两下 → 环→一字相互抵消**，而前 80ms 字母只走了约 1%，
+            屏幕上等于"什么都没发生"。加一个 260ms 冷却，**把第二下吞掉**：
+            宁可少响应一次，也不要"响应了但看不出来"。
+
+       另：`armed` 这个标志不能省。pointerdown 被品牌按钮 / 个人卡遮罩 stopPropagation
+       截走时它保持 false，pointerup 就不该算 —— 否则关掉弹窗的那一下会顺带换一次排列。 */
+    const CLICK_ANYWHERE = true;
+    const clickableAt = (x, y) => (CLICK_ANYWHERE ? true : hitTest(x, y));
+
+    const TOGGLE_COOLDOWN = 260;
+    let toggledAt = -1e9;
+    const activate = () => {
+      const now = performance.now();
+      if (now - toggledAt < TOGGLE_COOLDOWN) return;   // 见 ③
+      toggledAt = now;
+      toggleLayout();
+      nextMaterial();
+    };
+
+    let armed = false, downX = 0, downY = 0, downHit = false;
+    window.addEventListener('pointerdown', (e) => {
+      if (!onFirstScreen()) { armed = false; return; }
+      armed = true;
+      downX = e.clientX; downY = e.clientY;
+      downHit = clickableAt(e.clientX, e.clientY);      // 见 ②
+    });
+    window.addEventListener('pointerup', (e) => {
+      if (!armed) return;
+      armed = false;
+      if (!onFirstScreen()) return;
+      const d = Math.hypot(e.clientX - downX, e.clientY - downY);
+      if (d < 40 && (downHit || clickableAt(e.clientX, e.clientY))) activate();
+    });
+    /* 兜底解除 armed：手指按下后滚动会来 pointercancel；拖到窗口外松手则什么都没有。
+       不解除的话，下一次"按下被截走的"点击会拿上一次的坐标算 d —— 那是幽灵点击。 */
+    window.addEventListener('pointercancel', () => { armed = false; });
+    window.addEventListener('blur', () => { armed = false; });
+
+    window.addEventListener('keydown', (e) => {
+      if (!onFirstScreen()) return;
+      const k = e.key.toLowerCase();
+      if (k === 'l') activate();
+      else if (k === 'r') resetAll();
+    });
+
+    /* ===================== 每帧 ===================== */
+    const _rayOrigin = new THREE.Vector3();
+    const _rayDir = new THREE.Vector3();
+    const _p = new THREE.Vector3();
+    const _toC = new THREE.Vector3();
+    const _closest = new THREE.Vector3();
+    const _d = new THREE.Vector3();
+    const _n = new THREE.Vector3();
+    const _tmpQ = new THREE.Quaternion();
+    const _axis = new THREE.Vector3();
+    const _rel = new THREE.Vector3();
+
+    const smoothstep = (a, b, x) => {
+      const t = Math.max(0, Math.min(1, (x - a) / (b - a)));
+      return t * t * (3 - 2 * t);
+    };
+
+    const step = (dt, time) => {
+      const n = bodies.length;
+
+      // --- 鼠标：手搓一条相机射线（与 lusion 一样不开 Raycaster）---
+      const smx = sx.update(dt, input.ndc.x);
+      const smy = sy.update(dt, input.ndc.y);
+      const pvx = sx.yd, pvy = sy.yd;
+      input.smooth.set(smx, smy);
+      const mouseSpeed = Math.hypot(pvx, pvy);
+
+      _p.set(smx, smy, 0.5).unproject(camera);
+      _rayOrigin.copy(camera.position);
+      _rayDir.copy(_p).sub(camera.position).normalize();
+
+      // --- 逐字母积分 ---
+      for (let i = 0; i < n; i++) {
+        const b = bodies[i];
+
+        // 回位弹簧（含极轻的上下浮动，避免看着是静止的）
+        const bobY = Math.sin(time * 0.75 + b.phase) * 0.035;
+        _d.set(b.homePos.x - b.pos.x, b.homePos.y + bobY - b.pos.y, b.homePos.z - b.pos.z);
+        b.vel.addScaledVector(_d, CFG.spring * dt);
+        b.vel.y -= CFG.gravity * dt;
+        b.vel.multiplyScalar(Math.exp(-CFG.damping * dt));
+
+        // 鼠标推力：把"鼠标射线"当一根圆柱，落在里面的字母被推开
+        if (input.active) {
+          _toC.copy(b.pos).sub(_rayOrigin);
+          const t = _toC.dot(_rayDir);
+          if (t > 0) {
+            _closest.copy(_rayOrigin).addScaledVector(_rayDir, t);
+            _d.copy(b.pos).sub(_closest);
+            const dist = _d.length();
+            const outer = CFG.mouseInfluence + b.radius;
+            if (dist < outer) {
+              const falloff = 1 - smoothstep(CFG.mouseRadius, outer, dist);
+              if (dist > 1e-4) _n.copy(_d).divideScalar(dist);
+              else _n.set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize();
+              // 推得越近越猛，鼠标划得越快也越猛
+              const k = CFG.mouseForce * falloff * (0.55 + Math.min(mouseSpeed * 0.35, 1.6)) * dt;
+              b.vel.addScaledVector(_n, k);
+              // 顺带带一点自旋，像被拨了一下
+              _axis.crossVectors(_rayDir, _n).normalize();
+              b.angVel.addScaledVector(_axis, k * CFG.mouseSpin);
+            }
+          }
+        }
+
+        b.pos.addScaledVector(b.vel, dt);
+
+        // 姿态：回正 + 自旋衰减
+        _tmpQ.copy(b.homeQuat);
+        b.quat.slerp(_tmpQ, 1 - Math.exp(-CFG.springRot * dt));
+        b.angVel.multiplyScalar(Math.exp(-2.2 * dt));
+        const w = b.angVel.length();
+        if (w > 1e-5) {
+          _axis.copy(b.angVel).divideScalar(w);
+          _tmpQ.setFromAxisAngle(_axis, w * dt);
+          b.quat.premultiply(_tmpQ).normalize();
+        }
+
+        b.mesh.position.copy(b.pos);
+        b.mesh.quaternion.copy(b.quat);
+      }
+
+      // --- 字母互撞（球近似 + 位置修正）---
+      for (let i = 0; i < n; i++) {
+        for (let j = i + 1; j < n; j++) {
+          const a = bodies[i], c = bodies[j];
+          _d.copy(c.pos).sub(a.pos);
+          const dist = _d.length();
+          const minD = a.radius + c.radius;
+          if (dist > 1e-5 && dist < minD) {
+            _n.copy(_d).divideScalar(dist);
+            const overlap = minD - dist;
+            const wSum = a.massInv + c.massInv;
+            a.pos.addScaledVector(_n, (-overlap * a.massInv) / wSum * 0.85);
+            c.pos.addScaledVector(_n, (overlap * c.massInv) / wSum * 0.85);
+            _rel.copy(c.vel).sub(a.vel);
+            const vn = _rel.dot(_n);
+            if (vn < 0) {
+              const imp = (-(1 + CFG.restitution) * vn) / wSum;
+              a.vel.addScaledVector(_n, -imp * a.massInv);
+              c.vel.addScaledVector(_n, imp * c.massInv);
+              _axis.crossVectors(_n, _rel).normalize();
+              a.angVel.addScaledVector(_axis, -imp * 0.35);
+              c.angVel.addScaledVector(_axis, imp * 0.35);
+            }
+          }
+        }
+      }
+
+      // --- 邻居遮蔽（lusion 在顶点着色器里遍历邻居算 AO；这里 7 个字母，CPU 算更划算）
+      for (let i = 0; i < n; i++) bodies[i].occ = 0;
+      for (let i = 0; i < n; i++) {
+        for (let j = i + 1; j < n; j++) {
+          const a = bodies[i], c = bodies[j];
+          const dist = a.pos.distanceTo(c.pos);
+          const R = CFG.aoRange + (a.aoRadius + c.aoRadius) * 0.5;
+          if (dist < R) {
+            const k = 1 - dist / R;
+            a.occ += k; c.occ += k;
+          }
+        }
+      }
+      for (let i = 0; i < n; i++) {
+        const b = bodies[i];
+        const target = Math.max(0.34, Math.min(1, 1 - b.occ * 0.42));
+        const arr = b.aos.array;
+        const prev = arr[0];
+        const v = prev + (target - prev) * Math.min(1, dt * 9);   // 平滑过渡，避免 AO 跳变
+        arr.fill(v);
+        b.aos.needsUpdate = true;
+      }
+    };
+
+    /* ===================== 主循环 ===================== */
+    const resize = () => {
+      const w = letterStage.clientWidth || window.innerWidth;
+      const h = letterStage.clientHeight || window.innerHeight;
+      renderer.setSize(w, h, false);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      frameCamera();
+    };
+    window.addEventListener('resize', resize);
+
+    let last = 0, elapsed = 0, fade = 0, raf = 0;
+
+    const loop = (now) => {
+      const dt = Math.min(0.033, (now - last) / 1000);
+      last = now;
+      elapsed += dt;
+      step(dt, elapsed);
+      fade += (1 - fade) * Math.min(1, dt * 1.8);
+      sharedUniforms.u_fade.value = fade;
+      renderer.render(scene, camera);
+      raf = requestAnimationFrame(loop);
+    };
+
+    /* start/stop 一对：进第二屏就停掉渲染循环（离屏了别烧 GPU），
+       退出再起。停的时候场景整个留在内存里，回来不等重载。 */
+    const start = () => {
+      if (raf) return;
+      last = performance.now();     // 关键：不重置的话恢复后第一帧的 dt 会是"停掉的时长"
+      raf = requestAnimationFrame(loop);
+    };
+    const stop = () => {
+      if (raf) cancelAnimationFrame(raf);
+      raf = 0;
+    };
+
+    buildWord();
+    applyMaterial();
+    resize();
+
+    return {
+      start, stop, reset: resize, THREE, CFG, bodies, MATERIALS, camera, renderer, scene, letterStage,
+      /* 2026-10-19：首页「米米世界」入口要用的几个出口（排列状态 + 点击命中判定） */
+      getLayout, setLayout, toggleLayout, onLayout, hitTest,
+    };
+  };
+
+  /* 直入第二屏时把字母的构建**推后到空闲**：
+     用户点「首页」要的是第二屏，这一下 742 KB 的 three 求值实测独占主线程约 425ms，
+     砸在第二屏的进场渐变上就是一次可见的卡顿；而它跟 1.2 MB 的档案包抢带宽也毫无意义
+     （档案包才是这一屏的命根子）。所以先让档案包上路，再抢空闲建字母。
+     ⚠️ `lettersReady` 的语义不变（resolve 出三维修好后的句柄）——
+        「返回主界面」那边靠 `await lettersReady` 兜住"用户比字母先到"的情况。 */
+  const lettersReady = DIRECT_BROWSE
+    ? new Promise((resolve, reject) => {
+        const ric =
+          window.requestIdleCallback ||
+          ((fn) => setTimeout(() => fn({ timeRemaining: () => 0 }), 900));
+        setTimeout(() => ric(() => buildLetters().then(resolve, reject), { timeout: 2600 }), 1200);
+      })
+    : buildLetters();
+
+  lettersReady.then((h) => {
+    letters = h;
+    if (!document.body.classList.contains('browsing')) startLetters();
+  });
+
+  /* ---------- 1.5 米米世界入口 ----------
+     2026-10-19 加。需求原文：
+       · 点 WELCOME 字符 → 字母围成圆环 → 中间浮出 MC 图标，图标下面写「米米世界.exe」；
+       · 点（或双击）图标 → 进入游戏（/games/mimi-world/）；
+       · 再点 WELCOME 字符 → 回到一字排列，图标隐藏且**不可点**。
+     实现要点：
+       ① 环形排列本来就存在（CFG.layout：'line' | 'ring'），这里只订阅它的变化 ——
+          图标可见性由排列状态单向驱动，不存在"图标还亮着但字母已经散了"的状态；
+       ② 图标用 DOM 不用三维：文字清晰、可聚焦、可 Enter、可被读屏；
+       ③ 出现时延 360ms：先看到字母合拢，图标再浮起来，顺序对得上"围绕成圆环后…"；
+       ④ 点图标要 stopPropagation —— 字母那套"点一下就换排列"挂在 window 上，
+          不拦的话点图标会顺带把圆环收回一字（正是"进游戏前先散架"那种尴尬）。 */
+  const worldEntry = $('#worldEntry');
+  const worldEntryBtn = $('#worldEntryBtn');
+  const WORLD_ENTRY_DELAY = 360;
+  let worldEntryTimer = 0;
+  let worldEntryOpen = false;
+
+  const setWorldEntry = (open) => {
+    if (open === worldEntryOpen) return;
+    worldEntryOpen = open;
+    clearTimeout(worldEntryTimer);
+    if (!open) {
+      worldEntry.classList.remove('is-open');
+      worldEntry.setAttribute('aria-hidden', 'true');
+      worldEntryBtn.tabIndex = -1;
+      return;
+    }
+    const show = () => {
+      /* 图标在这里才真正开始下载（见 img 上的 data-src）。只在第一次赋值，
+         之后重复进出不再触发请求；已缓存时这一行是零成本的。 */
+      const icon = document.getElementById('worldEntryIcon');
+      if (icon && !icon.getAttribute('src') && icon.dataset.src) {
+        icon.src = icon.dataset.src;
+      }
+      worldEntry.classList.add('is-open');
+      worldEntry.setAttribute('aria-hidden', 'false');
+      worldEntryBtn.tabIndex = 0;
+    };
+    if (reduced) show();                       // 减少动效模式下直接出现
+    else worldEntryTimer = setTimeout(show, WORLD_ENTRY_DELAY);
+  };
+  /** 排列状态 → 图标可见性。唯一入口，别处不要直接动 class。 */
+  const syncWorldEntry = (layout) => setWorldEntry(layout === 'ring');
+  /** 收起入口（进第二屏时调）：先把排列收回一字，图标随订阅自动隐藏。 */
+  const closeWorldEntry = () => {
+    setWorldEntry(false);
+    if (letters && letters.getLayout() === 'ring') letters.setLayout('line');
+  };
+  /* 字母可能比这里晚就绪（直入第二屏时尤其晚），失败也不影响第一屏 */
+  lettersReady.then((h) => h.onLayout(syncWorldEntry), () => {});
+
+  /* 点图标 = 进游戏。做成**单击**：需求是"点击或双击都能进"，
+     如果按双击判定，单击就会变成"点了没反应"。防连点用 disabled。 */
+  for (const type of ['pointerdown', 'pointerup', 'touchmove']) {
+    worldEntry.addEventListener(type, (e) => e.stopPropagation(), { passive: true });
+  }
+  worldEntryBtn.addEventListener('click', () => {
+    worldEntryBtn.disabled = true;
+    window.location.href = '/games/mimi-world/';
+  });
+
+  /* ---------- 2. 第一屏 → 第二屏 的衔接（igloo 式"潜入"） ---------- */
+  const stage = $('#stage');
+  let raf = 0;
+  const onScroll = () => {
+    if (raf) return;
+    raf = requestAnimationFrame(() => {
+      raf = 0;
+      /* 进接管后，第一屏的"潜入"改由 diveOut() 用一条 transition 收尾。
+         这里必须让路：onScroll 是逐帧写 inline transform/opacity 的，
+         继续跑会把 diveOut 设的终值覆盖回"按滚动进度算出来的中间值"。
+         用 class 判据而不是 browseMode —— 后者是 `let`，在本函数第一次被调用时还在 TDZ 里。 */
+      if (document.body.classList.contains('browsing')) return;
+      const h = stage.offsetHeight || 1;
+      const p = Math.min(1, Math.max(0, window.scrollY / h));
+      const e = 1 - Math.pow(1 - p, 3);              // ease-out-cubic
+      // 字母画布：滚动时轻微缩小 + 淡出，给第二屏让位
+      letterStage.style.transform = `scale(${(1 - 0.10 * e).toFixed(4)})`;
+      letterStage.style.opacity = String(Math.max(0, 1 - e * 1.15));
+    });
+  };
+  if (!reduced) {
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+  }
+
+  /* ---------- 4. 二级条目数据：直接读档案存档（与三维阵列同一份数据） ----------
+     从 `/proto/three-archive/archives.json` 取 —— 它是构建三维包时顺手吐出来的那份
+     （35 KB / gzip 11 KB），所以**界面不等三维包**：栏目标签、右侧面板、无 WebGL 回退
+     卷轴都能立刻用上真数据；三维只是叠加在它之上的一层渲染。
+     一列 = 档案的一个 category（= 三维阵列里的一条 lane），列内顺序 = 阵列里的行序。
+     这个对应关系是刻意的：换列 = 换 lane，列内上下 = 沿 row 走，两边同一套坐标。 */
+  let COLUMNS = [];
+  let items = [];
+  let ARCHIVE = null;                 // 原始存档（三维侧要靠 id / category 反查）
+  let BUNDLE_V = '';                  // 三维包的内容版本号（给 archive.js 的 URL 带 ?v=）
+  try {
+    /* version.json 是构建期（sync-archive.mjs）落下的"包内容哈希"，作用只有一个：
+       给下面 import 的 archive.js 带 `?v=<hash>`。
+       ⚠️ 2026-09-30：Cloudflare 对 .js 这类扩展名会用 zone 的 Browser Cache TTL（4 小时）
+       覆盖 `_headers` 里写的 max-age=0 —— archive.js 因而会在浏览器里躺 4 小时，
+       出现"新宿主 + 旧引擎"（阵列条数对不上 / 改过的引擎行为看起来没生效）。
+       实测 query 参与 CF 缓存键，所以带上内容哈希后，内容一变 URL 就变、缓存自然失效。
+       它只有 ~25 B，且与 archives.json 并行发，不占额外往返。 */
+    const [res, vres] = await Promise.all([
+      fetch('/proto/three-archive/archives.json'),
+      fetch('/proto/three-archive/version.json', { cache: 'no-store' }).catch(() => null),
+    ]);
+    if (vres && vres.ok) {
+      try { BUNDLE_V = (await vres.json()).js || ''; } catch (e) { /* 拿不到就不带，退化成原行为 */ }
+    }
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    ARCHIVE = data;
+    COLUMNS = data.columns.map((name) => ({ id: name, name }));
+  items = data.records.map((r) => ({
+    col: r.category,
+    name: r.title,
+    sub: r.department + ' · ' + r.date,
+    chip: r.clearance || r.category,
+    desc: r.abstract,
+    preview: r.preview || '',   // 真封面图路径（gen-archives 出的；没有就是空串）
+    previewW: r.previewW || 0,
+    previewH: r.previewH || 0,
+    id: r.id,
+    href: r.href,          // 站内真实页面（二级页"打开页面 →"用；没有就藏按钮）
+    downloadable: !!(r.downloadable),   // 构建期已查过文件是否存在
+    downloadUrl: r.downloadUrl || '',
+  }));
+  } catch (err) {
+    console.error('[proto] 档案数据没读到，接管层会空着：', err);
+  }
+  if (!COLUMNS.length) {
+    // 数据是构建产物的一部分，读不到就是环境坏了。与其让下面一堆空数组报错，
+    // 不如明确停在这里 —— 第一屏（跑马灯 / 滚动动画）照常，接管层不启用。
+    $('#colName').textContent = '数据未载入';
+    console.error('[proto] 没有栏目数据，接管层不启用');
+    return;
+  }
+
+  const panel = $('#panel');
+  const panelMedia = $('#panelMedia');
+  const panelMediaText = $('#panelMediaText');
+  const panelTitle = $('#panelTitle');
+  const panelMeta = $('#panelMeta');
+  const panelDesc = $('#panelDesc');
+  const panelDownload = $('#panelDownload');
+
+  /* 封面图元素只建一次，切条目时只换 src ——
+     每次都重建 <img> 的话浏览器要重新解一次图，视觉上会闪一下。 */
+  const mediaImg = document.createElement('img');
+  mediaImg.decoding = 'async';
+  mediaImg.loading = 'lazy';
+  mediaImg.hidden = true;
+  panelMedia.append(mediaImg);
+  let shownImg = '';
+
+  /* 右侧面板永远显示「当前列 · 当前选中项」 */
+  let shownKey = '';
+  const applyPanel = () => {
+    const c = activeCol();
+    const it = c.items[c.selected];
+    if (!it) return;
+    /* 缺省是文字占位 —— 目前只有图集条目带封面图，项目 / 模块 / 文档 / 模型都落这一支。 */
+    if (it.preview) {
+      if (it.preview !== shownImg) {
+        shownImg = it.preview;
+        mediaImg.src = it.preview;
+        mediaImg.alt = it.name;
+        /* width/height 只为"图还没下完"时留位；盒子本身是 16:9 + object-fit:cover，
+           所以拿不到真实尺寸时按 16:9 兜底即可，不会有布局跳动。 */
+        mediaImg.width = it.previewW || 1600;
+        mediaImg.height = it.previewH || 900;
+      }
+      mediaImg.hidden = false;
+      panelMediaText.hidden = true;
+    } else {
+      shownImg = '';
+      mediaImg.hidden = true;
+      mediaImg.removeAttribute('src');
+      /* ⚠️ 必须连 alt 一起清：没有 src 的 <img> 会把 alt 当文字画在框里，
+         不清就会显示**上一个条目**的名字（alt 是上次 applyPanel 写的）。 */
+      mediaImg.alt = '';
+      panelMediaText.hidden = false;
+      panelMediaText.textContent = it.chip + ' · 封面';
+    }
+    panelTitle.textContent = it.name;
+    panelMeta.textContent = it.sub;
+    panelDesc.textContent = it.desc;
+    /* 下载按钮：仅当构建期确认文件存在（downloadable 且 downloadUrl 非空）才显示 */
+    if (it.downloadable && it.downloadUrl) {
+      panelDownload.href = it.downloadUrl;
+      panelDownload.setAttribute('download', it.downloadUrl.split('/').pop() || 'download');
+      panelDownload.hidden = false;
+    } else {
+      panelDownload.hidden = true;
+    }
+  };
+  const updatePanel = () => {
+    const c = activeCol();
+    const key = c.id + ':' + c.selected;
+    if (key === shownKey) return;
+    shownKey = key;
+    panel.classList.add('swapping');
+    setTimeout(() => { applyPanel(); panel.classList.remove('swapping'); }, reduced ? 0 : 130);
+  };
+
+  /* ---------- 5. 建列：每列一套自己的 DOM 与 selected / target / pos ----------
+     与 RhineLabUI 一致的核心（逐列各持一份）：
+       · 选中 = 当前位置 ±1，取模回绕 → 无限循环，永远滚不到底
+       · 位置用 1-exp(-k·dt) 阻尼跟随（帧率无关），不是 lerp
+     唯一改动：二维平面 → 纵向一维；相机跟随 → 条目纵向位移。 */
+  const colsEl = $('#cols');
+  const tabsEl = $('#colTabs');
+  const colNameEl = $('#colName');
+  const colPosEl = $('#colPos');
+  const countEl = $('#count');
+  const PITCH = 84;                        // 72px 行高 + 12px 间隙
+  const wrapIndex = (x, n) => ((x % n) + n) % n;
+
+  const cols = COLUMNS.map((meta) => {
+    const list = items.filter((it) => it.col === meta.id);
+
+    const root = document.createElement('div');
+    root.className = 'col';
+
+    const reelEl = document.createElement('div');
+    reelEl.className = 'reel';
+    reelEl.id = 'reel-' + meta.id;
+    reelEl.setAttribute('role', 'listbox');
+    reelEl.setAttribute('aria-label', meta.name + '条目，滚轮或上下键切换');
+    reelEl.tabIndex = -1;
+    root.appendChild(reelEl);
+    colsEl.appendChild(root);
+
+    const c = {
+      id: meta.id, name: meta.name,
+      items: list, root, reelEl, nodes: [],
+      selected: 0, target: 0, pos: 0, running: false, lastT: 0,
+    };
+
+    c.nodes = list.map((it, i) => {
+      const el = document.createElement('button');
+      el.type = 'button';
+      el.className = 'item';
+      el.setAttribute('role', 'option');
+      el.dataset.index = String(i);
+      el.innerHTML =
+        '<span class="no">' + String(i + 1).padStart(2, '0') + '</span>' +
+        '<span><span class="name">' + it.name + '</span><span class="sub">' + it.sub + '</span></span>' +
+        '<span class="chip">' + it.chip + '</span>';
+      el.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        if (i === c.selected) openRecord(c, i, el);   // 点正中的 → 直跳站内详情页
+        else goTo(c, i);                              // 点别的 → 先滚到它
+      });
+      reelEl.appendChild(el);
+      return el;
+    });
+
+    /* ↑↓ 只作用于本列（←→ 切列走 window 上的全局处理）。
+       走不动时（本列只有 1 条）弹一句提示，别让人以为键盘坏了。 */
+    reelEl.addEventListener('keydown', (e) => {
+      if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+      e.preventDefault();
+      if (!step(c, e.key === 'ArrowDown' ? 1 : -1)) flashLaneHint();
+    });
+
+    return c;
+  });
+
+  let active = 0;
+  const activeCol = () => cols[active];
+
+  /* ---------- 「这一栏只有 1 条」提示条 ----------
+     2026-09-30 用户拍板：**栏与栏严格隔离，滚轮绝不跨栏**。
+     于是只有 1 条的栏（现在只剩「工具」）滚轮会原地不动 —— 必须把原因讲出来，
+     否则就是 2026-09-21 用户报的「滚轮完全没反应」那个状态。
+     历史：09-21 ～ 09-30 之间我们曾经在"只有 1 条"时**偷偷换列**来避免空操作，
+     用户 09-30 的原话是「图片栏与文档栏能互通…这两个应该是单独的栏」——
+     所以改成"不跨栏 + 明说"。换列一律只走左右按钮 / ←→ 键 / 栏目标签。 */
+  const laneHint = $('#laneHint');
+  let laneHintTimer = 0;
+  const LANE_HINT_MS = 1700;
+  const flashLaneHint = (text) => {
+    laneHint.textContent = text || '这一栏只有 1 条 · 用 ← → 或两侧按钮换栏';
+    laneHint.hidden = false;
+    laneHint.classList.add('is-on');
+    clearTimeout(laneHintTimer);
+    laneHintTimer = setTimeout(() => {
+      laneHint.classList.remove('is-on');
+      /* 等淡出跑完再 hidden，否则 transition 还没走就被 display:none 掐掉了 */
+      laneHintTimer = setTimeout(() => { laneHint.hidden = true; }, 260);
+    }, LANE_HINT_MS);
+  };
+
+  /* 栏目名标签：点一下就跳过去（与左右按钮等价） */
+  COLUMNS.forEach((meta, i) => {
+    const t = document.createElement('button');
+    t.type = 'button';
+    t.className = 'coltab';
+    t.setAttribute('role', 'tab');
+    t.setAttribute('aria-selected', i === 0 ? 'true' : 'false');
+    t.textContent = meta.name;
+    t.addEventListener('click', () => setActive(i));
+    tabsEl.appendChild(t);
+  });
+
+  /* ---------- 6. 列切换：左右按钮 / 栏目标签 / ← → 键 ---------- */
+  /* 栏目大标题 = 纯文字，所有栏目一视同仁（2026-09-19 用户拍板「不要再使用图片」）。
+     原来这里有一张 COL_TITLE 映射表（栏目名 → 标题图），已连同 `.col-title-img` 元素一起删除；
+     以后若要恢复图片标题，得同时加回 <img>、CSS 和这张表。 */
+  const syncHead = () => {
+    const c = activeCol();
+    colNameEl.textContent = c.name;
+    countEl.textContent = String(c.items.length);
+    colPosEl.textContent = (active + 1) + ' / ' + cols.length;
+  };
+  /* 把"当前是哪一列"这件事实刷到 DOM 上：轨道位移 / 可聚焦 / 标签选中 / 标题 / 面板。
+     单独拆出来，是因为三维那边也会改当前列 —— 那时不能走 setActive 的"同一列就早退"。 */
+  const applyActive = () => {
+    colsEl.style.transform = 'translateX(' + (-100 * active).toFixed(4) + '%)';
+    cols.forEach((c, i) => {
+      c.reelEl.tabIndex = i === active ? 0 : -1;   // 只有当前列可聚焦
+      c.root.setAttribute('aria-hidden', i === active ? 'false' : 'true');
+    });
+    [...tabsEl.children].forEach((t, i) =>
+      t.setAttribute('aria-selected', i === active ? 'true' : 'false'));
+    syncHead();
+    updatePanel();
+  };
+  const setActive = (idx) => {
+    const next = wrapIndex(idx, cols.length);      // 首尾可以绕回来
+    if (next === active) return;
+    active = next;
+    applyActive();
+    syncArchiveToLane();                           // 三维不在场时是空操作
+  };
+  const stepCol = (dir) => setActive(active + dir);
+
+  /* ---------- 6.5 三维档案阵列：懒加载 + 接管 ----------
+     只有"进入接管层"那一刻才 import 那个 1.2 MB（gzip 302 KB）的模块，首屏零影响。
+     它在 DOM 版卷轴之上叠加渲染；两者共用同一份档案数据、同一套"列 = lane / 条目 = row"
+     坐标，所以换掉的是"怎么呈现"，不是"呈现什么"。
+     任何一步失败都退回 DOM 版（不加 .has3d，卷轴照常显示），不把页面弄坏。 */
+  const archLayer = $('#arch3d');
+  const archStatus = $('#archStatus');
+  const archStatusText = $('#archStatusText');
+  let archState = 'idle';                       // idle | loading | on | failed
+
+  /* 提示条什么时候收：成功 = 三维就绪即收（见 mountArchive 成功分支）；
+     失败 = 多留 2800ms 给人看清，且这 2800ms 必须是**用户能看见的 2800ms**。
+     为什么单拎出来：A 之后预取会提前到字母屏，失败可能就发生在你还看着 WELCOME 的时候 ——
+     那时 .browse 还被遮罩盖着，计时白跑完，等你滚下来只剩一个没有解释的列表，
+     正是 C 要消灭的那个状态。所以没进场就先挂起，等进场那一刻再起表。 */
+  let archStatusTimer = 0;
+  let archStatusErrPending = false;
+  const dismissArchStatusAfter = (ms) => {
+    clearTimeout(archStatusTimer);
+    archStatusTimer = setTimeout(() => archStatus.classList.add('done'), ms);
+  };
+  /* 用 class 判据而不是 browseMode —— 后者在 1657 才声明，这里可能早于它求值 */
+  const inBrowse = () => document.body.classList.contains('browsing');
+
+  /* 三维在场时，把阵列切到当前列（不在场就是空操作） */
+  const syncArchiveToLane = () => { arch?.focusLane(active); };
+
+  /* 三维那边选定了一条档案 → 把 DOM 侧（当前列 / 选中项 / 标题 / 面板）同步过来。
+     ⚠️ 这里绝不能反向调 focusLane：setActive → focusLane → onSelect → 本函数
+     会绕成一个圈。所以同步是单向的（三维 → DOM），反向只在 setActive 里走一次。 */
+  const syncUIFromArchive = (index) => {
+    const rec = ARCHIVE && ARCHIVE.records[index];
+    if (!rec) return;
+    const lane = COLUMNS.findIndex((c) => c.id === rec.category);
+    if (lane < 0) return;
+    const c = cols[lane];
+    const local = c.items.findIndex((it) => it.id === rec.id);
+    if (local < 0) return;
+    active = lane;
+    c.selected = local;
+    c.target = local;
+    c.pos = local;
+    c.running = false;                          // 三维在动，DOM 卷轴不用再跑阻尼
+    cols.forEach(drawCol);
+    applyActive();
+  };
+
+  /* 三维里点"当前聚焦的那张卡" → 直跳它的站内详情页。
+     用户 2026-09-19 拍板：**只对聚焦中的那张跳**，点别的盒体仍旧是切换焦点，浏览手感不变。
+     没有 href 的条目才会落回二级层 —— 这个判断在 openRecord 里做。
+     三维没有 DOM 卡片可以当共享元素源，所以 cardEl 传 null（openRecord 的兜底分支会用到）。 */
+  const openArchiveRecord = (index) => {
+    const rec = ARCHIVE && ARCHIVE.records[index];
+    if (!rec) return;
+    const lane = COLUMNS.findIndex((col) => col.id === rec.category);
+    if (lane < 0) return;
+    const c = cols[lane];
+    const local = c.items.findIndex((it) => it.id === rec.id);
+    if (local < 0) return;
+    openRecord(c, local, null);
+  };
+
+  const mountArchive = async () => {
+    if (archState !== 'idle') return;
+    archState = 'loading';
+    try {
+      // 动态 import：这是首屏零影响的唯一保证（模块本身不在任何 <script> 里）
+      // ⚠️ 必须带 ?v=<内容哈希>：Cloudflare 会无视 _headers 的 max-age=0、把 .js
+      //    按 Browser Cache TTL 缓存 4 小时（见上面读 version.json 处那段说明）。
+      /* ── 并行拉模型（2026-10-19 · 加载速度优化）──
+         以前模型要等「引擎包下载完 → 模块求值完」才发请求：实测 archive.js 918 KB
+         在 1882ms 结束、模型请求 2285ms 才开始，中间那 400ms 就是求值。
+         两段本来是纯串行的。这里在 import() **之前**就把 fetch 开出去，把 Promise
+         交给引擎，引擎拿到的是解压好的 ArrayBuffer，直接走 GLTFLoader.parseAsync()。
+         10 Mbps 限速下实测这一段串行值 800ms 左右（2977ms → 2183ms）。
+         失败不拦：catch 成 undefined 后引擎会自己再 fetch 一次（退化成改动前的行为）。
+         ⚠️ URL 必须与引擎里 loadGlb 算出来的完全一致（assetsBase + assets/…），
+            否则引擎认不出"宿主已经预取了"，会白下第二遍。
+         ⚠️ `.glb` 是**预压缩孪生**（brotli -79%），靠 public/_headers 派发
+            Content-Encoding: br 让浏览器自动解压 —— 这里拿到的仍是干净 glTF 字节流。 */
+      const cassette = fetch('/proto/three-archive/assets/archive-cassette.glb')
+        .then((r) => (r.ok ? r.arrayBuffer() : undefined))
+        .catch(() => undefined);
+      const mod = await import('/proto/three-archive/archive.js' + (BUNDLE_V ? '?v=' + BUNDLE_V : ''));
+      const handle = await mod.createArchiveEmbed(archLayer, {
+        // 绝对 URL —— 免得不小心被 <base> 或子路径部署改掉解析基准
+        assetsBase: new URL('/proto/three-archive/', location.origin).href,
+        dark: true,                              // 原型页是深色底，跟它对齐
+        cassette,                                // ← 上面那个并行 fetch
+      });
+      /* 三维里"点卡片"只有一个信号：引擎的 onSelect。它的 pointerup 分支对**已经选中**的格子
+         同样会发 onSelect（不像拖拽释放那条有 sameCell 门禁），所以我们能分辨出这两件事：
+           点当前已选中的那张 → **直跳它的站内详情页**（不经中间界面）
+           点别的             → 先选中它（DOM 那边靠 pointer-events 只让正中那张可点，
+                                三维里点任意一张都能选中，是更好的手感）
+         判"是不是当前选中"要用宿主自己记的上一个下标 —— embed 把新下标直接给过来，
+         它内部的 index 此刻已经更新，拿它比自己会永远相等。 */
+      let lastArchIndex = -1;
+      handle.onSelect = (index) => {
+        const same = index === lastArchIndex;
+        lastArchIndex = index;
+        if (same) openArchiveRecord(index);
+        else syncUIFromArchive(index);
+      };
+      /* 初始选中 = 进接管层时 DOM 侧已选中的那条，避免"进去先跳一下" */
+      const c0 = activeCol();
+      const i0 = mod.records.findIndex((r) => r.id === c0.items[c0.selected]?.id);
+      if (i0 >= 0) handle.select(i0);
+      arch = handle;
+      archState = 'on';
+      archLayer.classList.add('ready');
+      $('#browse').classList.add('has3d');
+      archStatus.classList.add('done');
+      if (browseMode) arch.setRunning(true);     // 加载期间用户可能已经退出去了
+    } catch (err) {
+      archState = 'failed';
+      archStatusText.textContent = '三维阵列没载入，已回退到列表视图';
+      /* 已经在第二屏 → 即刻起表；还在字母屏 → 挂起，由 enterBrowse 起表（见上面注释） */
+      if (inBrowse()) dismissArchStatusAfter(2800);
+      else archStatusErrPending = true;
+      console.error('[proto] 三维档案阵列加载失败：', err);
+    }
+  };
+  const enterArchive = () => {
+    if (archState === 'idle') void mountArchive();
+    else if (archState === 'on') arch.setRunning(true);
+  };
+  const leaveArchive = () => arch?.setRunning(false);
+  window.addEventListener('resize', () => arch?.resize());
+
+  /* 位置差 → 纵向位移；超半圈就绕到另一侧，于是永远滚不到底（逐列计算） */
+  const drawCol = (c) => {
+    const n = c.items.length;
+    if (!n) return;
+    for (let i = 0; i < n; i++) {
+      let d = wrapIndex(i - c.pos, n);
+      if (d > n / 2) d -= n;                  // d ∈ (-n/2, n/2]
+      const abs = Math.abs(d);
+      const el = c.nodes[i];
+      el.style.transform = 'translateY(' + (d * PITCH).toFixed(2) + 'px) scale(' +
+        Math.max(0.66, 1 - abs * 0.14).toFixed(3) + ')';
+      el.style.opacity = Math.max(0, 1 - abs * 0.32).toFixed(3);
+      el.style.zIndex = String(1000 - Math.round(abs * 10));
+      el.style.pointerEvents = abs < 0.5 ? 'auto' : 'none';
+      el.setAttribute('aria-current', i === c.selected ? 'true' : 'false');
+    }
+  };
+
+  /* 一个共享的动画循环，推进所有「正在动」的列（同一时刻通常只有一列） */
+  let ticking = false;
+  const loop = (now) => {
+    let any = false;
+    for (const c of cols) {
+      if (!c.running) continue;
+      const n = c.items.length;
+      const dt = Math.min((now - c.lastT) / 1000, 0.05);
+      c.lastT = now;
+      const k = reduced ? 1000 : 6.5;         // 阻尼速度（1/s）
+      c.pos += (c.target - c.pos) * (1 - Math.exp(-k * dt));
+      if (Math.abs(c.target - c.pos) < 0.0008) {
+        c.pos = wrapIndex(c.target, n);       // 收纳回 [0,n)，渲染结果不变
+        c.target = c.pos;
+        c.running = false;
+        drawCol(c);
+      } else {
+        drawCol(c);
+        any = true;
+      }
+    }
+    if (any) requestAnimationFrame(loop);
+    else ticking = false;
+  };
+  const ensure = (c) => {
+    if (c.running) return;
+    c.running = true;
+    c.lastT = performance.now();
+    if (!ticking) {
+      ticking = true;
+      requestAnimationFrame(loop);
+    }
+  };
+
+  /* 列内走一格。返回**这一格有没有真的换掉条目** —— 列里只有 1 条时是 false，
+     宿主据此弹「该栏只有 1 条」提示（2026-09-30 用户拍板：栏与栏严格隔离、滚轮绝不跨栏；
+     既然不跨栏了，"滚不动"就必须有个解释，不能看起来像坏了）。 */
+  const step = (c, dir) => {
+    const n = c.items.length;
+    if (!n) return false;
+    c.target += dir;
+    const ni = wrapIndex(c.target, n);
+    const moved = ni !== c.selected;
+    if (moved) {
+      c.selected = ni;
+      if (c === activeCol()) updatePanel();
+    }
+    ensure(c);
+    return moved;
+  };
+  const goTo = (c, i) => {
+    const n = c.items.length;
+    const from = wrapIndex(Math.round(c.target), n);
+    const fwd = wrapIndex(i - from, n);
+    if (!fwd) return;
+    const dir = fwd <= n / 2 ? 1 : -1;
+    const count = dir === 1 ? fwd : n - fwd;
+    for (let s = 0; s < count; s++) step(c, dir);
+  };
+
+  /* ---------- 7. 进出「接管模式」：往下滚过第一屏就全盘接管滚轮 ---------- */
+  const browse = $('#browse');
+  let browseMode = false;
+
+  /* 渐变揭示的时长，必须与 CSS 的 --dur-slow 对齐（用来在扫完后摘掉遮罩）。 */
+  const REVEAL_MS = 760;
+  let revealTimer = 0;
+
+  /* 「潜入」：进接管的那一下，把第一屏推到景深里。
+     滚动驱动的那套（onScroll）只按滚动进度推进，而触发进入时进度往往才 30% 出头 ——
+     画面会停在"半退不退"的状态被盖住。所以这里用一条 transition 把它补完到终点：
+     字母缩小 + 模糊 + 淡出。
+     ⚠️ 这会往元素上写 inline style + transition，退出时必须**先摘 transition/filter**
+     再交还给 onScroll（onScroll 是逐帧写 inline 的，留着 transition 会让它变成"追着跑"）。 */
+  const diveOut = () => {
+    const t = `opacity ${REVEAL_MS}ms var(--ease-dive), transform ${REVEAL_MS}ms var(--ease-dive), filter ${REVEAL_MS}ms var(--ease-dive)`;
+    letterStage.style.transition = t;
+    letterStage.style.transform = 'scale(0.86)';
+    letterStage.style.opacity = '0';
+    letterStage.style.filter = 'blur(6px)';
+  };
+  const diveBack = () => {
+    letterStage.style.transition = '';
+    letterStage.style.filter = '';
+    onScroll();                                // 立刻按当前滚动位置重算一次，接上滚动驱动
+  };
+
+  const enterBrowse = () => {
+    if (browseMode) return;
+    browseMode = true;
+    document.body.classList.add('browsing');   // 锁页面滚动 + 挡橡皮筋
+    closeWorldEntry();                         // 第一屏要沉下去了，把「米米世界」入口收回
+    diveOut();                                 // 第一屏沉入景深
+    browse.classList.remove('revealed');       // 反向进场时遮罩要先挂回来
+    browse.classList.add('active');            // 渐变带自上而下扫过，接管层化开
+    clearTimeout(revealTimer);
+    revealTimer = setTimeout(() => {
+      browse.classList.add('revealed');
+      /* 第一屏这时已经被完全盖住 —— 到这一步再停字母的渲染循环。
+         放在这里而不是 enterBrowse 开头，是为了让"潜入"那 760ms 里字母还是活的
+         （否则画布会冻在停循环的那一帧上再模糊出去）。 */
+      stopLetters();
+    }, REVEAL_MS + 60);
+    if (archStatusErrPending) {                 // 失败提示的停留从"被看见"那一刻起算
+      archStatusErrPending = false;
+      dismissArchStatusAfter(2800);
+    }
+    enterArchive();                            // 三维侧：到这一步通常早已预取完，不会卡过渡
+  };
+
+  /* 直入第二屏的进场（`/?browse`，2026-09-22 加）。与 enterBrowse 的差别只有两处：
+     ① 不播 `diveOut` 的 760ms 「潜入」—— 用户点「首页」要的是**直达**，不是再看一遍潜入；
+        第一屏的隐藏交给 `html.direct-browse` 的 CSS（首帧就生效，所以这里不用写 inline style）。
+     ② 字母的渲染循环不用等 760ms 之后再停 —— 这一模式下字母本来就还没建（见 lettersReady）。
+     `browseMode` 必须置真：滚轮接管、卷轴阻尼、三维选卡联动全靠它。 */
+  const enterBrowseDirect = () => {
+    if (browseMode) return;
+    browseMode = true;
+    document.body.classList.add('browsing');
+    closeWorldEntry();                         // 直入模式也顺手收掉入口（此时它本就没显示）
+    browse.classList.add('active');            // 渐变带自上而下扫过（与正常进场同一条动画）
+    clearTimeout(revealTimer);
+    revealTimer = setTimeout(() => browse.classList.add('revealed'), REVEAL_MS + 60);
+    stopLetters();
+    enterArchive();
+  };
+
+  let lastY = window.scrollY;
+  let enterLock = 0;
+  /* 「返回主界面」可能连点（尤其直入模式下按钮离手近）—— 加一道闸，
+     避免两次退出在 `await lettersReady` 那道缝里叠起来。 */
+  let exiting = false;
+  const exitBrowse = async () => {
+    if (!browseMode || exiting) return;
+    exiting = true;
+    /* 直入第二屏时字母是**延后构建**的：用户可能在它建好之前就按了「返回主界面」，
+       这时直接退会退到一片空背景上 —— 先把字母等出来。
+       正常路径（含普通入口）字母早就在了，这个 await 立即完成。 */
+    if (DIRECT_BROWSE && !letters) {
+      try {
+        await lettersReady;
+      } catch (err) {
+        console.error('[proto] 字母场景没建起来，返回后第一屏会是空的：', err);
+      }
+    }
+    if (!browseMode) { exiting = false; return; }
+    browseMode = false;
+    document.documentElement.classList.remove('direct-browse');   // 第一屏恢复可见
+    enterLock = performance.now() + 900;       // 退出动画期间别被滚动事件再次触发进入
+    document.body.classList.remove('browsing');
+    browse.classList.remove('revealed');       // 遮罩先挂回来，才有的可"收"
+    browse.classList.remove('active');         // --reveal 回 0：渐变带自下而上收走
+    clearTimeout(revealTimer);
+    leaveArchive();                            // 停渲染循环：离屏了就别烧 GPU（场景留在内存，再进不等加载）
+    startLetters();                            // 字母这边反过来 —— 要回来就得先把循环起回来
+    diveBack();                                // 第一屏从景深里浮回来（交还给滚动驱动）
+    window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' });   // 回主界面
+    exiting = false;
+  };
+  /* 预取：把三维包提前拉起来，别等到过渡那一刻才现下载 + 现解析。
+     实测过：把 import() 留在 enterBrowse 里，1.2 MB 的模块求值会把主线程按住约 425ms。
+     触发有两条（`prefetched` 保证只跑一次）：
+       · **主路（A，2026-09-19）**：字母屏稳定后的空闲时光就拉，见下面的 scheduleIdlePrefetch；
+       · **兜底**：往下滚过 6% 的"意图预取"，兜住 rIC 没来 / 省流门禁挡下 / 慢网 的情况。
+     代价是用户万一没进接管，白花一次 1.2 MB —— 省流与 2g/3g 已被门禁排除。 */
+  let prefetched = false;
+
+  /* 预热：比预取更要紧的一步。
+     三维的**首帧**要编译一整条管线（透射材质 / SSAO / 景深 / SMAA / 阴影），
+     实测这一下独占主线程 **2017ms**；第二次进同一页只剩 258ms —— 说明是纯一次性预热。
+     它要是发生在我们扫渐变带的时候，带子会直接卡在半路，用户看到的就是"没做过渡"。
+     所以 mount 完先偷偷跑 3 帧把着色器编译掉：
+       · 此时 .browse 还被遮罩盖得严严实实，用户什么都看不见；
+       · 这几帧落在主界面滚动期间 —— 跑马灯/极光是合成器动画，主线程抖一下它们照转。
+     跑完立刻 setRunning(false)，不在后台空烧 GPU。 */
+  const warmUp = () => {
+    if (archState !== 'on' || browseMode) return;   // 已进场就交给 enterArchive 管
+    arch.setRunning(true);
+    let n = 0;
+    const step = () => {
+      if (browseMode) return;                       // 用户抢先进场了，别争
+      n += 1;
+      if (n < 3) { requestAnimationFrame(step); return; }
+      arch.setRunning(false);
+    };
+    requestAnimationFrame(step);
+  };
+
+  const prefetchArchive = () => {
+    if (prefetched || archState !== 'idle') return;
+    prefetched = true;
+    void mountArchive().then(() => warmUp());
+  };
+
+  /* ── A（2026-09-19）：把预取从"滚过 6%"提前到"首屏字母稳定后的空闲时光" ──
+     起因：第二屏是"DOM 卷轴 + 三维叠加"两套并存。卷轴只吃 35 KB 的 archives.json，立刻可用；
+     三维要 1.2 MB 包 + 7 MB 模型。三维就绪之前，屏幕上就是那个**初版列表**，
+     而揭示遮罩只跑 760ms —— 所以只要三维慢过 760ms，那段窗口就露出来
+     （实测：人为把包延迟 1.5s → 初版界面露出 800ms，窗口 [850, 2001]）。
+     窗口宽窄 = "三维就绪" vs "揭示扫完"谁先 → 根治办法就是**提前把那 1.2 MB 拉下来**，
+     让它在用户还没滚之前就躺在缓存里，顺带让 warmUp 把首帧着色器也编译掉。
+
+     为什么挂 requestIdleCallback 而不是 rAF/setTimeout：首屏地基（742 KB three + 建词 +
+     首帧着色器编译）不能被这 1.2 MB 抢带宽、更不能抢主线程。所以等三件事：
+       ① lettersReady —— 字母那边整个建好了；
+       ② 再让路 PREFETCH_SETTLE_MS（见下）—— 让首帧过去；
+       ③ 浏览器真空闲了 —— 预取落在主线程的缝隙里。
+     两道 timeout 兜底：rIC 在持续有活的页面上可能一直不给回调，所以给它 2500ms 死线，
+     外面再套一层 1500ms 的让路 —— 最坏就是 letters + 4000ms 一定开跑。 */
+  const prefetchWorthIt = () => {
+    const c = navigator.connection;
+    if (!c) return true;                                     // 不支持 Connection API → 按允许处理
+    if (c.saveData) return false;                            // 用户自己开了流量节省
+    return !/^(slow-)?2g$|^3g$/.test(c.effectiveType || '');  // 慢网别抢，留给滚动那条
+  };
+  /* 让路时长：字母就绪后再等这么久才去抢空闲。
+     为什么要等 —— 实测过"不等"的样子：字母就绪后约 130ms 就开始拉，而这一步后续会触发
+     1.2 MB 模块的求值，那一下独占主线程约 425ms，正好砸在字母刚建完、首帧着色器还在编译的
+     那几帧上。1500ms 足够首帧稳定，又不影响目标（用户读到想往下滚时早就拉完了）。
+     真提前滚了也不怕：滚动那条 6% 兜底会立刻接手，不必等这个计时。 */
+  const PREFETCH_SETTLE_MS = 1500;
+  /* ── 慢链路不预取（2026-10-20）──
+     用户报「打开还是很慢」。实测（headless，1280×800）：
+       nav 14.9s / FCP 10.2s，30 秒时 three 的两个模块**还没下完**；
+       同一时刻一张 37 KB 的 welcome.png 花了 4.7 秒 —— 折合约 7 KB/s。
+     也就是说慢的是**首屏必需的 153 KB three**，而预取的那 1.54 MB
+     （archive.js 82 KB + 两个 GLB 1.46 MB）排在它后面，一旦开拉就会把
+     这条窄带全部占住，用户想往下滚或点走任何一页都得排队。
+     判据刻意选「字母场景自己花了多久才就绪」而不是 navigator.connection：
+     effectiveType 在这种"看着像 4G、实际限速"的链路上依然报 4g，测不出真相。
+     阈值 2500ms —— 正常宽带首屏 ~1s，绝不会误伤；慢到 2.5s 以上的，
+     那 1.54 MB 本来也赶不上「揭示扫完 760ms」，预取只是白占带宽。
+     ⚠️ 只影响「空闲自动预取」这一条；滚到 6% 的意图预取、35% 进场那条、
+        `?browse=1` 直入第二屏那条**都不受影响**。 */
+  const AUTO_PREFETCH_DEADLINE_MS = 2500;
+  const scheduleIdlePrefetch = () => {
+    if (performance.now() > AUTO_PREFETCH_DEADLINE_MS) return;  // 慢链路：交给滚动意图那条
+    if (!prefetchWorthIt()) return;                          // 被门禁挡下 → 等于回到改动前
+    const ric = window.requestIdleCallback ||
+      ((fn) => setTimeout(() => fn({ timeRemaining: () => 0 }), 600));
+    setTimeout(() => {
+      ric(() => {
+        if (browseMode || archState !== 'idle') return;       // 用户自己先进去了 / 已经在拉
+        prefetchArchive();
+      }, { timeout: 2500 });                                 // 最坏 letters + 1500 + 2500 就一定会跑
+    }, PREFETCH_SETTLE_MS);
+  };
+  if (DIRECT_BROWSE) {
+    /* 直入第二屏：档案包就是这一屏的命根子，**立刻**开拉 ——
+       不走"等字母就绪 → 再让路 1500ms → 抢空闲"那条（那条是给字母屏排队的，
+       而这条路径上字母本身都被推后了，等它等于永远不拉）。
+       这里刻意不过 prefetchWorthIt() 的省流/慢网门禁：用户是**主动点名**要进这一屏的，
+       数据不是可选项。`prefetchArchive` 自带 `prefetched` 闸，不会重复拉。 */
+    prefetchArchive();
+  } else {
+    /* 字母那边失败时别把整个页面拖下水 —— 静默跳过预取，滚动那条兜底路照旧 */
+    void lettersReady.then(scheduleIdlePrefetch, () => {});
+  }
+
+  window.addEventListener('scroll', () => {
+    const y = window.scrollY;
+    const goingDown = y > lastY;
+    lastY = y;
+    if (browseMode || !goingDown) return;      // 只有"主动往下滚"才进入（上滚动画不会误触发）
+    const h = stage.offsetHeight || window.innerHeight;
+    if (y > h * 0.06) prefetchArchive();       // 意图预取（先于阈值一大截）
+    if (performance.now() < enterLock) return;
+    if (y > h * 0.35) enterBrowse();
+  }, { passive: true });
+
+  /* 全盘接管滚轮（算法照搬 RhineLabUI，只换纵向）。退出唯一入口 = 返回条。
+     滚轮只切换「当前列」内的条目；换列走左右按钮 / ←→ 键 / 栏目标签。
+     ⚠️ 2026-09-30 用户拍板：**栏与栏严格隔离，滚轮绝不跨栏**。
+     当前栏只有 1 条时，滚轮**原地不动**并弹一条「该栏只有 1 条」的提示
+     （`flashLaneHint`）—— 把原因讲出来，而不是偷偷换一栏。
+     历史：2026-09-21 ～ 09-30 这里曾经是"只有 1 条就换列"，因为当时用户报
+     「第二屏盒体用滚轮滚不动」，而阵列里「项目 / 图片 / 工具」三栏各只有 1 条、
+     第二屏又默认落在「项目」栏，滚轮全是空操作。后来用户从另一头提意见
+     （「图片栏与文档栏能互通…这两个应该是单独的栏」），于是改成"不跨栏 + 提示"。
+     判定实现统一放在 embed 的 `stepRow` 里（返回是否真的动了），宿主只负责弹提示。
+     三维在场时，落在画布上的滚轮由引擎自己处理（引擎的 wheel 处理器会 preventDefault，
+     再走它的 onNavigate → stepRow）；只有滚在面板/栏目标签这些 DOM 上时事件才会原样冒到
+     这里 —— 判据就是"有没有被 preventDefault 过"，两边因此不会一步走两格。
+     ⚠️ 实测补正（2026-09-21 全屏命中测试，8×8 共 64 格）：**没有任何一格落在三维 canvas 上**。
+     `.browse .wrap` 是 z-index 1、`#arch3d` 是 z-index 0，内容层永远盖在三维层之上，
+     所以滚轮实际**总是**走这条宿主路径；引擎那条（scene.ts 的 canvas wheel 监听）在本
+     集成形态下是死代码。两条路最终都落到 embed 的 `handle.stepRow`，语义因此一致。 */
+  let wheelTotal = 0, wheelTime = 0;
+  window.addEventListener('wheel', (e) => {
+    if (!browseMode) return;
+    if (!detailview.hidden) return;            // 详情页开着时，滚轮留给详情页
+    if (e.ctrlKey) return;                     // 捏合缩放放行
+    const consumedByCanvas = e.defaultPrevented;
+    e.preventDefault();
+    const mode = e.deltaMode === 1 ? 40 : e.deltaMode === 2 ? window.innerHeight : 1;
+    const delta = Math.max(-300, Math.min(300, e.deltaY * mode));
+    const now = performance.now();
+    if (now - wheelTime > 180 || Math.sign(delta) !== Math.sign(wheelTotal)) wheelTotal = 0;
+    wheelTime = now;
+    wheelTotal += delta;
+    /* 单次最多 3 步（RhineLabUI 原算法）。但列短时必须再收一档：
+       列里只有 3 个条目时，3 步 = 整整绕回原地 —— 快滚一下什么都不发生，
+       手感像坏了。所以上限再取 min(列长-1)。 */
+    const cur = activeCol();
+    const cap = Math.min(3, Math.max(1, cur.items.length - 1));
+    const moves = Math.min(cap, Math.floor(Math.abs(wheelTotal) / 100));
+    if (!moves) return;
+    const dir = Math.sign(wheelTotal);
+    wheelTotal -= dir * moves * 100;
+    if (archOn()) {
+      if (consumedByCanvas) return;            // 画布已经走过了
+      /* 严格栏内移动：一条都没走动 = 这一栏只有 1 条 → 弹提示，不偷偷换栏 */
+      let moved = false;
+      for (let s = 0; s < moves; s++) moved = arch.stepRow(dir) || moved;
+      if (!moved) flashLaneHint();
+      return;
+    }
+    /* 三维没接管时的 DOM 版同样处理（列里只有 1 条时 step 返回 false） */
+    let moved = false;
+    for (let s = 0; s < moves; s++) moved = step(cur, dir) || moved;
+    if (!moved) flashLaneHint();
+  }, { passive: false });
+
+  /* ── 手机触屏：上下滑 = 换条目（2026-09-30 竖屏适配补上）──────────────
+     手机上既没有滚轮、也没有方向键：竖屏进来只能靠 ← → 换栏目，
+     **永远换不了条目**。这里补一个上下滑手势，落点与滚轮完全同源
+     （同样走 arch.stepRow / step，返回 false 就弹同一句"这一栏只有 1 条"提示）。
+     ⚠️ 只在「卷轴那块的矩形」内接管（preventDefault）：
+        竖屏下 .browse 本身是可滚的（说明面板在下方），矩形外照常滚动页面，
+        别把页面滚动一起吃掉。
+     ⚠️ 必须 passive:false 才拦得住滚动；30px 阈值用来躲开"轻轻一碰"。 */
+  const swipeRect = () => {
+    const c = activeCol();
+    const el = (c && (c.reelEl || c.root)) || null;
+    return el ? el.getBoundingClientRect() : null;
+  };
+  let swipeY = null;
+  browse.addEventListener('touchstart', (e) => {
+    if (!browseMode || !detailview.hidden || e.touches.length !== 1) return;
+    const t = e.touches[0];
+    const r = swipeRect();
+    swipeY = r && t.clientY >= r.top && t.clientY <= r.bottom
+             && t.clientX >= r.left && t.clientX <= r.right ? t.clientY : null;
+  }, { passive: true });
+  browse.addEventListener('touchmove', (e) => {
+    if (swipeY === null || e.touches.length !== 1) return;
+    const dy = e.touches[0].clientY - swipeY;
+    if (Math.abs(dy) < 30) return;
+    e.preventDefault();                        // 这一下算"滑条目"，不让页面跟着滚
+    swipeY = e.touches[0].clientY;
+    const dir = dy < 0 ? 1 : -1;               // 上滑 = 下一条（与滚轮向下同向）
+    const moved = archOn() ? arch.stepRow(dir) : step(activeCol(), dir);
+    if (!moved) flashLaneHint();
+  }, { passive: false });
+  const endSwipe = () => { swipeY = null; };
+  browse.addEventListener('touchend', endSwipe, { passive: true });
+  browse.addEventListener('touchcancel', endSwipe, { passive: true });
+
+  /* 左右按钮 = 换列（用户指定的方式） */
+  $('#colPrev').addEventListener('click', () => stepCol(-1));
+  $('#colNext').addEventListener('click', () => stepCol(1));
+
+  /* ←→ 键等价于左右按钮；↑↓ 由各列自己的 reel 处理；三维接管时 ↑↓ 走阵列 */
+  window.addEventListener('keydown', (e) => {
+    if (!browseMode || !detailview.hidden) return;
+    if (e.key === 'ArrowLeft')  { e.preventDefault(); stepCol(-1); }
+    if (e.key === 'ArrowRight') { e.preventDefault(); stepCol(1); }
+    if (!archOn()) return;                     // 下面两条只在三维接管后生效
+    if (e.key === 'ArrowUp')   { e.preventDefault(); if (!arch.stepRow(-1)) flashLaneHint(); }
+    if (e.key === 'ArrowDown') { e.preventDefault(); if (!arch.stepRow(1)) flashLaneHint(); }
+  });
+
+  $('#returnBar').addEventListener('click', exitBrowse);
+
+  /* ---------- 8. 初始化：第 0 列就位 ---------- */
+  cols.forEach((c, i) => {
+    c.reelEl.tabIndex = i === 0 ? 0 : -1;
+    c.root.setAttribute('aria-hidden', i === 0 ? 'false' : 'true');
+    drawCol(c);
+  });
+  colsEl.style.transform = 'translateX(0%)';
+  syncHead();
+  shownKey = activeCol().id + ':' + activeCol().selected;   // 首帧直接填，不做交叉淡入
+  applyPanel();
+
+  /* ---------- 8.5 直入第二屏（`/?browse`）：到这一步数据/列/面板都就位了，直接进 ----------
+     放在这里而不是更早：`browseMode` 置真之后，滚轮接管、键位、面板联动全都得有东西可操作，
+     而列与面板是在上面这几行才建好的。
+     也不放在更晚（详情过渡那一段之后）：那样第一屏的 CSS 隐藏虽然已经生效，
+     但 `.browse` 的进场渐变会白白晚一拍。 */
+  if (DIRECT_BROWSE) enterBrowseDirect();
+
+  /* ---------- 9. 点击选中项 → 详情过渡（共享元素形变，igloo 式） ---------- */
+  const detailview = $('#detailview');
+  const detailHero = $('#detailHero');
+  const detailHeroTitle = $('#detailHeroTitle');
+  const detailTitle = $('#detailTitle');
+  const detailText = $('#detailText');
+  const detailOpen = $('#detailOpen');
+  let lastCard = null;
+
+  /* ⚠️ 共享元素铁律：同一个 view-transition-name 在「旧快照」和「新快照」里
+     都必须有且只有一个元素带着它。两个元素同时带同名 → Chrome 会把整条过渡
+     静默跳过（无报错、无动画，只看到瞬间切页）。
+     .detail-hero 常驻 vt-card，但它藏在 .detailview[hidden]（display:none）里，
+     不参与快照 —— 所以：
+       打开：旧快照 = 源卡片带名；新快照 = 回调里先把卡片的名摘掉，让 hero 接棒。
+       关闭：旧快照 = hero 带名；新快照 = 回调里才给卡片挂名（hero 此时已 hidden）。
+     名片的所有权交接必须发生在 startViewTransition 的回调里，不能提前、也不能拖到 finished。 */
+  const openDetail = (c, idx, cardEl) => {
+    /* 三维接管后，DOM 卷轴是 display:none 的 —— 拿隐藏元素当共享元素源，
+       浏览器会拿到一个零尺寸盒子（甚至静默跳过整条过渡）。所以先确认它真的在画面上，
+       不在就退化成普通切换（面板按钮那条路也会走到这里）。 */
+    const source = cardEl && cardEl.getClientRects().length ? cardEl : null;
+    lastCard = source;                     // 关闭时要回到这张卡（点卡片进 / 点面板按钮进都要记）
+    const it = c.items[idx];
+    const apply = () => {
+      detailHeroTitle.textContent = it.name;
+      detailTitle.textContent = it.name;
+      detailText.textContent = it.desc;
+      /* 二级页的出口之一：跳到站内那条内容的真实页面。
+         数据来自 content/ 生成，所以除了极少数手工条目，几乎每条都有 href。
+         没有 href 时按钮自己藏起来，而不是留一个 href="#" 点了跳回页首的坑。 */
+      if (it.href) {
+        detailOpen.href = it.href;
+        detailOpen.hidden = false;
+      } else {
+        detailOpen.hidden = true;
+      }
+      detailview.hidden = false;
+      document.body.style.overflow = 'hidden';
+      $('#detailBack').focus();
+    };
+    if (document.startViewTransition && !reduced && source) {
+      source.style.viewTransitionName = 'vt-card';          // 旧快照：源卡片
+      const t = document.startViewTransition(() => {
+        source.style.viewTransitionName = '';               // 新快照：摘名，hero 接棒
+        apply();
+      });
+      t.finished.finally(() => { source.style.viewTransitionName = ''; });
+    } else {
+      apply();
+    }
+  };
+
+  /* ---------- 9.5 点盒体 / 点「查看详情」→ 直跳站内真实页面 ----------
+     用户 2026-09-19 拍板：点**当前聚焦的**盒体、或点右侧面板的「查看详情 →」，
+     都一步跳到该条目的站内详情页（`it.href`），不再经过中间的二级层。
+     ⚠️ 只对"聚焦中的那张"生效 —— 点别的盒体走的是"切换焦点"那条路（浏览手感不变）。
+     ⚠️ 没有 href 的条目（手工塞进来的）退回二级层：直接返回就成了"点了没反应"的哑按钮。
+     ⚠️ 走 location.assign 而不是 <a>：盒体本身是 <button>（三维接管后 DOM 卷轴还藏着，
+        拿不到可见的 <a> 可点），统一从这一个出口导航，两个入口行为才一致。 */
+  const openRecord = (c, idx, cardEl) => {
+    const it = c.items[idx];
+    if (it && it.href) {
+      location.assign(it.href);
+      return;
+    }
+    openDetail(c, idx, cardEl);            // 无 href 时的兜底
+  };
+
+  const closeDetail = () => {
+    const close = () => {
+      detailview.hidden = true;
+      detailOpen.hidden = true;          // 下次开面板时由 openDetail 重新决定显隐
+      document.body.style.overflow = '';
+      lastCard?.focus();
+    };
+    if (document.startViewTransition && !reduced && lastCard) {
+      const t = document.startViewTransition(() => {
+        lastCard.style.viewTransitionName = 'vt-card';     // 新快照：源卡片回归（此刻 hero 已 hidden）
+        close();
+      });
+      t.finished.finally(() => { lastCard.style.viewTransitionName = ''; });
+    } else close();
+  };
+
+  $('#openBtn').addEventListener('click', () => {
+    const c = activeCol();
+    openRecord(c, c.selected, c.nodes[c.selected]);   // 直跳站内详情页（无 href 才落回二级层）
+  });
+  $('#detailBack').addEventListener('click', closeDetail);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !detailview.hidden) closeDetail();
+  });
+
+  /* ---------- 9.6 左上角品牌 → 个人简介小窗口（就地弹，**不跳页**） ----------
+     数据来自 `/profile.json` —— 构建期由 `src/pages/profile.json.ts` 从
+     `content/profile/profile.md` 出，和 `/me/` 页面是**同一份源**，两处不会走偏。
+     只在第一次打开时拉一次，之后缓存在内存里。 */
+  const meview = $('#meview');
+  const meviewPhoto = $('#meviewPhoto');
+  const meviewName = $('#meviewName');
+  const meviewRole = $('#meviewRole');
+  const meviewProse = $('#meviewProse');
+  const meviewLinks = $('#meviewLinks');
+  let meviewLoaded = false;
+
+  /* 极简 markdown → HTML：标题 / 无序列表 / 引用 / 段落 + 行内 粗体·代码，够用就好。
+     ⚠️ 必须先转义再拼标签 —— 正文是用户自己写的，别让它变成 XSS 入口。 */
+  const escHtml = (s) =>
+    String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+  const inlineMd = (s) =>
+    escHtml(s).replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>').replace(/`([^`]+)`/g, '<code>$1</code>');
+  const mdToHtml = (md) => {
+    const out = [];
+    let list = null;
+    const flush = () => { if (list) { out.push('<ul>' + list.join('') + '</ul>'); list = null; } };
+    for (const raw of String(md || '').split(/\r?\n/)) {
+      const line = raw.trim();
+      if (!line) { flush(); continue; }
+      const h = line.match(/^#{1,4}\s+(.*)$/);
+      if (h) { flush(); out.push('<h3>' + inlineMd(h[1]) + '</h3>'); continue; }
+      if (/^[-*]\s+/.test(line)) { (list = list || []).push('<li>' + inlineMd(line.replace(/^[-*]\s+/, '')) + '</li>'); continue; }
+      if (/^>\s?/.test(line)) { flush(); out.push('<blockquote>' + inlineMd(line.replace(/^>\s?/, '')) + '</blockquote>'); continue; }
+      flush();
+      out.push('<p>' + inlineMd(line) + '</p>');
+    }
+    flush();
+    return out.join('');
+  };
+
+  const placeholderPhoto = () => {
+    const box = document.createElement('div');
+    box.className = 'meview-photo-empty';
+    const t = document.createElement('span');
+    t.textContent = '照片占位';
+    const c = document.createElement('code');
+    c.textContent = '把图放进 public/media/profile/，再填 avatar';
+    box.append(t, c);
+    return box;
+  };
+
+  const fillProfile = (p) => {
+    meviewName.textContent = p.name || '';
+    meviewRole.textContent = p.title || '';
+    meviewRole.hidden = !p.title;
+    meviewProse.innerHTML = mdToHtml(p.body);
+
+    /* 照片：有路径就交给浏览器加载，加载失败自动退回占位框。
+       ⚠️ 这里是浏览器，不像服务端能 fs.existsSync —— 只能靠 onerror 兜。 */
+    if (p.avatar) {
+      const img = document.createElement('img');
+      img.alt = p.avatarAlt || p.name || '';
+      img.loading = 'eager';
+      if (p.avatarW) img.width = p.avatarW;
+      if (p.avatarH) img.height = p.avatarH;
+      img.addEventListener('error', () => { meviewPhoto.replaceChildren(placeholderPhoto()); });
+      img.src = p.avatar;
+      meviewPhoto.replaceChildren(img);
+    } else {
+      meviewPhoto.replaceChildren(placeholderPhoto());
+    }
+
+    const links = (p.links || [])
+      .map((raw) => {
+        const [label, href] = String(raw).split('|').map((s) => s.trim());
+        return href ? { label: label || href, href } : { label: label || '', href: label || '' };
+      })
+      .filter((l) => l.href);
+    meviewLinks.replaceChildren();
+    meviewLinks.hidden = !links.length;
+    for (const l of links) {
+      const a = document.createElement('a');
+      a.className = 'btn btn-ghost';
+      a.href = l.href;
+      a.textContent = l.label;
+      meviewLinks.append(a);
+    }
+  };
+
+  const openProfile = async () => {
+    if (!meviewLoaded) {
+      try {
+        const res = await fetch('/profile.json');
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        fillProfile(await res.json());
+        meviewLoaded = true;
+      } catch (err) {
+        /* 读不到就**不开窗** —— 开一个空窗比干脆不开更让人困惑 */
+        console.error('[proto] 个人简介数据没读到：', err);
+        return;
+      }
+    }
+    meview.hidden = false;
+    document.body.style.overflow = 'hidden';
+    $('#meviewClose').focus();
+  };
+  const closeProfile = () => {
+    meview.hidden = true;
+    /* 只解自己加的那次锁：第二屏的滚动锁是 `body.browsing`（CSS 类）在管，不受影响 */
+    document.body.style.overflow = '';
+    $('#brandBtn').focus();
+  };
+
+  /* ⚠️ 字母场景的「点一下换排列 + 换材质」监听挂在 **window** 上（见上面 pointerdown /
+     pointerup 那两处），门禁只有"还在第一屏"一条 —— 挡不住这里的点击。不拦的话：
+     点左上角品牌按钮、点 ✕、点遮罩关窗，都会顺带把 WELCOME 字母换一次排列和材质。
+     所以在事件冒到 window 之前就地截住。`pointermove` 故意不拦 —— 字母跟着鼠标动是
+     想要的环境感，且它没有副作用。 */
+  const swallowClick = (el) => {
+    if (!el) return;
+    for (const t of ['pointerdown', 'pointerup', 'touchmove']) {
+      el.addEventListener(t, (e) => e.stopPropagation(), { passive: true });
+    }
+  };
+  swallowClick($('#brandBtn'));
+  swallowClick(meview);
+
+  $('#brandBtn').addEventListener('click', openProfile);
+  $('#meviewClose').addEventListener('click', closeProfile);
+  /* 点遮罩空白处关闭（点卡片内部不关） */
+  meview.addEventListener('click', (e) => { if (e.target === meview) closeProfile(); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !meview.hidden) closeProfile();
+  });
+
+  /* ---- 调试出口：给探针用。⚠️ 交付前删（与三维那 10 个出口一起清）----
+     三维句柄是**异步就绪**的，所以这里全用 getter 取"当下的值"，
+     不能在脚本末尾快照一次（那时 letters 还是 null）。 */
+  window.__home = {
+    get letters() { return letters; },
+    get lettersRun() { return lettersRun; },
+    get lettersReady() { return lettersReady; },
+    get browseMode() { return browseMode; },
+    get archState() { return archState; },     // idle | loading | on | failed（A/C 的探针要看它）
+    get worldEntryOpen() { return worldEntryOpen; },   // 「米米世界」入口是否可见/可点
+    worldEntry,
+    letterStage,
+  };
+  /* ---- 调试出口结束 ---- */
+})().catch((err) => console.error('[proto] 初始化失败：', err));
+</script>
+</body>
+</html>

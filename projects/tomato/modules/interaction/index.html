@@ -1,0 +1,754 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>交互系统 · 火星番茄 · JINJIARAN</title><meta name="description" content="看到什么、能抓什么、左键按下去到底发生什么 —— 以及为什么同一个滚轮在两种状态下语义完全不同。"><link rel="canonical" href="https://jinjiaran.com/projects/tomato/modules/interaction/"><!--
+      图标组（2026-10-21：换成 R 标）。
+      由 `node tmp/make-brand-icons.mjs` 从矢量化的 R 生成，别手工换图。
+      · favicon.svg —— 深底圆角块 + 白色 R。**深底不是装饰**：标签栏底色不可控
+        （浅色主题浅灰 / 深色主题近黑），透明底的黑 R 在深色标签栏上会整块消失。
+      · favicon.ico —— 16/24/32/48 四档**各自原生渲染**后拼成（不是缩出来的），
+        老浏览器、收藏夹、各类爬虫要的就是它。
+      · apple-touch-icon —— 180×180 **满幅方角、不透明**：圆角与遮罩由 iOS 自己套。
+      · site.webmanifest —— Android/Chrome「添加到主屏幕」用，带 192/512 两档。
+      顺序：SVG 在前（首选），ICO 兜底。
+    --><link rel="icon" type="image/svg+xml" href="/favicon.svg"><link rel="icon" type="image/x-icon" href="/favicon.ico" sizes="16x16 24x24 32x32 48x48"><link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180"><link rel="manifest" href="/site.webmanifest"><meta name="generator" content="Astro v7.3.2"><meta property="og:type" content="website"><meta property="og:site_name" content="JINJIARAN"><meta property="og:title" content="交互系统 · 火星番茄 · JINJIARAN"><meta property="og:description" content="看到什么、能抓什么、左键按下去到底发生什么 —— 以及为什么同一个滚轮在两种状态下语义完全不同。"><meta property="og:url" content="https://jinjiaran.com/projects/tomato/modules/interaction/"><!--
+      社交卡片图（2026-10-19 补）。之前全站没有任何 og:image，分享出去的链接是纯文字。
+      图是 public/og.png（1200×630，站点深底 + 品牌标），由 scripts/make-og.mjs 生成，
+      改文案/换标就重跑那个脚本，不要手工改图。
+      宽高必须写：部分抓取方（含微信/Twitter）会按它预留版位，缺了会裁得很难看。
+    --><meta property="og:image" content="https://jinjiaran.com/og.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="JINJIARAN · 个人作品站"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://jinjiaran.com/og.png"><!--
+      移动端浏览器地址栏染色。**只放一个 meta**，由下面那段内联脚本按最终主题
+      改 content —— 站内的主题是「手动切换 + data-theme」，不是跟随系统，
+      用两条 media 查询会跟用户手动选的打架。
+    --><meta name="theme-color" content="#f6f7f9" data-theme-color><script>
+      // 在首次绘制前定好主题，避免闪白；顺手把地址栏颜色定下来
+      ;(() => {
+        /* 先算出最终主题，再写 data-theme —— 两件事分开做，
+           是因为 localStorage 在隐私模式下会抛异常，旧写法里抛了就整段跳过。 */
+        let theme = 'light'
+        try {
+          const saved = localStorage.getItem('theme')
+          theme =
+            saved === 'light' || saved === 'dark'
+              ? saved
+              : window.matchMedia('(prefers-color-scheme: dark)').matches
+                ? 'dark'
+                : 'light'
+        } catch {
+          theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+        }
+        document.documentElement.dataset.theme = theme
+
+        const meta = document.querySelector('meta[data-theme-color]')
+        if (meta) meta.setAttribute('content', theme === 'dark' ? '#0d1117' : '#f6f7f9')
+      })()
+    </script><link rel="stylesheet" href="/_astro/BaseLayout.CKlrZbNO.css"><style>.bp[data-astro-cid-rf4rmido]{border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);overflow:hidden}.bp-head[data-astro-cid-rf4rmido]{border-bottom:1px solid var(--line);flex-wrap:wrap;align-items:flex-start;gap:12px;padding:16px 18px 14px;display:flex}.bp-head-main[data-astro-cid-rf4rmido]{flex:260px;min-width:0}.bp-title[data-astro-cid-rf4rmido]{margin:0;font-size:16px}.bp-graph[data-astro-cid-rf4rmido]{color:var(--fg-3);flex-wrap:wrap;align-items:center;gap:6px;margin:5px 0 0;font-size:12.5px;display:flex}.bp-graph[data-astro-cid-rf4rmido] code[data-astro-cid-rf4rmido]{color:var(--fg-2);background:var(--surface-2);border-radius:5px;padding:1px 7px;font-size:12px}.bp-dot[data-astro-cid-rf4rmido]{opacity:.5}.bp-actions[data-astro-cid-rf4rmido]{flex-wrap:wrap;flex:none;gap:8px;display:flex}.bp-btn[data-astro-cid-rf4rmido]{color:var(--fg-2);background:var(--surface-2);border:1px solid var(--line);cursor:pointer;border-radius:999px;align-items:center;gap:6px;padding:6px 12px;font-family:inherit;font-size:13px;transition:color .15s,border-color .15s;display:inline-flex}.bp-btn[data-astro-cid-rf4rmido]:hover{color:var(--accent);border-color:var(--accent)}.bp-summary[data-astro-cid-rf4rmido]{color:var(--fg-2);margin:0;padding:14px 18px 0;font-size:13.5px}.bp-stage[data-astro-cid-rf4rmido]{background:#242424;position:relative}.bp-loading[data-astro-cid-rf4rmido]{color:#9aa2ad;z-index:2;background:#242424;justify-content:center;align-items:center;gap:10px;font-size:13px;display:flex;position:absolute;inset:0}.bp-spinner[data-astro-cid-rf4rmido]{border:2px solid #fff3;border-top-color:#6a9bff;border-radius:50%;width:15px;height:15px;animation:.8s linear infinite bp-spin}@keyframes bp-spin{to{transform:rotate(360deg)}}ueb-blueprint[data-astro-cid-rf4rmido]:defined~.bp-loading[data-astro-cid-rf4rmido]{display:none}.bp-fallback[data-astro-cid-rf4rmido]{color:var(--fg-2);padding:14px 18px;font-size:13px;display:none}.bp-fallback[data-astro-cid-rf4rmido] pre[data-astro-cid-rf4rmido]{background:var(--surface-2);border-radius:var(--radius-sm);white-space:pre;max-height:340px;padding:12px;font-size:11.5px;line-height:1.5;overflow:auto}html[data-ueb-failed] .bp-fallback[data-astro-cid-rf4rmido],html[data-ueb-failed] .bp-loading[data-astro-cid-rf4rmido]{display:block}html[data-ueb-failed] .bp-loading[data-astro-cid-rf4rmido]{display:none}.bp-foot[data-astro-cid-rf4rmido]{border-top:1px solid var(--line);background:var(--surface);flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;padding:10px 18px;display:flex}.bp-hint[data-astro-cid-rf4rmido]{color:var(--fg-3);margin:0;font-size:12px}.bp-tags[data-astro-cid-rf4rmido]{flex-wrap:wrap;gap:6px;margin:0;display:flex}.bp-stage[data-astro-cid-rf4rmido] ueb-blueprint[data-astro-cid-rf4rmido]{width:100%;display:block}
+.meta-row[data-astro-cid-tzzuq5oi]{flex-wrap:wrap;gap:6px;margin-top:14px;display:flex}.module-lede[data-astro-cid-tzzuq5oi]{color:var(--fg-2);max-width:64ch;margin:10px 0 0}.bp-stack[data-astro-cid-tzzuq5oi]{flex-direction:column;gap:30px;margin-top:18px;display:flex}.code-wrap[data-astro-cid-tzzuq5oi]{margin-top:22px}.blk[data-astro-cid-tzzuq5oi]{margin-top:44px}.blk-title[data-astro-cid-tzzuq5oi]{border-bottom:1px solid var(--line);margin:0;padding-bottom:8px;font-size:20px}.code-name[data-astro-cid-tzzuq5oi]{color:var(--fg-3);margin:0 0 6px;font-family:Cascadia Code,Consolas,monospace;font-size:12.5px}.code-block[data-astro-cid-tzzuq5oi]{background:color-mix(in srgb, var(--surface-2) 78%, transparent);border:1px solid var(--line);border-radius:14px;margin:0;padding:16px 18px;font-size:12.5px;line-height:1.65;overflow-x:auto;box-shadow:inset 0 1px #ffffff1f}.pager[data-astro-cid-tzzuq5oi]{border-top:1px solid var(--line);justify-content:space-between;gap:14px;margin-top:56px;padding-top:22px;display:flex}.pager-item[data-astro-cid-tzzuq5oi]{border-radius:var(--radius-sm);flex-direction:column;gap:3px;padding:10px 14px;transition:background .15s;display:flex}.pager-item[data-astro-cid-tzzuq5oi]:hover{background:var(--surface-2)}.pager-next[data-astro-cid-tzzuq5oi]{text-align:right}.pager-dir[data-astro-cid-tzzuq5oi]{color:var(--fg-3);font-size:12px}.pager-name[data-astro-cid-tzzuq5oi]{font-size:14px;font-weight:500}
+</style><script type="module" src="/_astro/page.CQWjsXKf.js"></script></head><body class="glass"><div class="backdrop" aria-hidden="true"><i class="mark"></i><i class="grid"></i></div><div class="read-progress" aria-hidden="true"></div><a class="skip-link" href="#main">跳到主内容</a><header class="site-header"><div class="wrap"><a class="brand" href="/"><svg class="mark" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 524 438"><path fill="currentColor" fill-rule="evenodd" d="M416.82 435.14C401.57 430.1 389.97 420.04 326.46 356.8C296.19 326.66 271.11 302 270.71 302C270.32 302 270 305.17 270 309.04C270 325.19 266.58 345.78 262.45 354.51C255.61 368.97 239.01 381.19 219 386.5C209.37 389.05 184.12 389.66 172.36 387.62C134.98 381.14 105.07 359.07 93.9 329.73C92.7 326.56 91.89 323.77 92.12 323.55C92.35 323.32 95.67 323.54 99.52 324.04C109.01 325.26 124.12 325.21 132 323.93C141.17 322.44 145.84 319.58 148.95 313.53L151.5 308.56L151.81 272.78L152.12 237L132.31 236.97C105.96 236.93 68.66 235.43 57.5 233.96C32.51 230.67 18.83 221.26 8.86 200.5C3.37 189.06 0.95 178.74 0.29 164C-1.78 117.22 20.72 76.49 57.46 60.54C61.84 58.64 65.56 57.23 65.73 57.39C65.9 57.56 65.56 63.06 64.98 69.6C63.25 89.16 65.33 104.68 70.52 110.84C71.9 112.48 75.16 114.64 77.76 115.64C82.12 117.3 87.25 117.47 141 117.7C198.58 117.94 199.41 117.91 194 116.14C184.03 112.87 177.68 108.9 169.91 101.11C155.15 86.31 149.34 67.33 153.5 47.5C157.85 26.81 174.05 9.13 194.5 2.75C204.23 -0.28 218.77 -0.28 228.5 2.75C253.04 10.4 270.97 34.35 270.97 59.5C270.97 84.6 253.48 108.19 229 116.11C223.57 117.87 224.17 117.89 274.6 117.95C330.81 118.01 346.08 118.82 360.71 122.53C388.99 129.7 411.57 149.04 419.41 172.81C426.33 193.77 425.17 212.89 415.83 232C412.46 238.88 410.01 242.14 402.95 249.15L394.22 257.79L425.86 289.28C461.17 324.42 463.99 326.58 473.64 325.78C477.54 325.46 480.31 324.42 484.3 321.77C490.34 317.75 503.89 304.49 509.63 296.96C511.71 294.23 513.7 292 514.05 292C514.92 292 519.59 304.17 521.52 311.5C527.78 335.19 521.31 366.33 505.14 390.29C490.96 411.31 472.31 426.78 452.87 433.64C442.77 437.2 425.28 437.93 416.82 435.14ZM293.41 220.59C301.72 216.52 304.4 212.05 304.85 201.48C305.27 191.48 302.79 184.69 296.87 179.62C292 175.45 287.15 174 278.13 174L271 174L271 199.13L271 224.25L279.36 223.81C285.87 223.47 288.97 222.76 293.41 220.59Z"/></svg>
+<span>JINJIARAN<span class="sub"> · 个人作品站</span></span></a><nav class="nav" aria-label="主导航"><a href="/?browse=1">首页</a><a href="/projects" aria-current="page">项目</a><a href="/gallery">图片</a><a href="/videos">视频</a><a href="/docs">文档</a><a href="/models">模型</a><a href="/tools">工具</a><a href="/about">关于</a></nav><button class="icon-btn" type="button" data-search-open aria-label="站内搜索" title="搜索（按 / ）" aria-expanded="false" aria-controls="site-search" data-astro-cid-av774hkb><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" data-astro-cid-av774hkb><circle cx="11" cy="11" r="7" data-astro-cid-av774hkb></circle><path d="m20 20-3.5-3.5" data-astro-cid-av774hkb></path></svg></button><button class="icon-btn" id="theme-toggle" type="button" aria-label="切换深浅色主题" aria-pressed="false"><svg class="sun" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"></path></svg><svg class="moon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"></path></svg></button><!--
+          主题切换的状态播报（2026-10-19 审计 D3）。
+          按钮本身只管"按下去了没有"（aria-pressed），**说不清现在是什么主题** ——
+          读屏用户听到"切换深浅色主题，已按下"，还是不知道屏幕上到底变深了还是变浅了。
+          所以另起一个 role="status" 的区域，切换后把结果念出来。
+          role="status" 自带 aria-live="polite"；这里两个都写，是为了兼容只认其一的读屏。
+          它必须常驻 DOM（不能切换时才插入），否则播报不会触发。
+        --><p class="sr-only" role="status" aria-live="polite" data-theme-status></p></div></header><main id="main" data-pagefind-body><div class="wrap" data-astro-cid-tzzuq5oi><header class="glass-hero" style="--i:0" data-astro-cid-tzzuq5oi><p class="crumb" data-astro-cid-tzzuq5oi><a href="/projects" data-astro-cid-tzzuq5oi>项目</a><span aria-hidden="true" data-astro-cid-tzzuq5oi>/</span><a href="/projects/tomato" data-astro-cid-tzzuq5oi>火星番茄</a><span aria-hidden="true" data-astro-cid-tzzuq5oi>/</span><span data-astro-cid-tzzuq5oi>交互系统</span></p><h1 class="h-page" data-astro-cid-tzzuq5oi>交互系统</h1><p class="module-lede" data-astro-cid-tzzuq5oi>看到什么、能抓什么、左键按下去到底发生什么 —— 以及为什么同一个滚轮在两种状态下语义完全不同。</p><div class="meta-row" data-astro-cid-tzzuq5oi><span class="chip" data-astro-cid-tzzuq5oi>进行中</span><span class="chip" data-astro-cid-tzzuq5oi>C++</span><span class="chip" data-astro-cid-tzzuq5oi>蓝图</span></div></header></div><div class="wrap" style="padding-block:28px 0" data-astro-cid-tzzuq5oi><article class="prose glass-sheet" style="--i:1" data-astro-cid-tzzuq5oi><h2 id="为什么不做进角色里">为什么不做进角色里</h2>
+<p>一开始交互逻辑是写在 <code>BP_Farmer</code> 里的 —— 射线检测、找可交互物、显示提示、执行动作。
+写到第四个可交互物的时候问题就来了：机器要交互、载具要交互、作物也要交互，
+难道每个都往角色里加分支？</p>
+<p>于是拆成两层：</p>
+<ul>
+<li><strong>接口管「能不能」</strong> —— 一个物品实现 <code>BPI_Interactable</code> 就能被看向，
+实现 <code>BPI_Grabbable</code> 就能被抓。它不需要知道谁在看它、谁在抓它。</li>
+<li><strong>组件管「怎么判」</strong> —— <code>AC_InteractionManager</code> 挂在玩家身上，
+统一做射线、高亮、状态判定与分支派发。</li>
+</ul>
+<p>这套拆分是后来所有「冲突类 bug」的解药：两种交互打架的时候，
+要改的永远是<strong>分派那一处</strong>，而不是散在十几个物品蓝图里的判断。</p>
+<h2 id="三个接口职责严格分开">三个接口，职责严格分开</h2>
+<table>
+<thead>
+<tr>
+<th>接口</th>
+<th>提供什么</th>
+<th>谁在用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>BPI_Interactable</code></td>
+<td><code>LookAt</code>（看向）、<code>OnInteract</code>、<code>OnGrab</code></td>
+<td>悬停高亮与交互入口；<code>BP_ItemMaster</code> 实现它</td>
+</tr>
+<tr>
+<td><code>BPI_Grabbable</code></td>
+<td><code>CanBeGrabbed</code>、<code>GetGrabbablePrimitive</code>、<code>GetItemRowName</code></td>
+<td>抓取判定与「这东西对应 <code>DT_Items</code> 哪一行」</td>
+</tr>
+<tr>
+<td><code>UItemIdentityInterface</code>（C++）</td>
+<td><code>GetItemIdentityRowName</code>、<code>GetHotbarSlotIndex</code></td>
+<td>存档与快捷栏：把 UObject 指针还原成行名</td>
+</tr>
+</tbody>
+</table>
+<p>⚠️ <strong><code>LookAt</code> 挂在 <code>BPI_Interactable</code> 上，不在 <code>BPI_Grabbable</code> 上。</strong>
+这两条线是正交的：看向高亮走一套，抓取与拼装吸附走另一套。
+曾经想「反正都是交互，合成一个接口算了」，结果删一个就会让
+<code>AC_InteractionManager</code> / <code>AC_HighLightComponent</code> 的动态 Cast 断链 ——
+高亮和抓取是两种不同的「能」，别合并。</p>
+<h2 id="左键到底干了什么">左键到底干了什么</h2>
+<p>整个游戏只有一个左键入口，它内部按「这东西有没有装配记录」分成两条路：</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>TryGrab(射线命中的 Actor)</span></span>
+<span class="line"><span>  │</span></span>
+<span class="line"><span>  ├─ IsInteractionBlocked(Target)?           ← 统一阻断门，先问</span></span>
+<span class="line"><span>  │     ├ 花盆：CurrentPlantCount &gt; 0 → 拒绝</span></span>
+<span class="line"><span>  │     └ 化学器具：所属反应状态 == Processing → 拒绝</span></span>
+<span class="line"><span>  │</span></span>
+<span class="line"><span>  └─ GetGrabbablePrimitive → Cast&lt;MeshComponent&gt;</span></span>
+<span class="line"><span>        └ GetRecordConstraint(Component).Find?</span></span>
+<span class="line"><span>              ├ true  → GrabNewComponent / ReleaseItem</span></span>
+<span class="line"><span>              │          物理抓取：世界里的物体被手柄拎起来，**不销毁、不进背包**</span></span>
+<span class="line"><span>              └ false → AddItemByID + 销毁世界 Actor</span></span>
+<span class="line"><span>                         普通拾取：场景里的东西消失，背包 +1，手上有模型</span></span></code></pre>
+<p>这条分岔极其容易踩错。<strong>固化出来的产物一开始没有登记装配记录</strong>，
+于是明明是个装配体，点它却走了「拾取」分支 —— 物体从场景里消失、
+背包多了一坨东西、再也放不回地上。修法是在固化时补注册
+（见<a href="/projects/tomato/modules/assembly">拼装合成</a>的 <code>RegisterSynthesizedResult</code>）。
+反过来说，种子、肥料这类单件本来就不该有记录，
+所以它们的「收进背包」路径完全不受影响 —— 这正是把判据放在
+「有没有记录」而不是「是什么类型」上的好处。</p>
+<h3 id="统一阻断门">统一阻断门</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="cpp"><code><span class="line"><span style="color:#6A737D">/**</span></span>
+<span class="line"><span style="color:#6A737D"> * 这个 Actor 现在必须拒绝点击拾取 / 抓取吗？</span></span>
+<span class="line"><span style="color:#6A737D"> *</span></span>
+<span class="line"><span style="color:#6A737D"> * 目前覆盖：</span></span>
+<span class="line"><span style="color:#6A737D"> *  1. 种了活植株的可种植表面（花盆），要移除植株才能动它；</span></span>
+<span class="line"><span style="color:#6A737D"> *  2. 正在 Processing 的化学反应所属的器具，要等产物出来。</span></span>
+<span class="line"><span style="color:#6A737D"> *</span></span>
+<span class="line"><span style="color:#6A737D"> * 纯查询，用作 TryGrab 开头唯一的提前返回。</span></span>
+<span class="line"><span style="color:#6A737D"> */</span></span>
+<span class="line"><span style="color:#B392F0">UFUNCTION</span><span style="color:#E1E4E8">(BlueprintPure, Category </span><span style="color:#F97583">=</span><span style="color:#9ECBFF"> "Interaction"</span><span style="color:#E1E4E8">)</span></span>
+<span class="line"><span style="color:#F97583">static</span><span style="color:#F97583"> bool</span><span style="color:#B392F0"> IsInteractionBlocked</span><span style="color:#E1E4E8">(</span><span style="color:#B392F0">AActor</span><span style="color:#F97583">*</span><span style="color:#FFAB70"> Target</span><span style="color:#E1E4E8">);</span></span></code></pre>
+<p>它的价值在于**「不可交互」这件事只写一遍**。以后再加一种「暂时不能动的状态」
+（比如装置过热、门锁着），只往这个函数里加一条 —— 蓝图零改动。
+注意它只挡拾取/抓取入口，<strong>不挡高亮</strong>：玩家仍然应该看得见这个物体、知道它存在，
+只是现在动不了，而不是「眼前一片空白」。</p>
+<h2 id="碰撞契约两种交互必须正交">碰撞契约：两种交互必须正交</h2>
+<p>场景物品（<code>BP_ItemMaster</code> 的子类）的 StaticMesh <strong>必须用命名碰撞预设 <code>AssemblyItem</code></strong>：</p>
+<table>
+<thead>
+<tr>
+<th>设置</th>
+<th>值</th>
+<th>为什么</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ObjectType</td>
+<td><code>PhysicsBody</code></td>
+<td>拼装吸附用 <code>SphereOverlapComponents(ObjectTypeQuery4=PhysicsBody)</code> 扫零件，不设就扫不到</td>
+</tr>
+<tr>
+<td>CustomResponses</td>
+<td><code>RayTracing(GameTraceChannel1) = Block</code></td>
+<td>悬停高亮与左键拾取都打这条通道，<strong>它的默认值是 Ignore</strong></td>
+</tr>
+</tbody>
+</table>
+<p>这两条分别服务两个系统，缺一个就会出现「能抓但吸附不到」或者
+「能吸附但点不中」这种单边故障 —— 排查时先看这条。</p>
+<p>⚠️ 另外，<strong>不要内联写 <code>Custom</code> 碰撞</strong>。临时禁用重叠用的
+<code>DisableOverlapComponentCollision</code> 会先换成 <code>overlapall</code> 再按预设名恢复，
+对内联的 <code>Custom</code> 恢复是无效的 —— 装配体会直接掉出场景。</p>
+<h2 id="滚轮一个键两种语义这层是踩出来的">滚轮：一个键，两种语义（这层是踩出来的）</h2>
+<p>物理手柄在游戏里其实扛着<strong>两种完全不同的东西</strong>：</p>
+<ol>
+<li><strong>世界里的物体</strong> —— 合并体、固化产物、散落的可抓件；</li>
+<li><strong>手部模型</strong> —— <code>ItemInHand</code> 生成的手上那件东西，
+它也是走同一套物理手柄纯粹为了让手感“晃”起来。</li>
+</ol>
+<p>问题就在这儿：<code>IA_GrapDistance</code>（推拉抓取物）和 <code>IA_HotbarScroll</code>（切快捷栏）
+<strong>都映射在 <code>MouseWheelAxis</code> 上</strong>，于是每一格滚轮同时做两件事。正确的语义是：</p>
+<table>
+<thead>
+<tr>
+<th>手里正抓着</th>
+<th>滚轮应该做的事</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>世界物体</td>
+<td>把物体推远 / 拉近</td>
+</tr>
+<tr>
+<td>手部模型（或空手）</td>
+<td>切换快捷栏，并把下一格的模型换到手上</td>
+</tr>
+</tbody>
+</table>
+<p>判定被收敛成两个查询函数，避免各处自己判断：</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="cpp"><code><span class="line"><span style="color:#6A737D">/** 玩家物理手柄此刻抓的是"世界物体"吗？（手部模型不算） */</span></span>
+<span class="line"><span style="color:#F97583">static</span><span style="color:#F97583"> bool</span><span style="color:#B392F0"> IsGrabbingWorldObjectOnPawn</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">const</span><span style="color:#B392F0"> AActor</span><span style="color:#F97583">*</span><span style="color:#FFAB70"> Pawn</span><span style="color:#E1E4E8">);</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">/** 手部模型的唯一事实源：UHotbarManagerComponent::EquippedHandActor */</span></span>
+<span class="line"><span style="color:#F97583">static</span><span style="color:#B392F0"> AActor</span><span style="color:#F97583">*</span><span style="color:#B392F0"> ResolveHandModelActor</span><span style="color:#E1E4E8">(</span><span style="color:#F97583">const</span><span style="color:#B392F0"> AActor</span><span style="color:#F97583">*</span><span style="color:#FFAB70"> Pawn</span><span style="color:#E1E4E8">);</span></span></code></pre>
+<p>顺带修掉的两个真实缺陷：</p>
+<ul>
+<li><strong>手上的模型换不掉。</strong> 滚轮切栏原本读 <code>UHotbarManagerComponent.HotbarItems</code>，
+但<strong>工程里没有任何地方往这个数组写过东西</strong>（只有 UI 在读它），
+所以切栏永远是「先清空手上、再装上空的」= 模型消失。
+现在滚轮复用<strong>数字键那条路</strong>（<code>StepHotbarEquip</code> 走
+<code>BP_Farmer.Use HotBar Function</code> → 读 <code>AC_PlayerInventory.Items[Index]</code>），
+一格滚轮 == 按一次相邻的数字键。</li>
+<li><strong>快捷栏指示条一直是空的。</strong> 同一个原因：它读的也是那个没人填的数组。
+现在改成直接读 <code>AC_PlayerInventory.Items</code> + <code>BP_Farmer.Hot Bar Index</code>，
+一个事实源，不留第二本账。</li>
+</ul>
+<h2 id="光标与高亮">光标与高亮</h2>
+<p><code>AC_HighLightComponent</code> 负责「看向即高亮」，<code>WBP_CustomCursor</code> 是自绘光标 ——
+它要同时表达三件事：可交互 / 不可交互 / 正在拖拽。
+光标在鼠标不动时会轻微呼吸，因为这个游戏的信息密度不低，
+玩家很容易忘了自己正拿着东西。</p>
+<h2 id="掉落点">掉落点</h2>
+<p>松开左键把东西丢回场景时，落点算两段：</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="cpp"><code><span class="line"><span style="color:#6A737D">/** 鼠标光标射线能打多远（cm） */</span></span>
+<span class="line"><span style="color:#F97583">float</span><span style="color:#E1E4E8"> DropTraceDistance </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 800.0</span><span style="color:#F97583">f</span><span style="color:#E1E4E8">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">/** 命中点上再加的固定世界偏移 —— 用户口中的「固定的第三向量」 */</span></span>
+<span class="line"><span style="color:#E1E4E8">FVector DropLocationOffset </span><span style="color:#F97583">=</span><span style="color:#B392F0"> FVector</span><span style="color:#E1E4E8">::ZeroVector;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D">/** 距离相机的硬上限：防止光标射线打空/打到远处墙面时把物品丢到场地外 */</span></span>
+<span class="line"><span style="color:#F97583">float</span><span style="color:#E1E4E8"> MaxDropDistance </span><span style="color:#F97583">=</span><span style="color:#79B8FF"> 400.0</span><span style="color:#F97583">f</span><span style="color:#E1E4E8">;</span></span></code></pre>
+<p>先做一次鼠标光标射线拿命中点，再加 <code>DropLocationOffset</code>，
+最后用 <code>MaxDropDistance</code> 钳一次 —— 最后这一步是必要的，
+不然射线一旦打到很远的墙，物品就会被丢到玩家永远走不到的地方。</p>
+<h2 id="输入资产">输入资产</h2>
+<p>玩家输入走 Enhanced Input：</p>
+<table>
+<thead>
+<tr>
+<th>资产</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>IA_LeftClick</code></td>
+<td>主交互：按下抓取/拾取，松开则掉落</td>
+</tr>
+<tr>
+<td><code>IA_RightClick</code></td>
+<td>取消 / 拆解入口（执行链尚未接，见下）</td>
+</tr>
+<tr>
+<td><code>IA_PutIn</code></td>
+<td>倒液：按住把容器里的液体倒进目标</td>
+</tr>
+<tr>
+<td><code>IA_GrapDistance</code></td>
+<td>滚轮推拉抓取物</td>
+</tr>
+<tr>
+<td><code>IA_HotbarScroll</code></td>
+<td>滚轮切快捷栏</td>
+</tr>
+<tr>
+<td><code>IA_Synthesize</code></td>
+<td>拼装固化键</td>
+</tr>
+</tbody>
+</table>
+<p>⚠️ 映射上下文要注意活性：固化键必须绑在<strong>始终激活的 <code>IMC_Gameplay</code></strong> 上，
+不能绑只在拼装模式里加载的 <code>IMC_AssemblySystem</code> —— 否则一退出拼装模式键就失效，
+而且<strong>不会有任何报错</strong>。</p>
+<h2 id="目前的进展">目前的进展</h2>
+<ul class="contains-task-list">
+<li class="task-list-item"><input type="checkbox" checked disabled> 三件套接口（<code>BPI_Interactable</code> / <code>BPI_Grabbable</code> / <code>IItemIdentityInterface</code>）</li>
+<li class="task-list-item"><input type="checkbox" checked disabled> <code>AC_InteractionManager</code> 左键分派（装配记录两条路）</li>
+<li class="task-list-item"><input type="checkbox" checked disabled> 统一交互阻断门 <code>IsInteractionBlocked</code></li>
+<li class="task-list-item"><input type="checkbox" checked disabled> <code>AssemblyItem</code> 碰撞预设（拾取射线 × 拼装吸附正交）</li>
+<li class="task-list-item"><input type="checkbox" checked disabled> 悬停高亮与自绘光标</li>
+<li class="task-list-item"><input type="checkbox" checked disabled> 掉落点（光标射线 + 偏移 + 距离钳制）</li>
+<li class="task-list-item"><input type="checkbox" checked disabled> 滚轮语义分派（世界物体 vs 手部模型）</li>
+<li class="task-list-item"><input type="checkbox" checked disabled> 快捷栏指示条改读真实物品栏</li>
+<li class="task-list-item"><input type="checkbox" checked disabled> 修复左键被「读档」劫持（一次点击触发两次 Load Game）</li>
+<li class="task-list-item"><input type="checkbox" disabled> 右键拆解链的执行线接上（节点已有，连线没接）</li>
+<li class="task-list-item"><input type="checkbox" disabled> 长按与短按的判定阈值调优</li>
+</ul>
+</article><section class="blk" data-astro-cid-tzzuq5oi><h2 class="blk-title" data-astro-cid-tzzuq5oi>源码</h2><div class="code-wrap" data-astro-cid-tzzuq5oi><p class="code-name" data-astro-cid-tzzuq5oi>InteractionBlueprintLibrary.h</p><pre class="code-block" data-astro-cid-tzzuq5oi>
+                <code data-astro-cid-tzzuq5oi>// Fill out your copyright notice in the Description page of Project Settings.
+
+#pragma once
+
+#include &quot;CoreMinimal.h&quot;
+#include &quot;Kismet/BlueprintFunctionLibrary.h&quot;
+#include &quot;GameFramework/Actor.h&quot;
+#include &quot;InteractionBlueprintLibrary.generated.h&quot;
+
+class UHotbarManagerComponent;
+class UUserWidget;
+
+/**
+ * Interaction gating helpers shared by the pickup / grab flows.
+ *
+ * The click-pickup entry (AC_InteractionManager.TryGrab) calls
+ * IsInteractionBlocked as a single early-out so stateful items (a planted
+ * flowerpot, chemistry apparatus locked by a running reaction, ...) refuse
+ * interaction without every item blueprint having to know about the others.
+ */
+UCLASS()
+class U_TOMATO_API UInteractionBlueprintLibrary : public UBlueprintFunctionLibrary
+{
+	GENERATED_BODY()
+
+public:
+	/**
+	 * Whether the actor must refuse click-pickup / grab interactions right now.
+	 *
+	 * Currently covers:
+	 *  1. plantable surfaces (flowerpots etc.) that have living plants —
+	 *     locked until the plant is removed (PlantableSurfaceComponent.CurrentPlantCount &gt; 0);
+	 *  2. chemistry apparatus belonging to a station whose reaction is
+	 *     Processing — locked until the reaction Produces its result.
+	 *
+	 * Pure query; intended as the single early-out gate at the top of TryGrab.
+	 */
+	UFUNCTION(BlueprintPure, Category = &quot;Interaction&quot;)
+	static bool IsInteractionBlocked(AActor* Target);
+
+	/**
+	 * The hotbar manager component living on Pawn (null when the pawn has none), exposed as a
+	 * BlueprintPure so hand-model flows can reach it without a per-pawn variable getter.
+	 *
+	 * Used by BP_Farmer.ItemInHand to tell the hotbar which actor it just put in the hand.
+	 */
+	UFUNCTION(BlueprintPure, Category = &quot;Interaction|Hand&quot;)
+	static UHotbarManagerComponent* GetHotbarManagerComponent(AActor* Pawn);
+
+	/**
+	 * The actor the player is carrying as a HAND MODEL right now - the visual copy spawned by
+	 * BP_Farmer.ItemInHand - or null when nothing is in hand.
+	 *
+	 * SINGLE SOURCE OF TRUTH: UHotbarManagerComponent::EquippedHandActor. ItemInHand calls
+	 * NotifyItemEquipped on it right after the model is spawned and grabbed, so every caller -
+	 * the hotbar swap chain (OnCenterSlotChanged -&gt; Item In Hand) AND the TryGrab pickup path -
+	 * keeps it current.
+	 *
+	 * Earlier versions also fell back to reflecting BP_Farmer&#39;s &quot;Equipped Item&quot; variable for the
+	 * pickup path, which called ItemInHand without ever reaching NotifyItemEquipped. That fallback
+	 * is gone: if a future flow spawns a hand model without going through ItemInHand it must
+	 * update EquippedHandActor too, otherwise the hand counts as &quot;grabbing a world object&quot; and the
+	 * hotbar stops switching (see issue 20).
+	 */
+	static AActor* ResolveHandModelActor(const AActor* Pawn);
+
+	/**
+	 * True when the pawn&#39;s physics handle is holding a WORLD object driven by the mouse.
+	 *
+	 * There are two very different things that same handle carries:
+	 *   * a world object - a merged assembly, a synthesized result, a loose grabbable
+	 *     (AC_AssemblySystem.GrabNewComponent / AC_InteractionManager.TryGrab);
+	 *   * the spawned hand model, which ItemInHand also routes through the handle
+	 *     (SpawnActor -&gt; SimulatePhysics(true) -&gt; GrabNewComponent) purely so the carried
+	 *     item wobbles physically.
+	 * Only the first one is a real grab: it is what the mouse wheel pushes / pulls
+	 * (AC_AssemblySystem.GrapDistance). Holding the hand model means the wheel belongs to the
+	 * hotbar instead, and the hotbar itself must stay switchable.
+	 */
+	static bool IsGrabbingWorldObjectOnPawn(const AActor* Pawn);
+
+	/**
+	 * IsGrabbingWorldObjectOnPawn resolved from a world context object (the player pawn is
+	 * looked up through the first player controller), so Blueprint can call it with the
+	 * WorldContext pin auto-filled.
+	 */
+	UFUNCTION(BlueprintPure, Category = &quot;Interaction&quot;, meta = (WorldContext = &quot;WorldContextObject&quot;))
+	static bool IsGrabbingWorldObject(UObject* WorldContextObject);
+
+	/**
+	 * Walk the player&#39;s EQUIPPED hotbar slot by SlotDelta (+1 = next slot) and equip whatever that
+	 * slot holds, by running exactly the path the number keys run - BP_Farmer.&quot;Use HotBar Function&quot;,
+	 * which reads AC_PlayerInventory.&quot;Items&quot;[Index], spawns the hand model through ItemInHand and
+	 * stores &quot;Hot Bar Index&quot;.
+	 *
+	 * Why the wheel cannot use UHotbarManagerComponent.HotbarItems: nothing in the project ever
+	 * fills that array (WBP_Hotbar only reads it, SetHotbarSlot has no callers), so
+	 * OnCenterSlotItemChanged always carries a null item and the scroll path could only ever CLEAR
+	 * the hand model - which is exactly the &quot;model disappears and nothing replaces it&quot; bug. The
+	 * number-key path is the one that actually knows the items, so the wheel reuses it: one wheel
+	 * notch == pressing the next/previous number key.
+	 *
+	 * The target slot is clamped to the inventory&#39;s own item array because Cheak Hotbar indexes
+	 * Items[Index] without a bounds check; landing on an empty slot is a no-op (the hand keeps what
+	 * it has, it is not emptied). Returns true when an equip was actually requested.
+	 */
+	UFUNCTION(BlueprintCallable, Category = &quot;Interaction|Hand&quot;, meta = (WorldContext = &quot;WorldContextObject&quot;))
+	static bool StepHotbarEquip(UObject* WorldContextObject, int32 SlotDelta);
+
+	/**
+	 * Rebuild the hotbar strip widget (WBP_Hotbar) straight from the real hotbar data:
+	 * AC_PlayerInventory.&quot;Items&quot;[0..N-1] plus BP_Farmer.&quot;Hot Bar Index&quot;.
+	 *
+	 * WBP_Hotbar used to be fed by UHotbarManagerComponent.HotbarItems - the array nothing in
+	 * this project ever fills (see StepHotbarEquip) - so its RefreshHotbarDisplay loop body was
+	 * left empty and the strip never displayed anything. The inventory array is what the number
+	 * keys and the mouse wheel actually equip from, so the strip reads that instead: one source
+	 * of truth, no second bookkeeping array.
+	 *
+	 * The slots are the Border/TextBlock pairs inside the strip&#39;s layout panel, taken in widget
+	 * tree order (they are not exposed as widget variables, so they are found by walking the
+	 * tree). Slot i shows Items[i], or the slot number when that slot is empty; the slot whose
+	 * index equals &quot;Hot Bar Index&quot; is tinted HighlightColor, the others NormalColor.
+	 */
+	UFUNCTION(BlueprintCallable, Category = &quot;Interaction|Hand&quot;)
+	static void RefreshHotbarStripFromInventory(UUserWidget* HotbarStrip,
+		FLinearColor HighlightColor = FLinearColor(1.0f, 0.72f, 0.15f, 1.0f),
+		FLinearColor NormalColor = FLinearColor(0.02f, 0.02f, 0.02f, 0.55f));
+
+	/**
+	 * Push the strip refresh into every live hotbar strip widget.
+	 *
+	 * The strip binds OnHotbarScrolled/OnHotbarSlotUpdated in its own Event Construct, but the HUD
+	 * is built while the owning pawn is not resolved yet, so Get Farmer Char Ref returns null,
+	 * HotbarManagerRef stays null and BOTH bindings fail silently (verified in PIE: the manager
+	 * reports &quot;listeners=NONE&quot; on every equip). Pushing the refresh from the equip path therefore
+	 * does not depend on that binding.
+	 */
+	UFUNCTION(BlueprintCallable, Category = &quot;Interaction|Hand&quot;, meta = (WorldContext = &quot;WorldContextObject&quot;))
+	static void RefreshAllHotbarStrips(UObject* WorldContextObject);
+};
+</code>
+              </pre></div></section><nav class="pager" data-astro-cid-tzzuq5oi><a class="pager-item" href="/projects/tomato/modules/farming" data-astro-cid-tzzuq5oi><span class="pager-dir" data-astro-cid-tzzuq5oi>← 上一个</span><span class="pager-name" data-astro-cid-tzzuq5oi>农场系统</span></a><a class="pager-item pager-next" href="/projects/tomato/modules/assembly" data-astro-cid-tzzuq5oi><span class="pager-dir" data-astro-cid-tzzuq5oi>下一个 →</span><span class="pager-name" data-astro-cid-tzzuq5oi>拼装合成系统</span></a></nav></div></main><footer class="site-footer"><div class="wrap row"><p style="margin:0">© 2024–2026  内容版权归作者所有</p><p style="margin:0"><span class="chip">静态站</span><span class="chip" style="margin-left:6px">CDN 直出</span><span class="chip" style="margin-left:6px">0 台服务器</span></p></div></footer><!--
+      搜索面板挂在 </body> 前，不能放进页头：
+      页头有 backdrop-filter，它会让后代里的 position: fixed 以页头为包含块，
+      面板会被裁在页头那条 60px 的带子里。
+    --><div class="search-layer" id="site-search" data-search-layer hidden data-astro-cid-av774hkb><div class="search-backdrop" data-search-close aria-hidden="true" data-astro-cid-av774hkb></div><div class="search-panel" role="dialog" aria-modal="true" aria-label="站内搜索" data-astro-cid-av774hkb><div class="search-bar" data-astro-cid-av774hkb><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" data-astro-cid-av774hkb><circle cx="11" cy="11" r="7" data-astro-cid-av774hkb></circle><path d="m20 20-3.5-3.5" data-astro-cid-av774hkb></path></svg><input type="search" data-search-input placeholder="搜项目、模块、图集、蓝图…" autocomplete="off" spellcheck="false" aria-label="搜索关键词" data-astro-cid-av774hkb><kbd data-astro-cid-av774hkb>Esc</kbd></div><div class="search-body" data-search-body data-astro-cid-av774hkb><p class="search-tip" data-astro-cid-av774hkb>输入关键词开始搜索。按 <b data-astro-cid-av774hkb>/</b> 或 <b data-astro-cid-av774hkb>Ctrl</b>+<b data-astro-cid-av774hkb>K</b> 随时打开。</p></div></div></div><script>
+      ;(() => {
+        const layer = document.querySelector('[data-search-layer]')
+        if (!layer) return
+
+        const input = layer.querySelector('[data-search-input]')
+        const body = layer.querySelector('[data-search-body]')
+        const TIP =
+          '<p class="search-tip">输入关键词开始搜索。按 <b>/</b> 或 <b>Ctrl</b>+<b>K</b> 随时打开。</p>'
+
+        /* ---------------- Pagefind 懒加载 ---------------- */
+        let enginePromise = null
+        const loadEngine = () => {
+          if (!enginePromise) {
+            enginePromise = import('/pagefind/pagefind.js')
+              .then(async (pf) => {
+                try {
+                  await pf.options({ excerptLength: 24 })
+                } catch {
+                  /* 老版本没有 options，忽略 */
+                }
+                return pf
+              })
+              .catch((err) => {
+                enginePromise = null // 允许下次重试
+                throw err
+              })
+          }
+          return enginePromise
+        }
+
+        /* ---------------- 渲染 ---------------- */
+        const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
+
+        const setTip = (html) => {
+          body.innerHTML = html
+        }
+
+        const render = (items, query) => {
+          if (!items.length) {
+            setTip(`<p class="search-tip">没有找到和「${esc(query)}」相关的内容。</p>`)
+            return
+          }
+
+          const ul = document.createElement('ul')
+          ul.className = 'search-list'
+
+          for (const it of items) {
+            const a = document.createElement('a')
+            a.href = it.url || '/'
+
+            const t = document.createElement('span')
+            t.className = 'search-item-title'
+            t.textContent = (it.meta && it.meta.title) || it.url || '未命名'
+            a.append(t)
+
+            if (it.excerpt) {
+              const e = document.createElement('span')
+              e.className = 'search-item-excerpt'
+              // Pagefind 给的片段已经转义过，只有 <mark> 是高亮标签
+              e.innerHTML = it.excerpt
+              a.append(e)
+            }
+
+            const li = document.createElement('li')
+            li.append(a)
+            ul.append(li)
+          }
+
+          body.textContent = ''
+          body.append(ul)
+        }
+
+        /* ---------------- 搜索 ---------------- */
+        let seq = 0
+        const run = async (raw) => {
+          const mine = ++seq
+          const query = raw.trim()
+
+          if (!query) {
+            setTip(TIP)
+            return
+          }
+
+          setTip('<p class="search-tip">搜索中…</p>')
+
+          let pf
+          try {
+            pf = await loadEngine()
+          } catch {
+            setTip(
+              '<p class="search-tip">搜索索引暂时用不了。<br />索引是构建期生成的，' +
+                '<b>本地开发模式（pnpm dev）下没有</b>，跑一次 <b>pnpm build</b> 或 <b>pnpm preview</b> 就有了。</p>',
+            )
+            return
+          }
+          if (mine !== seq) return
+
+          try {
+            const res = await pf.search(query)
+            if (mine !== seq) return
+            const items = await Promise.all(res.results.slice(0, 8).map((r) => r.data()))
+            if (mine !== seq) return
+            render(items, query)
+          } catch {
+            setTip('<p class="search-tip">搜索出错了，换几个词再试试。</p>')
+          }
+        }
+
+        let timer
+        input.addEventListener('input', () => {
+          clearTimeout(timer)
+          timer = setTimeout(() => run(input.value), 130)
+        })
+
+        /* ---------------- 开关 ----------------
+         * 焦点闭环（2026-10-19 审计 D2）。此前的问题：
+         *   · 点开搜索、Esc 关掉之后，焦点落在 <body> 上 —— 键盘用户等于被扔回页首，
+         *     得从头 Tab 一遍才能回到刚才那颗放大镜；
+         *   · Tab 能一路走出面板、跑到页头导航和页脚链接上，而背景还盖着，
+         *     人是"看不见自己在哪"的。
+         *
+         * 做法分两层：
+         *   ① `inert` 给面板以外的所有 body 子节点 —— 一整片区域不可聚焦、不可点、
+         *     读屏也跳过。这是浏览器原生的"这块不参与交互"，比自己数可聚焦元素可靠；
+         *   ② Tab 在面板内显式循环 —— inert 已经挡住了外面的元素，但焦点走到最后
+         *     一个链接后浏览器会把焦点交给地址栏，再 Tab 回来就出了面板。显式兜一圈。
+         */
+        const isTyping = (el) =>
+          el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)
+
+        const trigger = document.querySelector('[data-search-open]')
+        /* 面板以外的所有 body 直接子节点（含 skip-link / header / main / footer）。
+           脚本标签也在里面 —— 给 <script> 设 inert 没有任何副作用。 */
+        const background = () => [...document.body.children].filter((el) => el !== layer)
+
+        /** 记住"打开之前焦点在哪"，关的时候还回去 */
+        let lastFocus = null
+
+        const focusables = () => {
+          const list = [...layer.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])')]
+          /* 结果列表是动态渲染的，用 offsetParent 过滤掉 [hidden] 与非可见项 */
+          return list.filter((el) => el === input || el.offsetParent !== null)
+        }
+
+        const open = () => {
+          lastFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
+          layer.hidden = false
+          document.body.style.overflow = 'hidden'
+          background().forEach((el) => el.setAttribute('inert', ''))
+          trigger?.setAttribute('aria-expanded', 'true')
+          input.focus()
+          input.select()
+          // 打开的那一刻就把索引拉起来，等"输入完再等下载"会显得卡
+          loadEngine().catch(() => {})
+        }
+
+        const close = () => {
+          layer.hidden = true
+          document.body.style.overflow = ''
+          background().forEach((el) => el.removeAttribute('inert'))
+          trigger?.setAttribute('aria-expanded', 'false')
+          /* 还焦点之前确认它还在文档里 —— 面板里点链接跳走时焦点目标可能是旧元素 */
+          if (lastFocus && document.contains(lastFocus)) lastFocus.focus()
+          lastFocus = null
+        }
+
+        /* Tab 在面板里循环。Shift+Tab 从第一个回到最后一个，Tab 从最后一个回到第一个。 */
+        layer.addEventListener('keydown', (e) => {
+          if (e.key !== 'Tab') return
+          const list = focusables()
+          if (!list.length) return
+          const first = list[0]
+          const last = list[list.length - 1]
+          if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault()
+            last.focus()
+          } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault()
+            first.focus()
+          }
+        })
+
+        document.addEventListener('click', (e) => {
+          if (e.target.closest('[data-search-open]')) {
+            e.preventDefault()
+            layer.hidden ? open() : close()
+            return
+          }
+          if (e.target.closest('[data-search-close]')) {
+            e.preventDefault()
+            close()
+          }
+        })
+
+        document.addEventListener('keydown', (e) => {
+          const open_ = !layer.hidden
+
+          if (e.key === 'Escape' && open_) {
+            close()
+            return
+          }
+          if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+            e.preventDefault()
+            open_ ? close() : open()
+            return
+          }
+          if (e.key === '/' && !open_ && !isTyping(e.target) && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            e.preventDefault()
+            open()
+          }
+        })
+
+        /* 上下键在结果里走 */
+        input.addEventListener('keydown', (e) => {
+          if (e.key !== 'ArrowDown') return
+          e.preventDefault()
+          body.querySelector('a')?.focus()
+        })
+        body.addEventListener('keydown', (e) => {
+          const links = [...body.querySelectorAll('a')]
+          const i = links.indexOf(document.activeElement)
+          if (e.key === 'ArrowDown') {
+            e.preventDefault()
+            links[Math.min(i + 1, links.length - 1)]?.focus()
+          } else if (e.key === 'ArrowUp') {
+            e.preventDefault()
+            i <= 0 ? input.focus() : links[i - 1].focus()
+          }
+        })
+      })()
+    </script><script>
+      // 主题切换：写 data-theme + 地址栏染色 + 记住选择 + 告诉读屏
+      ;(() => {
+        const btn = document.getElementById('theme-toggle')
+        if (!btn) return
+        const status = document.querySelector('[data-theme-status]')
+
+        /* 初值：<head> 里那段脚本已经把最终主题写进 data-theme 了，
+           这里只负责让按钮的 aria-pressed 跟它对齐（不能写死在 HTML 里 ——
+           首屏主题有一半概率来自系统偏好，服务端并不知道）。 */
+        const sync = (theme) => {
+          btn.setAttribute('aria-pressed', theme === 'dark' ? 'true' : 'false')
+        }
+        sync(document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light')
+
+        btn.addEventListener('click', () => {
+          const root = document.documentElement
+          const next = root.dataset.theme === 'dark' ? 'light' : 'dark'
+          root.dataset.theme = next
+          /* 地址栏跟着变，否则在深色系统里手动切到浅色后，浏览器顶上还是深色 */
+          document
+            .querySelector('meta[data-theme-color]')
+            ?.setAttribute('content', next === 'dark' ? '#0d1117' : '#f6f7f9')
+          sync(next)
+          try {
+            localStorage.setItem('theme', next)
+          } catch {
+            /* 忽略 */
+          }
+          /* 播报结果。先清空再写，是为了让"浅→深→浅"这种连续切换每次都念 ——
+             内容没变化时 aria-live 不会重复播报。 */
+          if (status) {
+            status.textContent = ''
+            requestAnimationFrame(() => {
+              status.textContent = next === 'dark' ? '已切换到深色主题' : '已切换到浅色主题'
+            })
+          }
+        })
+      })()
+    </script><script>
+          /* 两个小动作（关掉不影响阅读）：
+             1) 顶部的阅读进度线 → 往 .read-progress 上写 --p
+             2) 侧栏目录的滚动高亮 → 给当前章节的链接打 aria-current="true"
+             2026-10-19 第二版：删掉了「指针跟随的镜面高光」。
+             背景从彩色极光换成纸 + 单色暗记之后，那圈白斑在纸上没有任何东西可以反射，
+             只剩一层脏雾 —— 与其留着凑数，不如不要。 */
+          ;(() => {
+            const root = document.documentElement
+
+            /* ---------- 1. 阅读进度 ---------- */
+            const bar = document.querySelector('.read-progress')
+            if (bar) {
+              let raf2 = 0
+              const calc = () => {
+                raf2 = 0
+                const max = root.scrollHeight - root.clientHeight
+                const p = max > 0 ? Math.min(1, Math.max(0, root.scrollTop / max)) : 0
+                bar.style.setProperty('--p', p.toFixed(4))
+              }
+              addEventListener(
+                'scroll',
+                () => {
+                  if (!raf2) raf2 = requestAnimationFrame(calc)
+                },
+                { passive: true },
+              )
+              addEventListener('resize', calc, { passive: true })
+              calc()
+            }
+
+            /* ---------- 2. 目录滚动高亮 ---------- */
+            const links = [...document.querySelectorAll('.side nav a[href^="#"]')]
+            const targets = links
+              .map((a) => ({ a, el: document.getElementById(decodeURIComponent(a.hash.slice(1))) }))
+              .filter((x) => x.el)
+            if (targets.length && 'IntersectionObserver' in window) {
+              const setActive = (a) => {
+                for (const { a: l } of targets) l.removeAttribute('aria-current')
+                if (a) a.setAttribute('aria-current', 'true')
+              }
+              const visible = new Set()
+              const io = new IntersectionObserver(
+                (entries) => {
+                  for (const en of entries) {
+                    const hit = targets.find((t) => t.el === en.target)
+                    if (!hit) continue
+                    if (en.isIntersecting) visible.add(hit.a)
+                    else visible.delete(hit.a)
+                  }
+                  /* 同时有多个章节在视口里时，取文档顺序最靠前的那个 —— 与阅读方向一致 */
+                  setActive(links.find((l) => visible.has(l)) || null)
+                },
+                /* 顶部留出吸顶页头的高度，底部只认 30%：这样"刚滚到"就算当前章 */
+                { rootMargin: '-84px 0px -70% 0px', threshold: 0 },
+              )
+              for (const t of targets) io.observe(t.el)
+            }
+          })()
+        </script></body></html>

@@ -1,0 +1,616 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>交互与高亮 · 暖洋洋呆猫村 · JINJIARAN</title><meta name="description" content="一个接口、三个函数、四处实现，而四处实现彼此都不一样 —— 真正干活的是挂在物品上的两个组件，物品 Actor 自己反倒是个空壳。至于描边，查到最后发现只写了&quot;关&quot;、没写&quot;开&quot;。"><link rel="canonical" href="https://jinjiaran.com/projects/dcat/modules/interaction/"><!--
+      图标组（2026-10-21：换成 R 标）。
+      由 `node tmp/make-brand-icons.mjs` 从矢量化的 R 生成，别手工换图。
+      · favicon.svg —— 深底圆角块 + 白色 R。**深底不是装饰**：标签栏底色不可控
+        （浅色主题浅灰 / 深色主题近黑），透明底的黑 R 在深色标签栏上会整块消失。
+      · favicon.ico —— 16/24/32/48 四档**各自原生渲染**后拼成（不是缩出来的），
+        老浏览器、收藏夹、各类爬虫要的就是它。
+      · apple-touch-icon —— 180×180 **满幅方角、不透明**：圆角与遮罩由 iOS 自己套。
+      · site.webmanifest —— Android/Chrome「添加到主屏幕」用，带 192/512 两档。
+      顺序：SVG 在前（首选），ICO 兜底。
+    --><link rel="icon" type="image/svg+xml" href="/favicon.svg"><link rel="icon" type="image/x-icon" href="/favicon.ico" sizes="16x16 24x24 32x32 48x48"><link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180"><link rel="manifest" href="/site.webmanifest"><meta name="generator" content="Astro v7.3.2"><meta property="og:type" content="website"><meta property="og:site_name" content="JINJIARAN"><meta property="og:title" content="交互与高亮 · 暖洋洋呆猫村 · JINJIARAN"><meta property="og:description" content="一个接口、三个函数、四处实现，而四处实现彼此都不一样 —— 真正干活的是挂在物品上的两个组件，物品 Actor 自己反倒是个空壳。至于描边，查到最后发现只写了&quot;关&quot;、没写&quot;开&quot;。"><meta property="og:url" content="https://jinjiaran.com/projects/dcat/modules/interaction/"><!--
+      社交卡片图（2026-10-19 补）。之前全站没有任何 og:image，分享出去的链接是纯文字。
+      图是 public/og.png（1200×630，站点深底 + 品牌标），由 scripts/make-og.mjs 生成，
+      改文案/换标就重跑那个脚本，不要手工改图。
+      宽高必须写：部分抓取方（含微信/Twitter）会按它预留版位，缺了会裁得很难看。
+    --><meta property="og:image" content="https://jinjiaran.com/og.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="JINJIARAN · 个人作品站"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://jinjiaran.com/og.png"><!--
+      移动端浏览器地址栏染色。**只放一个 meta**，由下面那段内联脚本按最终主题
+      改 content —— 站内的主题是「手动切换 + data-theme」，不是跟随系统，
+      用两条 media 查询会跟用户手动选的打架。
+    --><meta name="theme-color" content="#f6f7f9" data-theme-color><script>
+      // 在首次绘制前定好主题，避免闪白；顺手把地址栏颜色定下来
+      ;(() => {
+        /* 先算出最终主题，再写 data-theme —— 两件事分开做，
+           是因为 localStorage 在隐私模式下会抛异常，旧写法里抛了就整段跳过。 */
+        let theme = 'light'
+        try {
+          const saved = localStorage.getItem('theme')
+          theme =
+            saved === 'light' || saved === 'dark'
+              ? saved
+              : window.matchMedia('(prefers-color-scheme: dark)').matches
+                ? 'dark'
+                : 'light'
+        } catch {
+          theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+        }
+        document.documentElement.dataset.theme = theme
+
+        const meta = document.querySelector('meta[data-theme-color]')
+        if (meta) meta.setAttribute('content', theme === 'dark' ? '#0d1117' : '#f6f7f9')
+      })()
+    </script><link rel="stylesheet" href="/_astro/BaseLayout.CKlrZbNO.css"><style>.bp[data-astro-cid-rf4rmido]{border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);overflow:hidden}.bp-head[data-astro-cid-rf4rmido]{border-bottom:1px solid var(--line);flex-wrap:wrap;align-items:flex-start;gap:12px;padding:16px 18px 14px;display:flex}.bp-head-main[data-astro-cid-rf4rmido]{flex:260px;min-width:0}.bp-title[data-astro-cid-rf4rmido]{margin:0;font-size:16px}.bp-graph[data-astro-cid-rf4rmido]{color:var(--fg-3);flex-wrap:wrap;align-items:center;gap:6px;margin:5px 0 0;font-size:12.5px;display:flex}.bp-graph[data-astro-cid-rf4rmido] code[data-astro-cid-rf4rmido]{color:var(--fg-2);background:var(--surface-2);border-radius:5px;padding:1px 7px;font-size:12px}.bp-dot[data-astro-cid-rf4rmido]{opacity:.5}.bp-actions[data-astro-cid-rf4rmido]{flex-wrap:wrap;flex:none;gap:8px;display:flex}.bp-btn[data-astro-cid-rf4rmido]{color:var(--fg-2);background:var(--surface-2);border:1px solid var(--line);cursor:pointer;border-radius:999px;align-items:center;gap:6px;padding:6px 12px;font-family:inherit;font-size:13px;transition:color .15s,border-color .15s;display:inline-flex}.bp-btn[data-astro-cid-rf4rmido]:hover{color:var(--accent);border-color:var(--accent)}.bp-summary[data-astro-cid-rf4rmido]{color:var(--fg-2);margin:0;padding:14px 18px 0;font-size:13.5px}.bp-stage[data-astro-cid-rf4rmido]{background:#242424;position:relative}.bp-loading[data-astro-cid-rf4rmido]{color:#9aa2ad;z-index:2;background:#242424;justify-content:center;align-items:center;gap:10px;font-size:13px;display:flex;position:absolute;inset:0}.bp-spinner[data-astro-cid-rf4rmido]{border:2px solid #fff3;border-top-color:#6a9bff;border-radius:50%;width:15px;height:15px;animation:.8s linear infinite bp-spin}@keyframes bp-spin{to{transform:rotate(360deg)}}ueb-blueprint[data-astro-cid-rf4rmido]:defined~.bp-loading[data-astro-cid-rf4rmido]{display:none}.bp-fallback[data-astro-cid-rf4rmido]{color:var(--fg-2);padding:14px 18px;font-size:13px;display:none}.bp-fallback[data-astro-cid-rf4rmido] pre[data-astro-cid-rf4rmido]{background:var(--surface-2);border-radius:var(--radius-sm);white-space:pre;max-height:340px;padding:12px;font-size:11.5px;line-height:1.5;overflow:auto}html[data-ueb-failed] .bp-fallback[data-astro-cid-rf4rmido],html[data-ueb-failed] .bp-loading[data-astro-cid-rf4rmido]{display:block}html[data-ueb-failed] .bp-loading[data-astro-cid-rf4rmido]{display:none}.bp-foot[data-astro-cid-rf4rmido]{border-top:1px solid var(--line);background:var(--surface);flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;padding:10px 18px;display:flex}.bp-hint[data-astro-cid-rf4rmido]{color:var(--fg-3);margin:0;font-size:12px}.bp-tags[data-astro-cid-rf4rmido]{flex-wrap:wrap;gap:6px;margin:0;display:flex}.bp-stage[data-astro-cid-rf4rmido] ueb-blueprint[data-astro-cid-rf4rmido]{width:100%;display:block}
+.meta-row[data-astro-cid-tzzuq5oi]{flex-wrap:wrap;gap:6px;margin-top:14px;display:flex}.module-lede[data-astro-cid-tzzuq5oi]{color:var(--fg-2);max-width:64ch;margin:10px 0 0}.bp-stack[data-astro-cid-tzzuq5oi]{flex-direction:column;gap:30px;margin-top:18px;display:flex}.code-wrap[data-astro-cid-tzzuq5oi]{margin-top:22px}.blk[data-astro-cid-tzzuq5oi]{margin-top:44px}.blk-title[data-astro-cid-tzzuq5oi]{border-bottom:1px solid var(--line);margin:0;padding-bottom:8px;font-size:20px}.code-name[data-astro-cid-tzzuq5oi]{color:var(--fg-3);margin:0 0 6px;font-family:Cascadia Code,Consolas,monospace;font-size:12.5px}.code-block[data-astro-cid-tzzuq5oi]{background:color-mix(in srgb, var(--surface-2) 78%, transparent);border:1px solid var(--line);border-radius:14px;margin:0;padding:16px 18px;font-size:12.5px;line-height:1.65;overflow-x:auto;box-shadow:inset 0 1px #ffffff1f}.pager[data-astro-cid-tzzuq5oi]{border-top:1px solid var(--line);justify-content:space-between;gap:14px;margin-top:56px;padding-top:22px;display:flex}.pager-item[data-astro-cid-tzzuq5oi]{border-radius:var(--radius-sm);flex-direction:column;gap:3px;padding:10px 14px;transition:background .15s;display:flex}.pager-item[data-astro-cid-tzzuq5oi]:hover{background:var(--surface-2)}.pager-next[data-astro-cid-tzzuq5oi]{text-align:right}.pager-dir[data-astro-cid-tzzuq5oi]{color:var(--fg-3);font-size:12px}.pager-name[data-astro-cid-tzzuq5oi]{font-size:14px;font-weight:500}
+</style><script type="module" src="/_astro/page.CQWjsXKf.js"></script></head><body class="glass"><div class="backdrop" aria-hidden="true"><i class="mark"></i><i class="grid"></i></div><div class="read-progress" aria-hidden="true"></div><a class="skip-link" href="#main">跳到主内容</a><header class="site-header"><div class="wrap"><a class="brand" href="/"><svg class="mark" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 524 438"><path fill="currentColor" fill-rule="evenodd" d="M416.82 435.14C401.57 430.1 389.97 420.04 326.46 356.8C296.19 326.66 271.11 302 270.71 302C270.32 302 270 305.17 270 309.04C270 325.19 266.58 345.78 262.45 354.51C255.61 368.97 239.01 381.19 219 386.5C209.37 389.05 184.12 389.66 172.36 387.62C134.98 381.14 105.07 359.07 93.9 329.73C92.7 326.56 91.89 323.77 92.12 323.55C92.35 323.32 95.67 323.54 99.52 324.04C109.01 325.26 124.12 325.21 132 323.93C141.17 322.44 145.84 319.58 148.95 313.53L151.5 308.56L151.81 272.78L152.12 237L132.31 236.97C105.96 236.93 68.66 235.43 57.5 233.96C32.51 230.67 18.83 221.26 8.86 200.5C3.37 189.06 0.95 178.74 0.29 164C-1.78 117.22 20.72 76.49 57.46 60.54C61.84 58.64 65.56 57.23 65.73 57.39C65.9 57.56 65.56 63.06 64.98 69.6C63.25 89.16 65.33 104.68 70.52 110.84C71.9 112.48 75.16 114.64 77.76 115.64C82.12 117.3 87.25 117.47 141 117.7C198.58 117.94 199.41 117.91 194 116.14C184.03 112.87 177.68 108.9 169.91 101.11C155.15 86.31 149.34 67.33 153.5 47.5C157.85 26.81 174.05 9.13 194.5 2.75C204.23 -0.28 218.77 -0.28 228.5 2.75C253.04 10.4 270.97 34.35 270.97 59.5C270.97 84.6 253.48 108.19 229 116.11C223.57 117.87 224.17 117.89 274.6 117.95C330.81 118.01 346.08 118.82 360.71 122.53C388.99 129.7 411.57 149.04 419.41 172.81C426.33 193.77 425.17 212.89 415.83 232C412.46 238.88 410.01 242.14 402.95 249.15L394.22 257.79L425.86 289.28C461.17 324.42 463.99 326.58 473.64 325.78C477.54 325.46 480.31 324.42 484.3 321.77C490.34 317.75 503.89 304.49 509.63 296.96C511.71 294.23 513.7 292 514.05 292C514.92 292 519.59 304.17 521.52 311.5C527.78 335.19 521.31 366.33 505.14 390.29C490.96 411.31 472.31 426.78 452.87 433.64C442.77 437.2 425.28 437.93 416.82 435.14ZM293.41 220.59C301.72 216.52 304.4 212.05 304.85 201.48C305.27 191.48 302.79 184.69 296.87 179.62C292 175.45 287.15 174 278.13 174L271 174L271 199.13L271 224.25L279.36 223.81C285.87 223.47 288.97 222.76 293.41 220.59Z"/></svg>
+<span>JINJIARAN<span class="sub"> · 个人作品站</span></span></a><nav class="nav" aria-label="主导航"><a href="/?browse=1">首页</a><a href="/projects" aria-current="page">项目</a><a href="/gallery">图片</a><a href="/videos">视频</a><a href="/docs">文档</a><a href="/models">模型</a><a href="/tools">工具</a><a href="/about">关于</a></nav><button class="icon-btn" type="button" data-search-open aria-label="站内搜索" title="搜索（按 / ）" aria-expanded="false" aria-controls="site-search" data-astro-cid-av774hkb><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" data-astro-cid-av774hkb><circle cx="11" cy="11" r="7" data-astro-cid-av774hkb></circle><path d="m20 20-3.5-3.5" data-astro-cid-av774hkb></path></svg></button><button class="icon-btn" id="theme-toggle" type="button" aria-label="切换深浅色主题" aria-pressed="false"><svg class="sun" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"></path></svg><svg class="moon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"></path></svg></button><!--
+          主题切换的状态播报（2026-10-19 审计 D3）。
+          按钮本身只管"按下去了没有"（aria-pressed），**说不清现在是什么主题** ——
+          读屏用户听到"切换深浅色主题，已按下"，还是不知道屏幕上到底变深了还是变浅了。
+          所以另起一个 role="status" 的区域，切换后把结果念出来。
+          role="status" 自带 aria-live="polite"；这里两个都写，是为了兼容只认其一的读屏。
+          它必须常驻 DOM（不能切换时才插入），否则播报不会触发。
+        --><p class="sr-only" role="status" aria-live="polite" data-theme-status></p></div></header><main id="main" data-pagefind-body><div class="wrap" data-astro-cid-tzzuq5oi><header class="glass-hero" style="--i:0" data-astro-cid-tzzuq5oi><p class="crumb" data-astro-cid-tzzuq5oi><a href="/projects" data-astro-cid-tzzuq5oi>项目</a><span aria-hidden="true" data-astro-cid-tzzuq5oi>/</span><a href="/projects/dcat" data-astro-cid-tzzuq5oi>暖洋洋呆猫村</a><span aria-hidden="true" data-astro-cid-tzzuq5oi>/</span><span data-astro-cid-tzzuq5oi>交互与高亮</span></p><h1 class="h-page" data-astro-cid-tzzuq5oi>交互与高亮</h1><p class="module-lede" data-astro-cid-tzzuq5oi>一个接口、三个函数、四处实现，而四处实现彼此都不一样 —— 真正干活的是挂在物品上的两个组件，物品 Actor 自己反倒是个空壳。至于描边，查到最后发现只写了&quot;关&quot;、没写&quot;开&quot;。</p><div class="meta-row" data-astro-cid-tzzuq5oi><span class="chip" data-astro-cid-tzzuq5oi>搁置</span><span class="chip" data-astro-cid-tzzuq5oi>蓝图</span><span class="chip" data-astro-cid-tzzuq5oi>蓝图接口</span><span class="chip" data-astro-cid-tzzuq5oi>组件</span></div></header></div><div class="wrap" style="padding-block:28px 0" data-astro-cid-tzzuq5oi><article class="prose glass-sheet" style="--i:1" data-astro-cid-tzzuq5oi><h2 id="接口只有三个函数">接口只有三个函数</h2>
+<p><code>Interactlnterface</code> 是一个蓝图接口，声明了三个函数 —— 图里加起来只有 4 个节点。
+引脚逐个读出来之后，签名是这样的：</p>
+<table>
+<thead>
+<tr>
+<th>函数</th>
+<th>签名（从引脚读）</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>LookAt</code></td>
+<td><strong><code>LookAt() → Message: text</code></strong></td>
+<td><strong>无参，返回一段文本</strong></td>
+</tr>
+<tr>
+<td><code>InteractWith</code></td>
+<td><strong><code>InteractWith(PlayerCharacter: BP_ThirdPersonCharacter_C)</code></strong></td>
+<td>把“谁来交互”传进来</td>
+</tr>
+<tr>
+<td><code>UnLook</code></td>
+<td><code>UnLook()</code></td>
+<td>无参无返回</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>⚠️ 这份签名里藏着一个<strong>没做完的设计</strong>：
+<code>LookAt</code> 是<strong>唯一一个有返回值的函数</strong>，返回类型是 <code>text</code>。
+按意图很好猜 —— 「看向某物时，让它回一句提示文字」（比如“按 E 拾取”）。
+而<a href="/projects/dcat/modules/ui">界面</a>里确实没有一个交互提示控件，
+<code>HighLightComponent</code> 也<strong>根本没实现 <code>LookAt</code></strong>。
+也就是说：<strong>这条提示文字的链路，从接口声明之后就没有下文了。</strong>
+调用点上那个 <code>LookAt</code> 消息节点的返回值引脚是空接的。</p>
+</blockquote>
+<blockquote>
+<p>⚠️ <code>Interactlnterface</code> —— 又是 <code>l</code> / <code>I</code> 那一类问题（本意 <code>InteractInterface</code>）。
+这是本工程第五处了。<strong>这个错名字已经扩散到 4 个蓝图</strong>（接口本身 + 三个实现者）。
+更麻烦的是：蓝图接口的资产名一旦生成，改名会连带改所有实现者的接口引用 ——
+所以它几乎注定要一直错下去。</p>
+<p>顺带一个有意思的对比：<code>InteractWith</code> 的参数类型写作
+<strong><code>BP_ThirdPersonCharacter_C</code></strong>，而不是 <code>BP_CATTTTTT_C</code>。
+接口是照着<strong>模板角色</strong>声明的 —— 又一个“从模板长出来”的指纹。</p>
+</blockquote>
+<h2 id="四种实现四种状态">四种实现，四种状态</h2>
+<p>接口有四个实现者，<strong>没有一个写法是相同的</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>实现者</th>
+<th>自建图</th>
+<th>接口实现情况</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ItemDataComponent</code></td>
+<td>EventGraph <strong>15 节点</strong></td>
+<td>✅ <code>InteractWith</code> 有实质逻辑；<code>UnLook</code> 空</td>
+</tr>
+<tr>
+<td><code>HighLightComponent</code></td>
+<td>EventGraph <strong>6 节点</strong></td>
+<td>⚠️ <strong>只实现了 <code>UnLook</code></strong>；<code>InteractWith</code> 空；<code>LookAt</code> 没实现</td>
+</tr>
+<tr>
+<td><code>BP_Box</code></td>
+<td>EventGraph <strong>9 节点</strong></td>
+<td>✅ <code>InteractWith</code> 打开箱子菜单；<code>UnLook</code> 空</td>
+</tr>
+<tr>
+<td><code>BP_Testltem</code></td>
+<td>EventGraph 3 节点（<strong>全空</strong>）</td>
+<td>⚠️ 三个函数都是空实现</td>
+</tr>
+<tr>
+<td><code>BP_Apple</code></td>
+<td>EventGraph 6 节点（<strong>全是 <code>CallParentFunction</code></strong>）</td>
+<td>⚠️ 纯转发</td>
+</tr>
+</tbody>
+</table>
+<h3 id="bp_testltem-是个空壳"><code>BP_Testltem</code> 是个空壳</h3>
+<p>它对接口的“实现”是：<strong><code>EventGraph</code> 里只有三个空事件</strong>
+（<code>ReceiveBeginPlay</code> / <code>ReceiveActorBeginOverlap</code> / <code>ReceiveTick</code>），
+接口的 <code>InteractWith</code> / <code>UnLook</code> 只有 ubergraph 入口、没有节点。</p>
+<p>也就是说 <strong><code>BP_Testltem</code> 自己按 E 什么都不会发生</strong>。
+它作为物品的价值全在它挂的两个组件上（见下）。</p>
+<h3 id="bp_apple-是空壳的空壳"><code>BP_Apple</code> 是空壳的空壳</h3>
+<p><code>BP_Apple</code> 继承 <code>BP_Testltem</code>，自建 0 变量、0 新逻辑，
+六个节点就是<strong>把三个事件 + <code>UserConstructionScript</code> 各转发给父类一次</strong>：</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>ReceiveBeginPlay        → CallParentFunction(ReceiveBeginPlay)</span></span>
+<span class="line"><span>ReceiveActorBeginOverlap→ CallParentFunction(ReceiveActorBeginOverlap)</span></span>
+<span class="line"><span>ReceiveTick             → CallParentFunction(ReceiveTick)</span></span>
+<span class="line"><span>UserConstructionScript  → CallParentFunction(UserConstructionScript)</span></span></code></pre>
+<blockquote>
+<p>那它为什么存在？因为它要<strong>当 <code>Item_Data</code> 表里 <code>Apple</code> 那一行的 <code>ItemClass</code></strong>。
+两张表的 <code>ItemClass</code> 列指向的是 <code>BP_Testltem_C</code>（<code>Text</code> 行）与
+<code>BP_Apple_C</code>（<code>Apple</code> 行）—— <strong>一个物品一行的 Class 字段，需要一个能区分的类</strong>。
+所以 <code>BP_Apple</code> 的唯一职责是“有个不同的类名”，
+里面一行逻辑都没有（连网格都没换，见下）。</p>
+</blockquote>
+<h3 id="物品的配方一个默认立方体--两个组件">物品的“配方”：一个默认立方体 + 两个组件</h3>
+<p><code>BP_Testltem</code> 的组件树只有四个节点，但信息量很大：</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>BP_Testltem (Actor)</span></span>
+<span class="line"><span>├─ DefaultSceneRoot</span></span>
+<span class="line"><span>├─ Cube            (StaticMeshComponent)  ← 网格是 /Engine/BasicShapes/Cube</span></span>
+<span class="line"><span>├─ ItemDataComponent  (ItemDataComponent_C)     ← 拾取</span></span>
+<span class="line"><span>└─ HighLightComponent (HighLightComponent_C)    ← 描边</span></span></code></pre>
+<ul>
+<li><strong>网格就是引擎自带的 <code>Cube</code></strong>（<code>/Engine/BasicShapes/Cube.Cube</code>），
+相对缩放 <code>0.75</code>。物品连个像样的模型都还没换 ——
+<code>Item_Data</code> 表里两行都填了缩略图，但场景里的实物是方块。</li>
+<li><code>BP_Apple</code> 继承之后<strong>没有加任何组件、也没换网格</strong>，
+所以现在“苹果”和“测试物品”在世界里长得一模一样，都是立方体。</li>
+</ul>
+<h3 id="bp_box-是唯一在-actor-层写了逻辑的"><code>BP_Box</code> 是唯一在 Actor 层写了逻辑的</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Event InteractWith</span></span>
+<span class="line"><span>  → GetPlayerController → DynamicCast(PC_MyPlayerController_C)</span></span>
+<span class="line"><span>  → HUD（读）+ InventorySystem（读）</span></span>
+<span class="line"><span>  → DisplayBoxMenu</span></span></code></pre>
+<p><strong>按 E 打开箱子界面。</strong> <code>BP_Box</code> 自己的组件是：</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>BP_Box (Actor)</span></span>
+<span class="line"><span>├─ DefaultSceneRoot</span></span>
+<span class="line"><span>├─ StaticMesh</span></span>
+<span class="line"><span>├─ InventorySystem    ← ★ 箱子用的是普通的 InventorySystem 组件</span></span>
+<span class="line"><span>└─ HighLightComponent</span></span></code></pre>
+<blockquote>
+<p>⚠️ 注意箱子上挂的是 <strong><code>InventorySystem</code></strong>，不是那个专门写来做容器的
+<code>BPC_ItemContainer</code> —— 后者从头到尾没被挂到任何东西上
+（详见<a href="/projects/dcat/modules/inventory">背包系统</a>）。
+而且 <code>BP_Box</code> 上<strong>没有 <code>ItemDataComponent</code></strong>，
+所以“能不能捡箱子”这件事在组件层面是不成立的 —— 箱子只能“开”，不能“捡”。</p>
+</blockquote>
+<h2 id="拾取的完整链路">拾取的完整链路</h2>
+<p>把三处代码串起来，一次按 E 是这样走的：</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>① InventorySystem.InteractionTrace（每帧）</span></span>
+<span class="line"><span>     GetPlayerCameraManager → SphereTraceSingle（通道见下）</span></span>
+<span class="line"><span>     命中 → BreakHitResult → 取到 Actor</span></span>
+<span class="line"><span>     新旧不同 → 对旧的发 UnLook 消息 / 对新的发 LookAt 消息</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>② InventorySystem.EventGraph</span></span>
+<span class="line"><span>     EnhancedInputAction(IA_Interact) → GetOwner → Server_Interact</span></span>
+<span class="line"><span>     → DynamicCast → OnLocalInteract → GetComponentByClass</span></span>
+<span class="line"><span>     → Message InteractWith   ← 发给组件，不是发给 Actor</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>③ ItemDataComponent.EventGraph</span></span>
+<span class="line"><span>     Event InteractWith</span></span>
+<span class="line"><span>       → InventorySystem（读自己的引用）→ IsValid 宏</span></span>
+<span class="line"><span>       → ItemID（DataTableRowHandle）→ BreakStruct</span></span>
+<span class="line"><span>       → Quantity（int）</span></span>
+<span class="line"><span>       → AddToInventory</span></span>
+<span class="line"><span>       → IfThenElse → GetOwner → K2_DestroyActor   ← 场景里那份自己消失</span></span></code></pre>
+<p>三个要点：</p>
+<ol>
+<li><strong>接口消息是发给“组件”的</strong>（<code>GetComponentByClass</code> 之后才 <code>Message</code>）——
+这解释了为什么 <code>BP_Testltem</code> 自己的空实现不影响拾取：
+真正响应的是挂在它身上的 <code>ItemDataComponent</code>。</li>
+<li><strong><code>ItemID</code> 是 <code>DataTableRowHandle</code> 类型</strong>，所以要 <code>BreakStruct</code> 才能取出
+行名与行结构；<code>Quantity</code> 是组件上的独立 int。</li>
+<li><strong>拾取后 <code>K2_DestroyActor</code> 销毁的是 <code>GetOwner()</code></strong> ——
+组件把宿主 Actor 干掉。数据已经先 <code>AddToInventory</code> 了，所以顺序是对的。</li>
+</ol>
+<blockquote>
+<p>顺带一个组件级的细节：<code>ItemDataComponent</code> 的 <code>ReceiveBeginPlay</code> 里
+调了一次 <strong><code>SetReplicates</code></strong>（取 <code>GetOwner</code> 再设）——
+和<a href="/projects/dcat/modules/inventory">背包系统</a>里那批空 <code>Server_*</code> 函数是同一个意图：
+<strong>联网是规划过的</strong>。但物品拾取是纯本地实现的，
+客户端销毁 Actor 在联机下会与服务器状态打架。</p>
+</blockquote>
+<h2 id="高亮只写了关没写开">高亮：只写了“关”，没写“开”</h2>
+<p>这是本模块最值得记的一处。<code>HighLightComponent</code> 的 EventGraph 只有六个节点：</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Event UnLook</span></span>
+<span class="line"><span>  → GetOwner</span></span>
+<span class="line"><span>  → GetComponentByClass</span></span>
+<span class="line"><span>  → SetRenderCustomDepth(false)</span></span></code></pre>
+<p><code>SetRenderCustomDepth</code> 这个调用，<strong>在全工程（所有蓝图、所有图）里只出现这一次</strong>。</p>
+<p>而物品的网格组件默认值是：</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Cube (StaticMeshComponent)</span></span>
+<span class="line"><span>  bRenderCustomDepth       = False</span></span>
+<span class="line"><span>  CustomDepthStencilValue  = 0</span></span></code></pre>
+<p>也就是说：</p>
+<ul>
+<li>物品网格<strong>出生时就是不写深度缓冲的</strong>；</li>
+<li><code>HighLightComponent</code> 实现了 <code>LookAt</code> 吗？<strong>没有</strong> —— 它的图里只有
+<code>ReceiveBeginPlay</code> / <code>ReceiveTick</code> / <code>UnLook</code> 三个事件；</li>
+<li>所以**“把描边打开”这半边的代码不存在**。</li>
+</ul>
+<p><strong>结论：目前实机里物品不会有描边。</strong> <code>UnLook</code> 里那行
+<code>SetRenderCustomDepth(false)</code> 是把一个本来就是 <code>false</code> 的值又设成 <code>false</code>。</p>
+<blockquote>
+<p>这是个很典型的“做到一半”的痕迹：接口的三个函数齐了、
+追踪射线也发了 <code>LookAt</code> 消息、组件也挂上了、<strong>只有最后那一个布尔没写</strong>。
+补上它只需要在 <code>LookAt</code> 事件里加一句 <code>SetRenderCustomDepth(true)</code>。</p>
+</blockquote>
+<h2 id="追踪通道自定义的-interactive">追踪通道：自定义的 <code>Interactive</code></h2>
+<p>射线用的通道不是 <code>Visibility</code> 也不是 <code>Camera</code>，而是工程里<strong>唯一一条自定义通道</strong>：</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="ini"><code><span class="line"><span style="color:#E1E4E8">+</span><span style="color:#F97583">DefaultChannelResponses</span><span style="color:#E1E4E8">=(</span><span style="color:#F97583">Channel</span><span style="color:#E1E4E8">=ECC_GameTraceChannel1,</span><span style="color:#F97583">DefaultResponse</span><span style="color:#E1E4E8">=ECR_Ignore,</span></span>
+<span class="line"><span style="color:#F97583">                         bTraceType</span><span style="color:#E1E4E8">=True,</span><span style="color:#F97583">bStaticObject</span><span style="color:#E1E4E8">=False,</span><span style="color:#F97583">Name</span><span style="color:#E1E4E8">=</span><span style="color:#9ECBFF">"Interactive"</span><span style="color:#E1E4E8">)</span></span></code></pre>
+<p><code>ECC_GameTraceChannel1</code> = 名为 <code>Interactive</code> 的<strong>追踪通道</strong>，
+默认响应是 <code>ECR_Ignore</code> —— <strong>谁都不响应，除非物品主动声明“我在这条通道上可被命中”</strong>。</p>
+<p>这个设计是对的：追逐射线不会撞到墙、地形、玩家 ——
+<strong>只有物品会挡它</strong>，所以“看向什么”的结果天然就是一串候选物品。
+代价是：新加一种可交互物时，忘了设置 <code>Interactive</code> 响应就会静默失效，
+不会有任何报错。</p>
+<blockquote>
+<p>具体是哪个组件、哪个插槽声明了 <code>Interactive</code> 响应，
+从组件默认值里读不到（碰撞配置不在 <code>obj dump</code> 的输出范围）。
+这点只能到编辑器里核对。</p>
+</blockquote>
+<h2 id="目前的进展">目前的进展</h2>
+<ul class="contains-task-list">
+<li class="task-list-item"><input type="checkbox" checked disabled> <code>Interactlnterface</code> 三个函数：<code>LookAt</code> / <code>InteractWith</code> / <code>UnLook</code></li>
+<li class="task-list-item"><input type="checkbox" checked disabled> <code>InventorySystem.InteractionTrace</code> 每帧球形射线 + 新旧目标配对</li>
+<li class="task-list-item"><input type="checkbox" checked disabled> <code>ItemDataComponent.InteractWith</code>：写背包 → 销毁场景实例</li>
+<li class="task-list-item"><input type="checkbox" checked disabled> <code>BP_Box.InteractWith</code>：打开箱子界面（<code>DisplayBoxMenu</code>）</li>
+<li class="task-list-item"><input type="checkbox" checked disabled> 自定义追踪通道 <code>Interactive</code>（默认忽略，物品需主动声明）</li>
+<li class="task-list-item"><input type="checkbox" checked disabled> 物品的组件化配方：网格 + 数据组件 + 高亮组件</li>
+<li class="task-list-item"><input type="checkbox" disabled> ⚠️ <strong>描边只写了关闭、没写打开</strong> —— <code>SetRenderCustomDepth(true)</code> 全工程不存在</li>
+<li class="task-list-item"><input type="checkbox" disabled> ⚠️ 接口名 <code>Interactlnterface</code> 拼写错误，已扩散到 5 个蓝图</li>
+<li class="task-list-item"><input type="checkbox" disabled> ⚠️ <code>LookAt() → text</code> 声明的交互提示文字从未被使用（返回值引脚空接）</li>
+<li class="task-list-item"><input type="checkbox" disabled> ⚠️ <code>HighLightComponent</code> 完全没有实现 <code>LookAt</code></li>
+<li class="task-list-item"><input type="checkbox" disabled> ⚠️ <code>InteractWith</code> 的参数类型是 <code>BP_ThirdPersonCharacter_C</code>（模板角色），不是猫</li>
+<li class="task-list-item"><input type="checkbox" disabled> ⚠️ <code>BP_Apple</code> 纯转发、<code>BP_Testltem</code> 空实现 —— 物品 Actor 层零逻辑</li>
+<li class="task-list-item"><input type="checkbox" disabled> ⚠️ 物品网格是引擎默认 <code>Cube</code>，苹果和测试物品外观相同</li>
+<li class="task-list-item"><input type="checkbox" disabled> ⚠️ <code>BP_Box</code> 上没有 <code>ItemDataComponent</code>，箱子不可被拾取</li>
+<li class="task-list-item"><input type="checkbox" disabled> 没有交互提示 UI（<code>LookAt</code> 成功时没有“按 E 拾取”之类的提示）</li>
+</ul>
+</article><nav class="pager" data-astro-cid-tzzuq5oi><a class="pager-item" href="/projects/dcat/modules/inventory" data-astro-cid-tzzuq5oi><span class="pager-dir" data-astro-cid-tzzuq5oi>← 上一个</span><span class="pager-name" data-astro-cid-tzzuq5oi>背包系统</span></a><a class="pager-item pager-next" href="/projects/dcat/modules/item-data" data-astro-cid-tzzuq5oi><span class="pager-dir" data-astro-cid-tzzuq5oi>下一个 →</span><span class="pager-name" data-astro-cid-tzzuq5oi>物品数据</span></a></nav></div></main><footer class="site-footer"><div class="wrap row"><p style="margin:0">© 2024–2026  内容版权归作者所有</p><p style="margin:0"><span class="chip">静态站</span><span class="chip" style="margin-left:6px">CDN 直出</span><span class="chip" style="margin-left:6px">0 台服务器</span></p></div></footer><!--
+      搜索面板挂在 </body> 前，不能放进页头：
+      页头有 backdrop-filter，它会让后代里的 position: fixed 以页头为包含块，
+      面板会被裁在页头那条 60px 的带子里。
+    --><div class="search-layer" id="site-search" data-search-layer hidden data-astro-cid-av774hkb><div class="search-backdrop" data-search-close aria-hidden="true" data-astro-cid-av774hkb></div><div class="search-panel" role="dialog" aria-modal="true" aria-label="站内搜索" data-astro-cid-av774hkb><div class="search-bar" data-astro-cid-av774hkb><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" data-astro-cid-av774hkb><circle cx="11" cy="11" r="7" data-astro-cid-av774hkb></circle><path d="m20 20-3.5-3.5" data-astro-cid-av774hkb></path></svg><input type="search" data-search-input placeholder="搜项目、模块、图集、蓝图…" autocomplete="off" spellcheck="false" aria-label="搜索关键词" data-astro-cid-av774hkb><kbd data-astro-cid-av774hkb>Esc</kbd></div><div class="search-body" data-search-body data-astro-cid-av774hkb><p class="search-tip" data-astro-cid-av774hkb>输入关键词开始搜索。按 <b data-astro-cid-av774hkb>/</b> 或 <b data-astro-cid-av774hkb>Ctrl</b>+<b data-astro-cid-av774hkb>K</b> 随时打开。</p></div></div></div><script>
+      ;(() => {
+        const layer = document.querySelector('[data-search-layer]')
+        if (!layer) return
+
+        const input = layer.querySelector('[data-search-input]')
+        const body = layer.querySelector('[data-search-body]')
+        const TIP =
+          '<p class="search-tip">输入关键词开始搜索。按 <b>/</b> 或 <b>Ctrl</b>+<b>K</b> 随时打开。</p>'
+
+        /* ---------------- Pagefind 懒加载 ---------------- */
+        let enginePromise = null
+        const loadEngine = () => {
+          if (!enginePromise) {
+            enginePromise = import('/pagefind/pagefind.js')
+              .then(async (pf) => {
+                try {
+                  await pf.options({ excerptLength: 24 })
+                } catch {
+                  /* 老版本没有 options，忽略 */
+                }
+                return pf
+              })
+              .catch((err) => {
+                enginePromise = null // 允许下次重试
+                throw err
+              })
+          }
+          return enginePromise
+        }
+
+        /* ---------------- 渲染 ---------------- */
+        const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
+
+        const setTip = (html) => {
+          body.innerHTML = html
+        }
+
+        const render = (items, query) => {
+          if (!items.length) {
+            setTip(`<p class="search-tip">没有找到和「${esc(query)}」相关的内容。</p>`)
+            return
+          }
+
+          const ul = document.createElement('ul')
+          ul.className = 'search-list'
+
+          for (const it of items) {
+            const a = document.createElement('a')
+            a.href = it.url || '/'
+
+            const t = document.createElement('span')
+            t.className = 'search-item-title'
+            t.textContent = (it.meta && it.meta.title) || it.url || '未命名'
+            a.append(t)
+
+            if (it.excerpt) {
+              const e = document.createElement('span')
+              e.className = 'search-item-excerpt'
+              // Pagefind 给的片段已经转义过，只有 <mark> 是高亮标签
+              e.innerHTML = it.excerpt
+              a.append(e)
+            }
+
+            const li = document.createElement('li')
+            li.append(a)
+            ul.append(li)
+          }
+
+          body.textContent = ''
+          body.append(ul)
+        }
+
+        /* ---------------- 搜索 ---------------- */
+        let seq = 0
+        const run = async (raw) => {
+          const mine = ++seq
+          const query = raw.trim()
+
+          if (!query) {
+            setTip(TIP)
+            return
+          }
+
+          setTip('<p class="search-tip">搜索中…</p>')
+
+          let pf
+          try {
+            pf = await loadEngine()
+          } catch {
+            setTip(
+              '<p class="search-tip">搜索索引暂时用不了。<br />索引是构建期生成的，' +
+                '<b>本地开发模式（pnpm dev）下没有</b>，跑一次 <b>pnpm build</b> 或 <b>pnpm preview</b> 就有了。</p>',
+            )
+            return
+          }
+          if (mine !== seq) return
+
+          try {
+            const res = await pf.search(query)
+            if (mine !== seq) return
+            const items = await Promise.all(res.results.slice(0, 8).map((r) => r.data()))
+            if (mine !== seq) return
+            render(items, query)
+          } catch {
+            setTip('<p class="search-tip">搜索出错了，换几个词再试试。</p>')
+          }
+        }
+
+        let timer
+        input.addEventListener('input', () => {
+          clearTimeout(timer)
+          timer = setTimeout(() => run(input.value), 130)
+        })
+
+        /* ---------------- 开关 ----------------
+         * 焦点闭环（2026-10-19 审计 D2）。此前的问题：
+         *   · 点开搜索、Esc 关掉之后，焦点落在 <body> 上 —— 键盘用户等于被扔回页首，
+         *     得从头 Tab 一遍才能回到刚才那颗放大镜；
+         *   · Tab 能一路走出面板、跑到页头导航和页脚链接上，而背景还盖着，
+         *     人是"看不见自己在哪"的。
+         *
+         * 做法分两层：
+         *   ① `inert` 给面板以外的所有 body 子节点 —— 一整片区域不可聚焦、不可点、
+         *     读屏也跳过。这是浏览器原生的"这块不参与交互"，比自己数可聚焦元素可靠；
+         *   ② Tab 在面板内显式循环 —— inert 已经挡住了外面的元素，但焦点走到最后
+         *     一个链接后浏览器会把焦点交给地址栏，再 Tab 回来就出了面板。显式兜一圈。
+         */
+        const isTyping = (el) =>
+          el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)
+
+        const trigger = document.querySelector('[data-search-open]')
+        /* 面板以外的所有 body 直接子节点（含 skip-link / header / main / footer）。
+           脚本标签也在里面 —— 给 <script> 设 inert 没有任何副作用。 */
+        const background = () => [...document.body.children].filter((el) => el !== layer)
+
+        /** 记住"打开之前焦点在哪"，关的时候还回去 */
+        let lastFocus = null
+
+        const focusables = () => {
+          const list = [...layer.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])')]
+          /* 结果列表是动态渲染的，用 offsetParent 过滤掉 [hidden] 与非可见项 */
+          return list.filter((el) => el === input || el.offsetParent !== null)
+        }
+
+        const open = () => {
+          lastFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
+          layer.hidden = false
+          document.body.style.overflow = 'hidden'
+          background().forEach((el) => el.setAttribute('inert', ''))
+          trigger?.setAttribute('aria-expanded', 'true')
+          input.focus()
+          input.select()
+          // 打开的那一刻就把索引拉起来，等"输入完再等下载"会显得卡
+          loadEngine().catch(() => {})
+        }
+
+        const close = () => {
+          layer.hidden = true
+          document.body.style.overflow = ''
+          background().forEach((el) => el.removeAttribute('inert'))
+          trigger?.setAttribute('aria-expanded', 'false')
+          /* 还焦点之前确认它还在文档里 —— 面板里点链接跳走时焦点目标可能是旧元素 */
+          if (lastFocus && document.contains(lastFocus)) lastFocus.focus()
+          lastFocus = null
+        }
+
+        /* Tab 在面板里循环。Shift+Tab 从第一个回到最后一个，Tab 从最后一个回到第一个。 */
+        layer.addEventListener('keydown', (e) => {
+          if (e.key !== 'Tab') return
+          const list = focusables()
+          if (!list.length) return
+          const first = list[0]
+          const last = list[list.length - 1]
+          if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault()
+            last.focus()
+          } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault()
+            first.focus()
+          }
+        })
+
+        document.addEventListener('click', (e) => {
+          if (e.target.closest('[data-search-open]')) {
+            e.preventDefault()
+            layer.hidden ? open() : close()
+            return
+          }
+          if (e.target.closest('[data-search-close]')) {
+            e.preventDefault()
+            close()
+          }
+        })
+
+        document.addEventListener('keydown', (e) => {
+          const open_ = !layer.hidden
+
+          if (e.key === 'Escape' && open_) {
+            close()
+            return
+          }
+          if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+            e.preventDefault()
+            open_ ? close() : open()
+            return
+          }
+          if (e.key === '/' && !open_ && !isTyping(e.target) && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            e.preventDefault()
+            open()
+          }
+        })
+
+        /* 上下键在结果里走 */
+        input.addEventListener('keydown', (e) => {
+          if (e.key !== 'ArrowDown') return
+          e.preventDefault()
+          body.querySelector('a')?.focus()
+        })
+        body.addEventListener('keydown', (e) => {
+          const links = [...body.querySelectorAll('a')]
+          const i = links.indexOf(document.activeElement)
+          if (e.key === 'ArrowDown') {
+            e.preventDefault()
+            links[Math.min(i + 1, links.length - 1)]?.focus()
+          } else if (e.key === 'ArrowUp') {
+            e.preventDefault()
+            i <= 0 ? input.focus() : links[i - 1].focus()
+          }
+        })
+      })()
+    </script><script>
+      // 主题切换：写 data-theme + 地址栏染色 + 记住选择 + 告诉读屏
+      ;(() => {
+        const btn = document.getElementById('theme-toggle')
+        if (!btn) return
+        const status = document.querySelector('[data-theme-status]')
+
+        /* 初值：<head> 里那段脚本已经把最终主题写进 data-theme 了，
+           这里只负责让按钮的 aria-pressed 跟它对齐（不能写死在 HTML 里 ——
+           首屏主题有一半概率来自系统偏好，服务端并不知道）。 */
+        const sync = (theme) => {
+          btn.setAttribute('aria-pressed', theme === 'dark' ? 'true' : 'false')
+        }
+        sync(document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light')
+
+        btn.addEventListener('click', () => {
+          const root = document.documentElement
+          const next = root.dataset.theme === 'dark' ? 'light' : 'dark'
+          root.dataset.theme = next
+          /* 地址栏跟着变，否则在深色系统里手动切到浅色后，浏览器顶上还是深色 */
+          document
+            .querySelector('meta[data-theme-color]')
+            ?.setAttribute('content', next === 'dark' ? '#0d1117' : '#f6f7f9')
+          sync(next)
+          try {
+            localStorage.setItem('theme', next)
+          } catch {
+            /* 忽略 */
+          }
+          /* 播报结果。先清空再写，是为了让"浅→深→浅"这种连续切换每次都念 ——
+             内容没变化时 aria-live 不会重复播报。 */
+          if (status) {
+            status.textContent = ''
+            requestAnimationFrame(() => {
+              status.textContent = next === 'dark' ? '已切换到深色主题' : '已切换到浅色主题'
+            })
+          }
+        })
+      })()
+    </script><script>
+          /* 两个小动作（关掉不影响阅读）：
+             1) 顶部的阅读进度线 → 往 .read-progress 上写 --p
+             2) 侧栏目录的滚动高亮 → 给当前章节的链接打 aria-current="true"
+             2026-10-19 第二版：删掉了「指针跟随的镜面高光」。
+             背景从彩色极光换成纸 + 单色暗记之后，那圈白斑在纸上没有任何东西可以反射，
+             只剩一层脏雾 —— 与其留着凑数，不如不要。 */
+          ;(() => {
+            const root = document.documentElement
+
+            /* ---------- 1. 阅读进度 ---------- */
+            const bar = document.querySelector('.read-progress')
+            if (bar) {
+              let raf2 = 0
+              const calc = () => {
+                raf2 = 0
+                const max = root.scrollHeight - root.clientHeight
+                const p = max > 0 ? Math.min(1, Math.max(0, root.scrollTop / max)) : 0
+                bar.style.setProperty('--p', p.toFixed(4))
+              }
+              addEventListener(
+                'scroll',
+                () => {
+                  if (!raf2) raf2 = requestAnimationFrame(calc)
+                },
+                { passive: true },
+              )
+              addEventListener('resize', calc, { passive: true })
+              calc()
+            }
+
+            /* ---------- 2. 目录滚动高亮 ---------- */
+            const links = [...document.querySelectorAll('.side nav a[href^="#"]')]
+            const targets = links
+              .map((a) => ({ a, el: document.getElementById(decodeURIComponent(a.hash.slice(1))) }))
+              .filter((x) => x.el)
+            if (targets.length && 'IntersectionObserver' in window) {
+              const setActive = (a) => {
+                for (const { a: l } of targets) l.removeAttribute('aria-current')
+                if (a) a.setAttribute('aria-current', 'true')
+              }
+              const visible = new Set()
+              const io = new IntersectionObserver(
+                (entries) => {
+                  for (const en of entries) {
+                    const hit = targets.find((t) => t.el === en.target)
+                    if (!hit) continue
+                    if (en.isIntersecting) visible.add(hit.a)
+                    else visible.delete(hit.a)
+                  }
+                  /* 同时有多个章节在视口里时，取文档顺序最靠前的那个 —— 与阅读方向一致 */
+                  setActive(links.find((l) => visible.has(l)) || null)
+                },
+                /* 顶部留出吸顶页头的高度，底部只认 30%：这样"刚滚到"就算当前章 */
+                { rootMargin: '-84px 0px -70% 0px', threshold: 0 },
+              )
+              for (const t of targets) io.observe(t.el)
+            }
+          })()
+        </script></body></html>

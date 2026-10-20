@@ -1,0 +1,1088 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Marathon 美术风格拆解与 UE5 复刻流程 · JINJIARAN</title><meta name="description" content="从 2,313 个网格与 14,654 张贴图的实测数据反推《Marathon》的图形写实风格：七条风格判据、资产预算表、模块化规范与 trim sheet 工作流，以及 UE5 侧的关键开关。"><link rel="canonical" href="https://jinjiaran.com/docs/marathon-art-style/"><!--
+      图标组（2026-10-21：换成 R 标）。
+      由 `node tmp/make-brand-icons.mjs` 从矢量化的 R 生成，别手工换图。
+      · favicon.svg —— 深底圆角块 + 白色 R。**深底不是装饰**：标签栏底色不可控
+        （浅色主题浅灰 / 深色主题近黑），透明底的黑 R 在深色标签栏上会整块消失。
+      · favicon.ico —— 16/24/32/48 四档**各自原生渲染**后拼成（不是缩出来的），
+        老浏览器、收藏夹、各类爬虫要的就是它。
+      · apple-touch-icon —— 180×180 **满幅方角、不透明**：圆角与遮罩由 iOS 自己套。
+      · site.webmanifest —— Android/Chrome「添加到主屏幕」用，带 192/512 两档。
+      顺序：SVG 在前（首选），ICO 兜底。
+    --><link rel="icon" type="image/svg+xml" href="/favicon.svg"><link rel="icon" type="image/x-icon" href="/favicon.ico" sizes="16x16 24x24 32x32 48x48"><link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180"><link rel="manifest" href="/site.webmanifest"><meta name="generator" content="Astro v7.3.2"><meta property="og:type" content="website"><meta property="og:site_name" content="JINJIARAN"><meta property="og:title" content="Marathon 美术风格拆解与 UE5 复刻流程 · JINJIARAN"><meta property="og:description" content="从 2,313 个网格与 14,654 张贴图的实测数据反推《Marathon》的图形写实风格：七条风格判据、资产预算表、模块化规范与 trim sheet 工作流，以及 UE5 侧的关键开关。"><meta property="og:url" content="https://jinjiaran.com/docs/marathon-art-style/"><!--
+      社交卡片图（2026-10-19 补）。之前全站没有任何 og:image，分享出去的链接是纯文字。
+      图是 public/og.png（1200×630，站点深底 + 品牌标），由 scripts/make-og.mjs 生成，
+      改文案/换标就重跑那个脚本，不要手工改图。
+      宽高必须写：部分抓取方（含微信/Twitter）会按它预留版位，缺了会裁得很难看。
+    --><meta property="og:image" content="https://jinjiaran.com/og.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="JINJIARAN · 个人作品站"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://jinjiaran.com/og.png"><!--
+      移动端浏览器地址栏染色。**只放一个 meta**，由下面那段内联脚本按最终主题
+      改 content —— 站内的主题是「手动切换 + data-theme」，不是跟随系统，
+      用两条 media 查询会跟用户手动选的打架。
+    --><meta name="theme-color" content="#f6f7f9" data-theme-color><script>
+      // 在首次绘制前定好主题，避免闪白；顺手把地址栏颜色定下来
+      ;(() => {
+        /* 先算出最终主题，再写 data-theme —— 两件事分开做，
+           是因为 localStorage 在隐私模式下会抛异常，旧写法里抛了就整段跳过。 */
+        let theme = 'light'
+        try {
+          const saved = localStorage.getItem('theme')
+          theme =
+            saved === 'light' || saved === 'dark'
+              ? saved
+              : window.matchMedia('(prefers-color-scheme: dark)').matches
+                ? 'dark'
+                : 'light'
+        } catch {
+          theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+        }
+        document.documentElement.dataset.theme = theme
+
+        const meta = document.querySelector('meta[data-theme-color]')
+        if (meta) meta.setAttribute('content', theme === 'dark' ? '#0d1117' : '#f6f7f9')
+      })()
+    </script><link rel="stylesheet" href="/_astro/BaseLayout.CKlrZbNO.css"><style>.doc-meta[data-astro-cid-wyaoh547]{color:var(--fg-3);flex-wrap:wrap;align-items:center;gap:8px;margin:16px 0 0;font-size:12.5px;display:flex}.dot[data-astro-cid-wyaoh547]{opacity:.5}.doc-layout[data-astro-cid-wyaoh547]{grid-template-columns:232px minmax(0,1fr);align-items:start;gap:40px;display:grid}.side[data-astro-cid-wyaoh547]{max-height:calc(100vh - 100px);position:sticky;top:80px;overflow-y:auto}.side-label[data-astro-cid-wyaoh547]{letter-spacing:.12em;text-transform:uppercase;color:var(--fg-3);margin:0 0 10px;font-size:11px}.side[data-astro-cid-wyaoh547] nav[data-astro-cid-wyaoh547]{flex-direction:column;gap:2px;display:flex}.side[data-astro-cid-wyaoh547] a[data-astro-cid-wyaoh547]{border-radius:var(--radius-sm);color:var(--fg-2);gap:8px;padding:5px 8px;font-size:12.5px;line-height:1.5;text-decoration:none;transition:background .15s,color .15s;display:flex}.side[data-astro-cid-wyaoh547] a[data-astro-cid-wyaoh547]:hover{background:var(--surface-2);color:var(--fg)}.num[data-astro-cid-wyaoh547]{color:var(--fg-3);font-variant-numeric:tabular-nums;flex:none}@media (width<=860px){.doc-layout[data-astro-cid-wyaoh547]{grid-template-columns:minmax(0,1fr);gap:0}.side[data-astro-cid-wyaoh547]{border-bottom:1px solid var(--line);max-height:none;margin-bottom:26px;padding-bottom:18px;position:static}}
+</style><script type="module" src="/_astro/page.CQWjsXKf.js"></script></head><body class="glass"><div class="backdrop" aria-hidden="true"><i class="mark"></i><i class="grid"></i></div><div class="read-progress" aria-hidden="true"></div><a class="skip-link" href="#main">跳到主内容</a><header class="site-header"><div class="wrap"><a class="brand" href="/"><svg class="mark" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 524 438"><path fill="currentColor" fill-rule="evenodd" d="M416.82 435.14C401.57 430.1 389.97 420.04 326.46 356.8C296.19 326.66 271.11 302 270.71 302C270.32 302 270 305.17 270 309.04C270 325.19 266.58 345.78 262.45 354.51C255.61 368.97 239.01 381.19 219 386.5C209.37 389.05 184.12 389.66 172.36 387.62C134.98 381.14 105.07 359.07 93.9 329.73C92.7 326.56 91.89 323.77 92.12 323.55C92.35 323.32 95.67 323.54 99.52 324.04C109.01 325.26 124.12 325.21 132 323.93C141.17 322.44 145.84 319.58 148.95 313.53L151.5 308.56L151.81 272.78L152.12 237L132.31 236.97C105.96 236.93 68.66 235.43 57.5 233.96C32.51 230.67 18.83 221.26 8.86 200.5C3.37 189.06 0.95 178.74 0.29 164C-1.78 117.22 20.72 76.49 57.46 60.54C61.84 58.64 65.56 57.23 65.73 57.39C65.9 57.56 65.56 63.06 64.98 69.6C63.25 89.16 65.33 104.68 70.52 110.84C71.9 112.48 75.16 114.64 77.76 115.64C82.12 117.3 87.25 117.47 141 117.7C198.58 117.94 199.41 117.91 194 116.14C184.03 112.87 177.68 108.9 169.91 101.11C155.15 86.31 149.34 67.33 153.5 47.5C157.85 26.81 174.05 9.13 194.5 2.75C204.23 -0.28 218.77 -0.28 228.5 2.75C253.04 10.4 270.97 34.35 270.97 59.5C270.97 84.6 253.48 108.19 229 116.11C223.57 117.87 224.17 117.89 274.6 117.95C330.81 118.01 346.08 118.82 360.71 122.53C388.99 129.7 411.57 149.04 419.41 172.81C426.33 193.77 425.17 212.89 415.83 232C412.46 238.88 410.01 242.14 402.95 249.15L394.22 257.79L425.86 289.28C461.17 324.42 463.99 326.58 473.64 325.78C477.54 325.46 480.31 324.42 484.3 321.77C490.34 317.75 503.89 304.49 509.63 296.96C511.71 294.23 513.7 292 514.05 292C514.92 292 519.59 304.17 521.52 311.5C527.78 335.19 521.31 366.33 505.14 390.29C490.96 411.31 472.31 426.78 452.87 433.64C442.77 437.2 425.28 437.93 416.82 435.14ZM293.41 220.59C301.72 216.52 304.4 212.05 304.85 201.48C305.27 191.48 302.79 184.69 296.87 179.62C292 175.45 287.15 174 278.13 174L271 174L271 199.13L271 224.25L279.36 223.81C285.87 223.47 288.97 222.76 293.41 220.59Z"/></svg>
+<span>JINJIARAN<span class="sub"> · 个人作品站</span></span></a><nav class="nav" aria-label="主导航"><a href="/?browse=1">首页</a><a href="/projects">项目</a><a href="/gallery">图片</a><a href="/videos">视频</a><a href="/docs" aria-current="page">文档</a><a href="/models">模型</a><a href="/tools">工具</a><a href="/about">关于</a></nav><button class="icon-btn" type="button" data-search-open aria-label="站内搜索" title="搜索（按 / ）" aria-expanded="false" aria-controls="site-search" data-astro-cid-av774hkb><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" data-astro-cid-av774hkb><circle cx="11" cy="11" r="7" data-astro-cid-av774hkb></circle><path d="m20 20-3.5-3.5" data-astro-cid-av774hkb></path></svg></button><button class="icon-btn" id="theme-toggle" type="button" aria-label="切换深浅色主题" aria-pressed="false"><svg class="sun" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"></path></svg><svg class="moon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"></path></svg></button><!--
+          主题切换的状态播报（2026-10-19 审计 D3）。
+          按钮本身只管"按下去了没有"（aria-pressed），**说不清现在是什么主题** ——
+          读屏用户听到"切换深浅色主题，已按下"，还是不知道屏幕上到底变深了还是变浅了。
+          所以另起一个 role="status" 的区域，切换后把结果念出来。
+          role="status" 自带 aria-live="polite"；这里两个都写，是为了兼容只认其一的读屏。
+          它必须常驻 DOM（不能切换时才插入），否则播报不会触发。
+        --><p class="sr-only" role="status" aria-live="polite" data-theme-status></p></div></header><main id="main" data-pagefind-body><header class="page-head is-tight"><div class="wrap"><nav class="crumb" aria-label="面包屑"><a href="/docs">文档</a><span aria-hidden="true">/</span><span>Marathon 美术风格拆解与 UE5 复刻流程</span></nav><h1>Marathon 美术风格拆解与 UE5 复刻流程</h1><p class="lede">从 2,313 个网格与 14,654 张贴图的实测数据反推《Marathon》的图形写实风格：七条风格判据、资产预算表、模块化规范与 trim sheet 工作流，以及 UE5 侧的关键开关。</p><div class="doc-meta" data-astro-cid-wyaoh547><span class="chip" data-astro-cid-wyaoh547>Markdown</span><span data-astro-cid-wyaoh547>仅在线阅读，不提供下载</span><span class="dot" aria-hidden="true" data-astro-cid-wyaoh547>·</span><span data-astro-cid-wyaoh547>2026/10/14 更新</span><span class="chip" data-astro-cid-wyaoh547>Marathon</span><span class="chip" data-astro-cid-wyaoh547>美术风格</span><span class="chip" data-astro-cid-wyaoh547>UE5</span><span class="chip" data-astro-cid-wyaoh547>模块化</span><span class="chip" data-astro-cid-wyaoh547>Trim Sheet</span></div></div></header><div class="wrap" style="padding-block:34px 0" data-astro-cid-wyaoh547><div class="doc-layout" data-astro-cid-wyaoh547><aside class="side" data-astro-cid-wyaoh547><p class="side-label" data-astro-cid-wyaoh547>目录</p><nav data-astro-cid-wyaoh547><a href="#0-一句话结论" data-astro-cid-wyaoh547><span class="num" data-astro-cid-wyaoh547>01</span>0. 一句话结论</a><a href="#1-方法与口径" data-astro-cid-wyaoh547><span class="num" data-astro-cid-wyaoh547>02</span>1. 方法与口径</a><a href="#2-风格拆解从实测数据反推图形写实" data-astro-cid-wyaoh547><span class="num" data-astro-cid-wyaoh547>03</span>2. 风格拆解：从实测数据反推「图形写实」</a><a href="#3-资产预算表先定再建模不要事后砍" data-astro-cid-wyaoh547><span class="num" data-astro-cid-wyaoh547>04</span>3. 资产预算表（先定再建模，不要事后砍）</a><a href="#4-模块化规范" data-astro-cid-wyaoh547><span class="num" data-astro-cid-wyaoh547>05</span>4. 模块化规范</a><a href="#5-材质与贴图流程复刻的核心" data-astro-cid-wyaoh547><span class="num" data-astro-cid-wyaoh547>06</span>5. 材质与贴图流程（复刻的核心）</a><a href="#6-ue5-侧关键开关逐条对应实测" data-astro-cid-wyaoh547><span class="num" data-astro-cid-wyaoh547>07</span>6. UE5 侧关键开关（逐条对应实测）</a><a href="#7-场景搭建" data-astro-cid-wyaoh547><span class="num" data-astro-cid-wyaoh547>08</span>7. 场景搭建</a><a href="#8-后处理定调图形感从这来" data-astro-cid-wyaoh547><span class="num" data-astro-cid-wyaoh547>09</span>8. 后处理定调（“图形感”从这来）</a><a href="#9-五阶段流程与验收标准" data-astro-cid-wyaoh547><span class="num" data-astro-cid-wyaoh547>10</span>9. 五阶段流程与验收标准</a><a href="#10-出处与数据索引" data-astro-cid-wyaoh547><span class="num" data-astro-cid-wyaoh547>11</span>10. 出处与数据索引</a></nav></aside><article class="prose glass-sheet" data-docmode="readonly" style="--i:1" data-astro-cid-wyaoh547><!--
+  这篇是 scripts/sync-docs.mjs 从 docs/Marathon美术风格拆解.md 生成的，不要直接改这里。
+  要改内容请改源文档，然后跑：pnpm docs:sync
+-->
+<blockquote>
+<p>这份文档只回答一个问题：<strong>《Marathon》(2025) 那种「图形写实主义」的美术风格，拆开来看究竟是什么，在 UE5 里怎么用同样的路子做出来？</strong></p>
+<p>全部结论来自对本机真实安装包的实测 —— <code>.pkg</code> 解析、2,313 个网格与 14,654 张贴图的逐条统计、66 万条场景实例的还原。<strong>不是经验之谈，也不是对官方分享的复述</strong>：文中的每一个预算数字都能追到一个实测分位数，出处见 §10。</p>
+<p>游戏目录全程只读：只做包解析，不写盘、不注入进程。</p>
+</blockquote>
+<hr>
+<h2 id="0-一句话结论">0. 一句话结论</h2>
+<blockquote>
+<p><strong>风格的关键不在 shader，在「模块化套件 + trim sheet + 大色块 + 后处理定调」。</strong></p>
+<p>原包数据本身就证明了这点：<strong>工程量约 80% 在规范与资产组织，只有 20% 在材质。</strong>
+如果你把主要精力花在写复杂 shader 上，方向就已经错了。</p>
+</blockquote>
+<p>反过来说也一样成立：在 UE5 里堆法线细节、堆高频噪声、堆金属反射，会立刻把画面拉向「写实向」，和最省力也最有效的做法背道而驰。</p>
+<hr>
+<h2 id="1-方法与口径">1. 方法与口径</h2>
+<p>后面的数字要能被检验，所以先交代数据是怎么来的。</p>
+<table>
+<thead>
+<tr>
+<th>项</th>
+<th>数量</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>包文件（<code>.pkg</code>，引擎 Bungie Tiger / goliath，version 53）</td>
+<td>646 个</td>
+</tr>
+<tr>
+<td>已结构化索引</td>
+<td>148 个（1,011,346 条目）</td>
+</tr>
+<tr>
+<td>导出贴图</td>
+<td><strong>14,654</strong> 张 PNG（6.27 GB）</td>
+</tr>
+<tr>
+<td>导出网格</td>
+<td><strong>2,313</strong> 个 OBJ（2.28 GB）</td>
+</tr>
+<tr>
+<td>网格合计几何</td>
+<td>15,015,436 顶点 / 25,364,476 三角面</td>
+</tr>
+<tr>
+<td>场景实例容器</td>
+<td>12 个（其中 11 个可成功绑定）</td>
+</tr>
+<tr>
+<td>场景实例总数</td>
+<td><strong>662,861</strong> 条，闭合 662,729（<strong>99.98%</strong>）</td>
+</tr>
+</tbody>
+</table>
+<p><strong>三条口径约定</strong>（不说清楚，数字之间就会互相矛盾）：</p>
+<ol>
+<li><strong>「全库 14,654 张」和「9,757 条引用」是两个统计面。</strong> 前者是磁盘上导出的全部贴图；后者是<strong>被 2,313 个网格引用到的那部分</strong>，同一张贴图被多个网格共用会重复计数。本文凡说「sRGB 3,644 张」「BC5 19 条」之类，都是<strong>引用侧</strong>口径。</li>
+<li><strong>面数与分位数都按「单件资产」聚合</strong>，不是按顶点、也不是按场景实例展开后的总量 —— 实例是复用，不该重复计入资产规模。</li>
+<li><strong>几何一律取「还原后的真值」</strong>：顶点按最长轴归一化再加回局部包围盒偏移，对齐残差中位 0.00005；尺寸口径为 1 游戏单位 ≈ 1 m。</li>
+</ol>
+<hr>
+<h2 id="2-风格拆解从实测数据反推图形写实">2. 风格拆解：从实测数据反推「图形写实」</h2>
+<h3 id="21-七条观察--七条结论">2.1 七条观察 → 七条结论</h3>
+<table>
+<thead>
+<tr>
+<th>观察（实测）</th>
+<th>数据</th>
+<th>对风格的含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>UV 挤在窄带</td>
+<td>密度 <code>p90/p10</code> 中位 <strong>9.6</strong>；典型 <code>u ∈ [0.500, 0.521]</code></td>
+<td><strong>大量 trim sheet / 平铺</strong>：造型靠方正大块面，细节由贴图条带承担</td>
+</tr>
+<tr>
+<td>单件面数低</td>
+<td>三角 <code>p50</code> <strong>526</strong>、平均 <strong>1,705</strong></td>
+<td>模块化套件，形状由大平面 + 倒角构成</td>
+</tr>
+<tr>
+<td>实例量巨大</td>
+<td>单图 <strong>24.3 万</strong> 实例 / 全库 <strong>66.3 万</strong></td>
+<td>空间节奏靠<strong>重复构件</strong>，不靠单体雕刻</td>
+</tr>
+<tr>
+<td>主色是绝对主体</td>
+<td>sRGB <strong>3,644</strong> 张（BC7_SRGB 1,521 + BC1_UNORM 2,123）</td>
+<td>信息主要在 albedo，<strong>不在法线高频</strong></td>
+</tr>
+<tr>
+<td>单通道灰度成规模</td>
+<td>BC4 <strong>1,195</strong> 张</td>
+<td>粗糙度 / AO 走<strong>大区块</strong>，避免噪声</td>
+</tr>
+<tr>
+<td>HDR 极少</td>
+<td>BC6H 仅 <strong>43</strong> 张</td>
+<td>自发光 / 玻璃是点缀，不是主体</td>
+</tr>
+<tr>
+<td><strong>场景件没有切线流</strong></td>
+<td>stride 16（位置 + 单位四元数），无 tangent</td>
+<td><strong>环境件基本不吃法线贴图</strong> → 形状优先、法线次要</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>这七条合起来，就是「图形写实」的技术定义：
+<strong>大形状 + 平铺色块 + 低频粗糙度 + 克制的高光。</strong></p>
+</blockquote>
+<p>第 7 条值得单独看一眼，因为它最容易被忽略：场景网格的顶点流只有 16 字节 —— 位置（4×i16）之后跟的是<strong>单位四元数</strong>（4 分量模长实测 100% = 1.0000，把局部 +X 轴旋到法线，同向率中位 97.7%），<strong>根本没有切线</strong>。没有切线就没有可靠的切线空间，也就意味着环境件的法线贴图这条路在原包里是关掉的。</p>
+<p>下面这张图就是上面七条的空间形态 —— 一整张地图的等距预览（还原后的几何，不含贴图）：</p>
+<img src="/media/docs/marathon/deck-001-iso.webp" alt="Marathon 关卡等距预览：大面积方正平板与密集重复构件（仅几何）" width="1600" height="900" />
+<p><em>图 1 · 单张地图的几何还原。注意画面重心是<strong>几块大面积平板</strong>（大块面），而它们之间的“信息密度”全部来自<strong>同一批小构件的高频重复</strong> —— 这正是「模块化套件 + 实例重复」的视觉结果，也是 §2.3 要讲的复用策略。</em></p>
+<h3 id="22-它不是传统-pbr">2.2 它不是传统 PBR</h3>
+<p>把「传统 PBR（metal-rough）流程」的每一条特征拿去对，几乎全是负结论：</p>
+<table>
+<thead>
+<tr>
+<th>传统 PBR 特征</th>
+<th>实测</th>
+<th>判定</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>法线贴图是标配（BC5，两通道）</td>
+<td>BC5 <strong>全库仅 16 张 / 引用仅 19 条</strong></td>
+<td>✗</td>
+</tr>
+<tr>
+<td>每顶点有切线（TBN 矩阵）</td>
+<td>场景件 stride 16，<strong>没有切线流</strong></td>
+<td>✗</td>
+</tr>
+<tr>
+<td>网格自带贴图绑定</td>
+<td><strong>24,325 个网格里 0 个</strong>直接引用贴图</td>
+<td>✗</td>
+</tr>
+<tr>
+<td>材质资产含贴图槽</td>
+<td>材质链只到 <strong>DXBC 着色器</strong>，<code>texture_ref</code> 恒为空</td>
+<td>✗</td>
+</tr>
+<tr>
+<td>有成百上千张烘焙 lightmap</td>
+<td>HDR（BC6H）<strong>仅 43 张</strong></td>
+<td>✗</td>
+</tr>
+</tbody>
+</table>
+<p><strong>实际形态是</strong>：<strong>几何静态挂着色器 + 贴图在运行期绑定 + 大色块 / 低频粗糙度</strong>。</p>
+<ul>
+<li><strong>几何：静态直连</strong> —— 实例记录里直接带网格 tag，<code>SStaticMesh +0x08</code> 直指网格数据。<strong>是直接用</strong>。</li>
+<li><strong>着色器：静态直连</strong> —— 每个网格静态挂 <strong>4 个 DXBC 着色器</strong>（中位），全库引用 1,645 个去重着色器。<strong>是直接用</strong>，但它是 <strong>D3D 字节码，不能移植</strong> —— 只能当“它在做什么”的参考，材质必须重写。</li>
+<li><strong>贴图：运行期绑定</strong> —— 数据层<strong>没有</strong>网格↔贴图绑定（<code>0 / 24325</code>）。贴图是运行期靠参数挂上去的。</li>
+</ul>
+<blockquote>
+<p>这也解释了为什么这个风格看起来“更简单”：<strong>简单不是省事的结果，是复用策略的结果。</strong></p>
+</blockquote>
+<h3 id="23-原理复用的三个乘数">2.3 原理：复用的三个乘数</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>视觉变化 = 几何复用(实例变换) × 贴图复用(UV 子区) × 外观复用(每实例参数)</span></span>
+<span class="line"><span>成本只按「1 份」计</span></span></code></pre>
+<ul>
+<li><strong>为什么省</strong>：真正的瓶颈是 draw call 与带宽。实测 <strong>1,645 个着色器 + 24,301 个网格 + 9,757 条贴图引用</strong>，撑起了 <strong>66.3 万条实例</strong> —— 这就是复用的量级。</li>
+<li><strong>风格是效率约束的审美化</strong>。三条复用手段各自对应一个形状后果：</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>复用手段</th>
+<th>形状后果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>形状通用（模块化套件）</td>
+<td>→ <strong>方正大块面</strong></td>
+</tr>
+<tr>
+<td>UV 分格（trim sheet）</td>
+<td>→ 细节<strong>低频、成条带</strong></td>
+</tr>
+<tr>
+<td>靠参数差异（MI / 实例数据）</td>
+<td>→ <strong>色块与磨损</strong>，而非结构差异</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>代价</strong>：绑定被推迟到运行期，UV 是 trim 域。所以「数据层读不到贴图、读不到 per-draw 缩放」<strong>不是数据缺失，是这套原理的必然结果</strong> —— 在逆向时它是障碍，在制作时它是<strong>设计选择</strong>。</li>
+<li><strong>Nanite 时代</strong>只解决了<strong>几何</strong>那一层（自动量化 + 免 LOD）；<strong>贴图与外观的复用仍然需要</strong> trim sheet + Master Material + Material Instance 来支撑。</li>
+</ul>
+<hr>
+<h2 id="3-资产预算表先定再建模不要事后砍">3. 资产预算表（先定再建模，不要事后砍）</h2>
+<p>预算的作用不是限制，是<strong>让“复用”在开工前就成立</strong>。下面每一行都对应一个实测分位数。</p>
+<h3 id="31-几何">3.1 几何</h3>
+<table>
+<thead>
+<tr>
+<th>资产类型</th>
+<th>三角上限</th>
+<th>贴图</th>
+<th>实测分位依据</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>模块化构件（墙 / 地 / 顶 / 柱）</td>
+<td><strong>2,000</strong></td>
+<td>共享 trim sheet</td>
+<td>p50 526 / p75 1,377</td>
+</tr>
+<tr>
+<td>大型结构件</td>
+<td><strong>8,000</strong></td>
+<td>2048²</td>
+<td>p95 7,298</td>
+</tr>
+<tr>
+<td>Hero prop（近景交互物）</td>
+<td><strong>20,000</strong></td>
+<td>1024² 主色 + 512² 细节</td>
+<td>p99 19,331（极少数）</td>
+</tr>
+<tr>
+<td>小道具 / 装饰</td>
+<td><strong>600</strong></td>
+<td>512² 或共享</td>
+<td>p25 200</td>
+</tr>
+</tbody>
+</table>
+<h3 id="32-贴图">3.2 贴图</h3>
+<table>
+<thead>
+<tr>
+<th>类型</th>
+<th>分辨率</th>
+<th>UE5 Compression</th>
+<th>sRGB</th>
+<th>实测对应</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>主色 Albedo</td>
+<td>1024²</td>
+<td><code>Default</code> 或 <code>BC7</code></td>
+<td>开</td>
+<td>BC7_SRGB 1,521 / BC1_SRGB 2,123</td>
+</tr>
+<tr>
+<td>法线（仅 hero 用）</td>
+<td>1024²</td>
+<td><code>Normalmap</code>（BC5）</td>
+<td>关</td>
+<td>原包 BC5 极少，多为线性 BC7</td>
+</tr>
+<tr>
+<td>Roughness / AO / Mask</td>
+<td>1024²</td>
+<td><code>Masks (no sRGB)</code></td>
+<td>关</td>
+<td>BC4_UNORM 1,195</td>
+</tr>
+<tr>
+<td>Trim sheet</td>
+<td><strong>2048²</strong></td>
+<td><code>BC7</code></td>
+<td>开</td>
+<td>—</td>
+</tr>
+<tr>
+<td>自发光 / HDR</td>
+<td>512²</td>
+<td><code>HDR</code>（BC6H）</td>
+<td>关</td>
+<td>BC6H_UF16 43</td>
+</tr>
+<tr>
+<td>UI / 图标</td>
+<td>实际尺寸</td>
+<td><code>UserInterface2D</code></td>
+<td>开</td>
+<td>R8G8B8A8_SRGB 320</td>
+</tr>
+</tbody>
+</table>
+<h3 id="33-结构与开销">3.3 结构与开销</h3>
+<table>
+<thead>
+<tr>
+<th>项</th>
+<th>预算</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Master Material 数量</td>
+<td><strong>≤ 3 个</strong>（主体 1 个就够）</td>
+</tr>
+<tr>
+<td>单构件材质槽</td>
+<td><strong>1 个</strong>（多槽 = draw call 浪费）</td>
+</tr>
+<tr>
+<td>场景实例数</td>
+<td>单图 10⁵ 量级（原包 24.3 万）</td>
+</tr>
+<tr>
+<td>后处理总开销</td>
+<td>≤ 2 ms</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="4-模块化规范">4. 模块化规范</h2>
+<p>尺度、栅格、pivot、命名这四样必须在<strong>建第一个构件之前</strong>定死；它们是「构件能互换、能吸附、能共享贴图」的前提。</p>
+<table>
+<thead>
+<tr>
+<th>项</th>
+<th>规定</th>
+<th>依据</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>尺度</strong></td>
+<td>1 游戏单位 ≈ <strong>1 m</strong>；UE5 里 ×100（1 m = 100 uu）</td>
+<td>单图跨度实测 1,229 单位（t4_marsh）≈ 1.2 km 量级</td>
+</tr>
+<tr>
+<td><strong>栅格</strong></td>
+<td>基准 <strong>200 uu</strong>；墙高 400 / 600；层高 600；走廊净宽 400 / 600</td>
+<td>单件尺寸量级 ≈ 2 单位 = 200 uu</td>
+</tr>
+<tr>
+<td><strong>Pivot</strong></td>
+<td>统一<strong>底部中心</strong>（墙 / 柱 / 箱）；地砖 / 天花板用<strong>角点</strong></td>
+<td>保证全部可吸附、可平铺</td>
+</tr>
+<tr>
+<td><strong>吸附</strong></td>
+<td>编辑器 Grid Snap = <strong>50</strong>；模块化件吸附到 <strong>200</strong></td>
+<td>—</td>
+</tr>
+<tr>
+<td><strong>命名</strong></td>
+<td><code>SM_&lt;区域&gt;_&lt;类型&gt;_&lt;尺寸&gt;_&lt;变体&gt;</code>，如 <code>SM_Deck_Wall_400_A</code></td>
+<td><strong>原包没有资产名</strong>（tag 是哈希），必须自己定</td>
+</tr>
+<tr>
+<td><strong>碰撞</strong></td>
+<td>模块化件一律 <strong>Simple Collision（盒）</strong>，禁止复杂碰撞</td>
+<td>几十万实例，复杂碰撞必崩</td>
+</tr>
+<tr>
+<td><strong>接缝</strong></td>
+<td>构件边必须落在 grid 上；转角用专门的 90° 件，<strong>不要靠缩放拼</strong></td>
+<td>缩放会破坏 UV 密度与吸附</td>
+</tr>
+</tbody>
+</table>
+<p>下图是这个规范的视觉目标 —— 方正大块面 + 倒角，几乎找不到“雕刻感”的曲面：</p>
+<img src="/media/docs/marathon/outpost-iso.webp" alt="前哨站场景等距预览：大块面构件与倒角" width="1600" height="900" />
+<p><em>图 2 · 前哨站类场景的几何还原。左侧的<strong>方正构件是主体</strong>，中间那团密集的细碎形状是大量小装饰件的堆积 —— 二者用的是同一套栅格与同一张 trim sheet，“复杂”完全是复用堆出来的，不是靠单体精度。</em></p>
+<hr>
+<h2 id="5-材质与贴图流程复刻的核心">5. 材质与贴图流程（复刻的核心）</h2>
+<h3 id="51-master-material--一个就够">5.1 Master Material —— 一个就够</h3>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Texture Object Parameter × 4    T_Base(albedo) / T_Trim / T_Mask / T_Normal</span></span>
+<span class="line"><span>Scalar · Vector Parameter       TrimScale, TintColor, RoughMin/RoughMax</span></span>
+<span class="line"><span>Custom Primitive Data × 4       Tint 偏移 · UV 偏移/缩放 · 磨损强度 · 区域 ID</span></span></code></pre>
+<ul>
+<li><strong>Mask 通道约定</strong>（对齐原包的单通道灰度习惯）：<code>R = Roughness</code>、<code>G = AO</code>、<code>B = Metallic</code></li>
+<li><strong>不给环境件接 Normal 输入</strong> —— 原包场景件没有切线流（见 §2.1 第 7 条）</li>
+<li>需要<strong>每实例差异</strong>（颜色 / 磨损 / UV 偏移）时走 <strong>Custom Primitive Data</strong>，<strong>不要</strong>为每个变体做一份新材质</li>
+</ul>
+<h3 id="52-trim-sheet-工作流">5.2 Trim Sheet 工作流</h3>
+<p>这是复刻里最核心的一件事，四步：</p>
+<ol>
+<li>做 <strong>1 张 2048²</strong> trim sheet，切 <strong>8~16 条材质带</strong>（金属 / 混凝土 / 警示条 / 格栅 / 线缆…）</li>
+<li>每个构件的 UV <strong>只映射到其中几条带</strong>内 → 全场景共享 <strong>1 张</strong>贴图</li>
+<li>大面积表面（地板 / 长墙）用<strong>平铺</strong>（UV 超出 0–1，Wrap 采样）</li>
+<li>结果：显存与 draw call 都压到极低，而且<strong>天然产生“色块化”的图形感</strong></li>
+</ol>
+<blockquote>
+<p>原包实测就是这个模式的铁证：多个网格的 UV 恰好从 <code>u = 0.500</code> 起始、区间只有 <strong>0.02</strong> 宽 —— 这就是一条 trim 带。</p>
+</blockquote>
+<img src="/media/docs/marathon/kit-piece.webp" alt="模块化构件的四联图：几何 / 贴图渲染 / UV 压图 / 主色贴图" width="640" height="640" />
+<p><em>图 3 · 一个模块化构件的四联证据图。<strong>上左</strong>几何（方正 + 倒角）；<strong>上右</strong>贴上主色后的样子 —— 注意是<strong>大色块</strong>而非结构细节；<strong>下左</strong> UV 压图：整套 UV 只占了贴图<strong>一个很小的角落</strong>，大面积区域完全空着，这正是“UV 是 trim 域、不是 0–1 展开”的直接证据；<strong>下右</strong>主色贴图本身。</em></p>
+<img src="/media/docs/marathon/uv-atlas.webp" alt="角色装备的 UV 压图：绿色线框落在图集式贴图的条带上" width="1024" height="1024" />
+<p><em>图 4 · 同一原理用在角色 / 装备上：UV 是被<strong>排布到贴图条带里</strong>的（绿色线框 = 三角面投影），而不是自由展开。这也是为什么“把原包 UV 当 0–1 展开来用”一定不对。</em></p>
+<blockquote>
+<p>图 1~4 都是从游戏资产还原出来的几何渲染，只作技术分析示意，不构成任何可复用资产。</p>
+</blockquote>
+<h3 id="53-用-mi-替代运行期贴图绑定">5.3 用 MI 替代“运行期贴图绑定”</h3>
+<p>原包的做法是「<strong>网格上静态挂 4 个 DXBC 着色器 + 贴图在运行期给</strong>」（实测：24,325 个网格里 <strong>0 个</strong>直接引用贴图）。在 UE5 里的正确对应<strong>不是</strong>去搞 per-draw 常量缓冲，而是：</p>
+<blockquote>
+<p><strong>1 个 Master Material + N 个 Material Instance</strong>（每个 MI 只换 Texture 参数）</p>
+</blockquote>
+<p>一个 shader 家族覆盖全场景，MI 之间的差异只产生常量差异 —— 这正是原包那种“共享着色器”的做法，而且完全绕开了不可移植的 DXBC。</p>
+<hr>
+<h2 id="6-ue5-侧关键开关逐条对应实测">6. UE5 侧关键开关（逐条对应实测）</h2>
+<table>
+<thead>
+<tr>
+<th>复刻目标（原包实测）</th>
+<th>UE5 里怎么设</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>顶点 i16 量化 + 四元数法线</td>
+<td><strong>Nanite</strong>（自动量化 + 顶点去重），<strong>不要手搓</strong></td>
+</tr>
+<tr>
+<td>UV 是 u16</td>
+<td>Static Mesh Build Settings：<code>Use Full Precision UVs</code> <strong>保持关闭</strong></td>
+</tr>
+<tr>
+<td>单段索引 / 无 LOD 链</td>
+<td>场景件走 Nanite（免 LOD）；非 Nanite 件<strong>必须</strong>生成 Auto LOD</td>
+</tr>
+<tr>
+<td>每网格静态挂 4 个 shader</td>
+<td><strong>1 Master Material + 大量 MI</strong></td>
+</tr>
+<tr>
+<td>贴图运行期绑定</td>
+<td>Material Instance 的 Texture 参数</td>
+</tr>
+<tr>
+<td>per-draw UV 缩放 / 偏移</td>
+<td><strong>Per-Instance Custom Data / Custom Primitive Data</strong></td>
+</tr>
+<tr>
+<td>66 万实例</td>
+<td><strong>HISM / PCG</strong>；大世界加 <strong>World Partition + HLOD</strong></td>
+</tr>
+<tr>
+<td>环境件无切线</td>
+<td>环境材质<strong>不接 Normal</strong>，用 Cavity / AO 撑形状</td>
+</tr>
+<tr>
+<td>BC4 单通道灰度</td>
+<td>Compression = <code>Masks (no sRGB)</code>，或打包 ORM</td>
+</tr>
+<tr>
+<td>BC6H HDR</td>
+<td>Compression = <code>HDR</code></td>
+</tr>
+<tr>
+<td>海量 1024² 贴图</td>
+<td>上 <strong>Streaming Virtual Texture (SVT)</strong>，别全常驻</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>⚠️ Nanite 对 WPO / 遮罩 / 半透明的支持随版本变化，逐项在目标版本上确认；本文讨论的静态构件不受影响。</p>
+</blockquote>
+<hr>
+<h2 id="7-场景搭建">7. 场景搭建</h2>
+<p>三档分工，各管一类东西：</p>
+<table>
+<thead>
+<tr>
+<th>手段</th>
+<th>铺什么</th>
+<th>规模</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>HISM</strong></td>
+<td>固定重复构件（墙 / 地 / 柱 / 箱）</td>
+<td>几十万实例</td>
+</tr>
+<tr>
+<td><strong>PCG</strong>（5.2+）</td>
+<td>随机 / 衰减类（碎石、设备、线缆、杂物）；<strong>spline 模式</strong>做管线与走廊排布</td>
+<td>长条构件尤其对口（原包大量存在）</td>
+</tr>
+<tr>
+<td><strong>手工</strong></td>
+<td>只放 hero 与关卡节拍点</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>World Partition</strong>：按 <strong>200 m</strong> 分格（1.2 km 地图 ≈ 6×6 格）</li>
+<li><strong>光照</strong>：直接用 <strong>Lumen</strong>。
+<blockquote>
+<p>依据：原包 HDR 贴图只有 <strong>43 张</strong> —— 不太可能是大规模烘焙 lightmap（那会产出成百上千张），更像动态 GI + 稀疏的 HDR 数据。所以<strong>没有“必须烘焙”的理由</strong>。</p>
+</blockquote>
+</li>
+</ul>
+<hr>
+<h2 id="8-后处理定调图形感从这来">8. 后处理定调（“图形感”从这来）</h2>
+<p>Post Process Volume 上逐项定：</p>
+<table>
+<thead>
+<tr>
+<th>项</th>
+<th>建议</th>
+<th>理由</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Color Grading</td>
+<td>挂 <strong>LUT</strong>（DaVinci / PS 里做，导出 3D LUT）</td>
+<td>一次定死全片色调</td>
+</tr>
+<tr>
+<td>Bloom</td>
+<td><strong>收窄 + 降强度</strong></td>
+<td>图形感的关键：高光<strong>不要糊开</strong></td>
+</tr>
+<tr>
+<td>Film Grain</td>
+<td><strong>关</strong></td>
+<td>颗粒会立刻把画面拉向写实</td>
+</tr>
+<tr>
+<td>Chromatic Aberration</td>
+<td>≤ 0.2</td>
+<td>微量即可</td>
+</tr>
+<tr>
+<td>Vignette</td>
+<td>轻</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Tone Curve</td>
+<td>拉一点对比</td>
+<td>配合大色块</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>需要描边 / 边缘光时，用 <strong>Post Process Material（Blendable）</strong> 做深度 + 法线边缘检测。<strong>不要</strong>在每个材质里塞 Fresnel —— 那会破坏批处理，也会让风格变“脏”。</li>
+<li>材质端：Roughness 走 <strong>trim sheet 区块化</strong>，避免高频纹理噪声。</li>
+</ul>
+<hr>
+<h2 id="9-五阶段流程与验收标准">9. 五阶段流程与验收标准</h2>
+<table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>产出</th>
+<th>验收（达到才算过）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>1. 定规格</strong></td>
+<td>本文档落成团队约定 + UE5 导入预设（Interchange）+ 命名 / grid</td>
+<td>新导入的资产<strong>自动</strong>带对压缩设置与 16-bit UV，不用手改</td>
+</tr>
+<tr>
+<td><strong>2. 先做材质</strong></td>
+<td>1 个 Master Material + 1 张 2048² trim sheet + 1 张通用法线</td>
+<td>用 <strong>3 个 MI</strong> 就能铺满一整面墙，且 draw call 不随构件数增长</td>
+</tr>
+<tr>
+<td><strong>3. 建套件</strong></td>
+<td>30~60 个模块化构件（墙 / 地 / 顶 / 柱 / 管 / 箱）</td>
+<td>全部 Nanite、共享 trim、pivot 可吸附、单件 ≤ 2000 三角</td>
+</tr>
+<tr>
+<td><strong>4. 铺场景</strong></td>
+<td>HISM / PCG 铺满 + World Partition</td>
+<td>目标规模下 60 fps；实例数 ≥ 10⁵ 仍不卡</td>
+</tr>
+<tr>
+<td><strong>5. 定调压测</strong></td>
+<td>LUT + 后处理 + GPU Profiler top-5</td>
+<td>后处理开销 ≤ 2 ms；shader 复杂度图无红区</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>顺序不能换：先材质后建模。</strong> trim sheet 的条带决定了构件该怎么切 UV；反过来做的话，套件建完还要回去重展 UV —— 这正是 §2.3 那个“复用”结构对流程顺序的硬约束。</p>
+</blockquote>
+<hr>
+<h2 id="10-出处与数据索引">10. 出处与数据索引</h2>
+<p>本文的每一条结论都有对应档案。档案是逆向工作过程的原始记录，保存在本地工作区，不随本文发布。</p>
+<table>
+<thead>
+<tr>
+<th>本文位置</th>
+<th>结论来源</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>§1 规模总表</td>
+<td><code>项目全貌.md</code> §1.2</td>
+</tr>
+<tr>
+<td>§2.1 七条观察</td>
+<td><code>UE5风格复刻规格书.md</code> §1；UV/顶点侧另有 <code>配套场景/场景结构解析.md</code> §3.4</td>
+</tr>
+<tr>
+<td>§2.2 非传统 PBR</td>
+<td><code>项目全貌.md</code> §7.1 / §7.2、§8.1 负结论汇总</td>
+</tr>
+<tr>
+<td>§2.3 复用的三个乘数</td>
+<td><code>项目全貌.md</code> §7.4</td>
+</tr>
+<tr>
+<td>§3 预算表</td>
+<td><code>UE5风格复刻规格书.md</code> §2（分位数由原包实测反推）</td>
+</tr>
+<tr>
+<td>§4 模块化规范</td>
+<td><code>UE5风格复刻规格书.md</code> §3</td>
+</tr>
+<tr>
+<td>§5 材质流程</td>
+<td><code>UE5风格复刻规格书.md</code> §4；贴图格式分布见 <code>配套/不确定项与统计.md</code>、<code>项目全貌.md</code> §4.1 / §5.11</td>
+</tr>
+<tr>
+<td>§6 UE5 开关</td>
+<td><code>UE5风格复刻规格书.md</code> §5</td>
+</tr>
+<tr>
+<td>§7 场景搭建</td>
+<td><code>UE5风格复刻规格书.md</code> §6；实例/绑定细节见 <code>项目全貌.md</code> §6</td>
+</tr>
+<tr>
+<td>§8 后处理</td>
+<td><code>UE5风格复刻规格书.md</code> §7</td>
+</tr>
+<tr>
+<td>§9 五阶段</td>
+<td><code>UE5风格复刻规格书.md</code> §10</td>
+</tr>
+<tr>
+<td>图 1 / 图 2 出图</td>
+<td><code>配套场景/预览/</code>（等距预览，几何还原）</td>
+</tr>
+<tr>
+<td>图 3 / 图 4 出图</td>
+<td><code>配套/已配对/</code>（网格 × 贴图 × UV 四联与 UV 压图）</td>
+</tr>
+</tbody>
+</table>
+<p><strong>术语对照</strong></p>
+<table>
+<thead>
+<tr>
+<th>词</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>trim sheet</strong></td>
+<td>一张把多种材质按条带排布在同一张贴图上的 texture；构件 UV 只取其中几条带，全场景共享</td>
+</tr>
+<tr>
+<td><strong>模块化套件（modular kit）</strong></td>
+<td>一套按统一栅格与 pivot 制作、可互相拼装的构件集合</td>
+</tr>
+<tr>
+<td><strong>HISM</strong></td>
+<td>Hierarchical Instanced Static Mesh，UE5 的层级实例化静态网格，铺重复构件的首选</td>
+</tr>
+<tr>
+<td><strong>PCG</strong></td>
+<td>Procedural Content Generation，UE5.2+ 的程序化放置框架</td>
+</tr>
+<tr>
+<td><strong>CPD</strong></td>
+<td>Custom Primitive Data，UE5 里给每实例传自定义参数的机制</td>
+</tr>
+<tr>
+<td><strong>DXBC</strong></td>
+<td>D3D DirectX Bytecode，D3D 的着色器字节码；<strong>不可移植到 UE5</strong></td>
+</tr>
+<tr>
+<td><strong>per-draw 常量</strong></td>
+<td>每次绘制调用传的一组常量（原包 <code>(34,1)</code>）；原包中该条目为空，运行期才填</td>
+</tr>
+<tr>
+<td><strong>BC4 / BC5 / BC6H / BC7</strong></td>
+<td>块压缩纹理格式：单通道灰度 / 两通道法线 / HDR / 通用高质</td>
+</tr>
+</tbody>
+</table>
+</article></div></div></main><footer class="site-footer"><div class="wrap row"><p style="margin:0">© 2024–2026  内容版权归作者所有</p><p style="margin:0"><span class="chip">静态站</span><span class="chip" style="margin-left:6px">CDN 直出</span><span class="chip" style="margin-left:6px">0 台服务器</span></p></div></footer><!--
+      搜索面板挂在 </body> 前，不能放进页头：
+      页头有 backdrop-filter，它会让后代里的 position: fixed 以页头为包含块，
+      面板会被裁在页头那条 60px 的带子里。
+    --><div class="search-layer" id="site-search" data-search-layer hidden data-astro-cid-av774hkb><div class="search-backdrop" data-search-close aria-hidden="true" data-astro-cid-av774hkb></div><div class="search-panel" role="dialog" aria-modal="true" aria-label="站内搜索" data-astro-cid-av774hkb><div class="search-bar" data-astro-cid-av774hkb><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" data-astro-cid-av774hkb><circle cx="11" cy="11" r="7" data-astro-cid-av774hkb></circle><path d="m20 20-3.5-3.5" data-astro-cid-av774hkb></path></svg><input type="search" data-search-input placeholder="搜项目、模块、图集、蓝图…" autocomplete="off" spellcheck="false" aria-label="搜索关键词" data-astro-cid-av774hkb><kbd data-astro-cid-av774hkb>Esc</kbd></div><div class="search-body" data-search-body data-astro-cid-av774hkb><p class="search-tip" data-astro-cid-av774hkb>输入关键词开始搜索。按 <b data-astro-cid-av774hkb>/</b> 或 <b data-astro-cid-av774hkb>Ctrl</b>+<b data-astro-cid-av774hkb>K</b> 随时打开。</p></div></div></div><script>
+      ;(() => {
+        const layer = document.querySelector('[data-search-layer]')
+        if (!layer) return
+
+        const input = layer.querySelector('[data-search-input]')
+        const body = layer.querySelector('[data-search-body]')
+        const TIP =
+          '<p class="search-tip">输入关键词开始搜索。按 <b>/</b> 或 <b>Ctrl</b>+<b>K</b> 随时打开。</p>'
+
+        /* ---------------- Pagefind 懒加载 ---------------- */
+        let enginePromise = null
+        const loadEngine = () => {
+          if (!enginePromise) {
+            enginePromise = import('/pagefind/pagefind.js')
+              .then(async (pf) => {
+                try {
+                  await pf.options({ excerptLength: 24 })
+                } catch {
+                  /* 老版本没有 options，忽略 */
+                }
+                return pf
+              })
+              .catch((err) => {
+                enginePromise = null // 允许下次重试
+                throw err
+              })
+          }
+          return enginePromise
+        }
+
+        /* ---------------- 渲染 ---------------- */
+        const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
+
+        const setTip = (html) => {
+          body.innerHTML = html
+        }
+
+        const render = (items, query) => {
+          if (!items.length) {
+            setTip(`<p class="search-tip">没有找到和「${esc(query)}」相关的内容。</p>`)
+            return
+          }
+
+          const ul = document.createElement('ul')
+          ul.className = 'search-list'
+
+          for (const it of items) {
+            const a = document.createElement('a')
+            a.href = it.url || '/'
+
+            const t = document.createElement('span')
+            t.className = 'search-item-title'
+            t.textContent = (it.meta && it.meta.title) || it.url || '未命名'
+            a.append(t)
+
+            if (it.excerpt) {
+              const e = document.createElement('span')
+              e.className = 'search-item-excerpt'
+              // Pagefind 给的片段已经转义过，只有 <mark> 是高亮标签
+              e.innerHTML = it.excerpt
+              a.append(e)
+            }
+
+            const li = document.createElement('li')
+            li.append(a)
+            ul.append(li)
+          }
+
+          body.textContent = ''
+          body.append(ul)
+        }
+
+        /* ---------------- 搜索 ---------------- */
+        let seq = 0
+        const run = async (raw) => {
+          const mine = ++seq
+          const query = raw.trim()
+
+          if (!query) {
+            setTip(TIP)
+            return
+          }
+
+          setTip('<p class="search-tip">搜索中…</p>')
+
+          let pf
+          try {
+            pf = await loadEngine()
+          } catch {
+            setTip(
+              '<p class="search-tip">搜索索引暂时用不了。<br />索引是构建期生成的，' +
+                '<b>本地开发模式（pnpm dev）下没有</b>，跑一次 <b>pnpm build</b> 或 <b>pnpm preview</b> 就有了。</p>',
+            )
+            return
+          }
+          if (mine !== seq) return
+
+          try {
+            const res = await pf.search(query)
+            if (mine !== seq) return
+            const items = await Promise.all(res.results.slice(0, 8).map((r) => r.data()))
+            if (mine !== seq) return
+            render(items, query)
+          } catch {
+            setTip('<p class="search-tip">搜索出错了，换几个词再试试。</p>')
+          }
+        }
+
+        let timer
+        input.addEventListener('input', () => {
+          clearTimeout(timer)
+          timer = setTimeout(() => run(input.value), 130)
+        })
+
+        /* ---------------- 开关 ----------------
+         * 焦点闭环（2026-10-19 审计 D2）。此前的问题：
+         *   · 点开搜索、Esc 关掉之后，焦点落在 <body> 上 —— 键盘用户等于被扔回页首，
+         *     得从头 Tab 一遍才能回到刚才那颗放大镜；
+         *   · Tab 能一路走出面板、跑到页头导航和页脚链接上，而背景还盖着，
+         *     人是"看不见自己在哪"的。
+         *
+         * 做法分两层：
+         *   ① `inert` 给面板以外的所有 body 子节点 —— 一整片区域不可聚焦、不可点、
+         *     读屏也跳过。这是浏览器原生的"这块不参与交互"，比自己数可聚焦元素可靠；
+         *   ② Tab 在面板内显式循环 —— inert 已经挡住了外面的元素，但焦点走到最后
+         *     一个链接后浏览器会把焦点交给地址栏，再 Tab 回来就出了面板。显式兜一圈。
+         */
+        const isTyping = (el) =>
+          el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)
+
+        const trigger = document.querySelector('[data-search-open]')
+        /* 面板以外的所有 body 直接子节点（含 skip-link / header / main / footer）。
+           脚本标签也在里面 —— 给 <script> 设 inert 没有任何副作用。 */
+        const background = () => [...document.body.children].filter((el) => el !== layer)
+
+        /** 记住"打开之前焦点在哪"，关的时候还回去 */
+        let lastFocus = null
+
+        const focusables = () => {
+          const list = [...layer.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])')]
+          /* 结果列表是动态渲染的，用 offsetParent 过滤掉 [hidden] 与非可见项 */
+          return list.filter((el) => el === input || el.offsetParent !== null)
+        }
+
+        const open = () => {
+          lastFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
+          layer.hidden = false
+          document.body.style.overflow = 'hidden'
+          background().forEach((el) => el.setAttribute('inert', ''))
+          trigger?.setAttribute('aria-expanded', 'true')
+          input.focus()
+          input.select()
+          // 打开的那一刻就把索引拉起来，等"输入完再等下载"会显得卡
+          loadEngine().catch(() => {})
+        }
+
+        const close = () => {
+          layer.hidden = true
+          document.body.style.overflow = ''
+          background().forEach((el) => el.removeAttribute('inert'))
+          trigger?.setAttribute('aria-expanded', 'false')
+          /* 还焦点之前确认它还在文档里 —— 面板里点链接跳走时焦点目标可能是旧元素 */
+          if (lastFocus && document.contains(lastFocus)) lastFocus.focus()
+          lastFocus = null
+        }
+
+        /* Tab 在面板里循环。Shift+Tab 从第一个回到最后一个，Tab 从最后一个回到第一个。 */
+        layer.addEventListener('keydown', (e) => {
+          if (e.key !== 'Tab') return
+          const list = focusables()
+          if (!list.length) return
+          const first = list[0]
+          const last = list[list.length - 1]
+          if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault()
+            last.focus()
+          } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault()
+            first.focus()
+          }
+        })
+
+        document.addEventListener('click', (e) => {
+          if (e.target.closest('[data-search-open]')) {
+            e.preventDefault()
+            layer.hidden ? open() : close()
+            return
+          }
+          if (e.target.closest('[data-search-close]')) {
+            e.preventDefault()
+            close()
+          }
+        })
+
+        document.addEventListener('keydown', (e) => {
+          const open_ = !layer.hidden
+
+          if (e.key === 'Escape' && open_) {
+            close()
+            return
+          }
+          if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+            e.preventDefault()
+            open_ ? close() : open()
+            return
+          }
+          if (e.key === '/' && !open_ && !isTyping(e.target) && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            e.preventDefault()
+            open()
+          }
+        })
+
+        /* 上下键在结果里走 */
+        input.addEventListener('keydown', (e) => {
+          if (e.key !== 'ArrowDown') return
+          e.preventDefault()
+          body.querySelector('a')?.focus()
+        })
+        body.addEventListener('keydown', (e) => {
+          const links = [...body.querySelectorAll('a')]
+          const i = links.indexOf(document.activeElement)
+          if (e.key === 'ArrowDown') {
+            e.preventDefault()
+            links[Math.min(i + 1, links.length - 1)]?.focus()
+          } else if (e.key === 'ArrowUp') {
+            e.preventDefault()
+            i <= 0 ? input.focus() : links[i - 1].focus()
+          }
+        })
+      })()
+    </script><script>
+      // 主题切换：写 data-theme + 地址栏染色 + 记住选择 + 告诉读屏
+      ;(() => {
+        const btn = document.getElementById('theme-toggle')
+        if (!btn) return
+        const status = document.querySelector('[data-theme-status]')
+
+        /* 初值：<head> 里那段脚本已经把最终主题写进 data-theme 了，
+           这里只负责让按钮的 aria-pressed 跟它对齐（不能写死在 HTML 里 ——
+           首屏主题有一半概率来自系统偏好，服务端并不知道）。 */
+        const sync = (theme) => {
+          btn.setAttribute('aria-pressed', theme === 'dark' ? 'true' : 'false')
+        }
+        sync(document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light')
+
+        btn.addEventListener('click', () => {
+          const root = document.documentElement
+          const next = root.dataset.theme === 'dark' ? 'light' : 'dark'
+          root.dataset.theme = next
+          /* 地址栏跟着变，否则在深色系统里手动切到浅色后，浏览器顶上还是深色 */
+          document
+            .querySelector('meta[data-theme-color]')
+            ?.setAttribute('content', next === 'dark' ? '#0d1117' : '#f6f7f9')
+          sync(next)
+          try {
+            localStorage.setItem('theme', next)
+          } catch {
+            /* 忽略 */
+          }
+          /* 播报结果。先清空再写，是为了让"浅→深→浅"这种连续切换每次都念 ——
+             内容没变化时 aria-live 不会重复播报。 */
+          if (status) {
+            status.textContent = ''
+            requestAnimationFrame(() => {
+              status.textContent = next === 'dark' ? '已切换到深色主题' : '已切换到浅色主题'
+            })
+          }
+        })
+      })()
+    </script><script>
+          /* 两个小动作（关掉不影响阅读）：
+             1) 顶部的阅读进度线 → 往 .read-progress 上写 --p
+             2) 侧栏目录的滚动高亮 → 给当前章节的链接打 aria-current="true"
+             2026-10-19 第二版：删掉了「指针跟随的镜面高光」。
+             背景从彩色极光换成纸 + 单色暗记之后，那圈白斑在纸上没有任何东西可以反射，
+             只剩一层脏雾 —— 与其留着凑数，不如不要。 */
+          ;(() => {
+            const root = document.documentElement
+
+            /* ---------- 1. 阅读进度 ---------- */
+            const bar = document.querySelector('.read-progress')
+            if (bar) {
+              let raf2 = 0
+              const calc = () => {
+                raf2 = 0
+                const max = root.scrollHeight - root.clientHeight
+                const p = max > 0 ? Math.min(1, Math.max(0, root.scrollTop / max)) : 0
+                bar.style.setProperty('--p', p.toFixed(4))
+              }
+              addEventListener(
+                'scroll',
+                () => {
+                  if (!raf2) raf2 = requestAnimationFrame(calc)
+                },
+                { passive: true },
+              )
+              addEventListener('resize', calc, { passive: true })
+              calc()
+            }
+
+            /* ---------- 2. 目录滚动高亮 ---------- */
+            const links = [...document.querySelectorAll('.side nav a[href^="#"]')]
+            const targets = links
+              .map((a) => ({ a, el: document.getElementById(decodeURIComponent(a.hash.slice(1))) }))
+              .filter((x) => x.el)
+            if (targets.length && 'IntersectionObserver' in window) {
+              const setActive = (a) => {
+                for (const { a: l } of targets) l.removeAttribute('aria-current')
+                if (a) a.setAttribute('aria-current', 'true')
+              }
+              const visible = new Set()
+              const io = new IntersectionObserver(
+                (entries) => {
+                  for (const en of entries) {
+                    const hit = targets.find((t) => t.el === en.target)
+                    if (!hit) continue
+                    if (en.isIntersecting) visible.add(hit.a)
+                    else visible.delete(hit.a)
+                  }
+                  /* 同时有多个章节在视口里时，取文档顺序最靠前的那个 —— 与阅读方向一致 */
+                  setActive(links.find((l) => visible.has(l)) || null)
+                },
+                /* 顶部留出吸顶页头的高度，底部只认 30%：这样"刚滚到"就算当前章 */
+                { rootMargin: '-84px 0px -70% 0px', threshold: 0 },
+              )
+              for (const t of targets) io.observe(t.el)
+            }
+          })()
+        </script></body></html>

@@ -1,0 +1,733 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>JINJIARAN · 个人作品站</title>
+<meta name="description" content="收纳并展示我制作的 UE5 项目、3D 模型、图片、文档与思维导图——含蓝图存档可视化、C++ 源码、模型在线旋转查看与下载。" />
+<!-- ============================================================
+     2026-09-18：本文件**不再是根路径 `/` 的来源**。
+     首页现在是 `public/proto/home.html` —— 它的**第一屏就是这份字母场景**，
+     后面接了"向下滚 → 渐变揭示 → 滚轴选页 + 三维档案阵列"的第二屏。
+     这里保留为「独立单屏原型」：
+       · 单独打开 `/proto/letters.html` 看纯字母屏（与首页做 A/B 对照）
+       · 无头探针（tmp/lusion/probe-*.mjs）打的是这个文件 —— 改动小、跑得快
+
+     ⚠️ 字母的场景代码现在是**两份**：这份 + home.html 里那段。有意为之
+        （那边和滚动机制长在一起，这边是干净的单屏），但**改手感时两边都要顾**。
+        以后真嫌烦了，就抽成一个共享模块给两边 import。
+
+     下面所有资源一律用**站点绝对路径** —— 相对路径（./lib/…）在根路径下
+     会解析成 `/lib/…` → 404。这个文件里出这个错，症状是只剩一个 LOADING；
+     home.html 里出同一个错，症状是第一屏一片空。
+     ============================================================ -->
+<!-- 首屏关键路径：three 是整页的地基（module 359 KB + core 383 KB），
+     提前拉总归是赚的。两条都要 —— module 内部 import 了 core。 -->
+<link rel="modulepreload" href="/proto/lib/three.module.min.js" />
+<link rel="modulepreload" href="/proto/lib/three.core.min.js" />
+<style>
+  :root {
+    color-scheme: dark;
+    --fg: #f2f4f7;
+    --fg-3: rgba(242, 244, 247, 0.38);
+    --pad: 20px;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: #0b0c0e;
+    /* 背景直接铺在网页上，不用任何"视口/画框"去裁三维 —— 字母是浮在页面上的 */
+    background-image:
+      radial-gradient(120% 90% at 50% 8%, #24262b 0%, #14161a 46%, #0b0c0e 100%);
+    color: var(--fg);
+    font: 14px/1.6 ui-sans-serif, system-ui, "PingFang SC", "Microsoft YaHei", sans-serif;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+  #stage { position: fixed; inset: 0; display: block; }
+  #stage canvas { display: block; width: 100%; height: 100%; }
+
+  /* ---------- HUD ---------- */
+  .hud { position: fixed; z-index: 2; pointer-events: none; }
+  .hud-top {
+    top: 0; left: 0; right: 0;
+    padding: 18px var(--pad) 0;
+  }
+  .brand { font-weight: 650; letter-spacing: 0.14em; font-size: 13px; color: var(--fg); }
+
+  /* ---------- 载入 ---------- */
+  #boot {
+    position: fixed; inset: 0; z-index: 9; display: grid; place-items: center;
+    background: #0b0c0e; color: var(--fg-3); font-size: 13px; letter-spacing: 0.06em;
+    /* visibility 延到淡出结束才切 —— 否则那 0.55s 的淡出会被它一刀砍掉 */
+    transition: opacity 0.55s ease, visibility 0s linear 0.55s;
+  }
+  /* 用 visibility 而不是只把透明度归零：透明元素仍然是"渲染内容"，
+     会留在 innerText / 无障碍树里。首页上不该长期挂着一个 LOADING。 */
+  #boot.gone { opacity: 0; pointer-events: none; visibility: hidden; }
+
+  @media (max-width: 720px) {
+    .hud-top { padding-top: 14px; }
+  }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+
+<div class="hud hud-top">
+  <div class="brand">WELCOME</div>
+</div>
+
+<div id="boot" aria-hidden="true">LOADING</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "/proto/lib/three.module.min.js",
+    "three/addons/": "/proto/lib/addons/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three'
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
+
+/* ============================================================================
+ * 0. 参数
+ * ==========================================================================*/
+
+const WORD = 'WELCOME'
+
+// 可点击切换的调色板。颜色照搬 lusion 的球体数据表，但只留**缎面（磨砂）**那一档：
+//   rough >= 0.5 → 走 matcap 的 G 通道（宽而弱的柔光）＝缎面
+//   0.1 那档走 B 通道＝紧高光，连同两类 #111 黑一起已按要求全部移除。
+// 刻意不带名字：页面上不出现任何材质文字。
+const MATERIALS = [
+  { color: 0xe9ebee, rough: 0.8 },
+  { color: 0x061dfb, rough: 0.8 },
+  { color: 0xadff00, rough: 0.8 },
+  { color: 0xffc000, rough: 0.8 },
+]
+
+const CFG = {
+  tube: 0.105,          // 笔画粗细（管半径）
+  letterH: 1,           // 字母设计高度
+  tracking: 0.42,       // 字间距
+  tilt: 0.16,           // 每个字母初始的轻微偏转，露出管的厚度
+  zStagger: 0.55,       // 前后错落
+  layout: 'line',       // line | ring
+  spring: 8.6,          // 回位弹簧刚度
+  damping: 3.7,         // 阻尼（比值≈0.63，一两秒内把词拼回来）
+  gravity: 0.30,        // 轻微下坠
+  springRot: 4.6,       // 姿态回正
+  mouseRadius: 0.30,    // 鼠标作用半径（球面）
+  mouseInfluence: 1.15, // 鼠标影响范围
+  mouseForce: 26,       // 鼠标推力
+  mouseSpin: 3.4,       // 鼠标带起的自旋
+  restitution: 0.42,    // 字母互撞弹性
+  aoRange: 2.05,        // 邻居遮蔽范围
+  secF: 1.35,           // 二阶弹簧：频率   ← lusion 原值
+  secZ: 0.5,            //           阻尼比 ← lusion 原值
+  secR: 1.25,           //           响应初速 ← lusion 原值
+}
+
+/* ============================================================================
+ * 1. 材质：程序化重建 lusion 的 matcap
+ * ---------------------------------------------------------------------------
+ * 该站的材质本质是「一张 matcap 贴图，三个通道各管一种光照」：
+ *     R = 漫反射      G = 粗糙高光（roughness>0.5 时用）   B = 镜面高光（否则）
+ * 片元里就是：
+ *     matcapDiff = 0.25 + 0.75 * R;   color = albedo * matcapDiff + spec;
+ *
+ * 那张真图是 512×512 的 EXR。这里不搬它的文件，而是**把它的光照用二阶球谐
+ * 重建**：对 R/G 通道做 9 项最小二乘（R 的残差 RMS 0.021，G 0.006），
+ * B 通道另按「边缘环 + 一个很紧的高光瓣」重建。视觉上与真图一致。
+ * ==========================================================================*/
+
+// 实测拟合出来的 9 个球谐系数（基：1,x,y,z,xy,yz,2z²-x²-y²,xz,x²-y²）
+const SH_R = [0.51737, -0.01844, 0.32871, -0.08260, 0.14880, 0.06755, 0.00665, 0.65190, 0.10040]
+const SH_G = [0.09436, -0.04474, 0.02401, -0.08077, -0.02070, -0.00013, 0.00753, 0.07704, 0.01168]
+// B：边缘环境环 + 紧高光（SH 抓不住尖峰，单独补）
+const B_RIM = { base: 0.025, amp: 0.30, pow: 1.3 }
+const B_TIGHT = { amp: 0.95, pow: 90, dir: [0.383, 0.321, 0.866] }
+
+function bakeMatcap(size = 256) {
+  const buf = new Uint8Array(size * size * 4)
+  const [tx, ty, tz] = B_TIGHT.dir
+  for (let py = 0; py < size; py++) {
+    for (let px = 0; px < size; px++) {
+      // 像素 → 球面法线；约定 u=n.x*0.5+0.5, v=n.y*0.5+0.5（顶光）
+      let x = ((px + 0.5) / size) * 2 - 1
+      let y = ((py + 0.5) / size) * 2 - 1
+      const r2 = x * x + y * y
+      let z
+      if (r2 >= 1) { const k = 1 / Math.sqrt(r2); x *= k; y *= k; z = 0 }
+      else z = Math.sqrt(1 - r2)
+      const b = [1, x, y, z, x * y, y * z, 2 * z * z - x * x - y * y, x * z, x * x - y * y]
+      const sh = (c) => c[0]*b[0] + c[1]*b[1] + c[2]*b[2] + c[3]*b[3] + c[4]*b[4]
+                      + c[5]*b[5] + c[6]*b[6] + c[7]*b[7] + c[8]*b[8]
+      const R = sh(SH_R)
+      const G = sh(SH_G)
+      const dT = Math.max(0, x * tx + y * ty + z * tz)
+      const B = B_RIM.base + B_RIM.amp * Math.pow(1 - z, B_RIM.pow)
+                        + B_TIGHT.amp * Math.pow(dT, B_TIGHT.pow)
+      const i = (py * size + px) * 4
+      buf[i]     = Math.max(0, Math.min(255, Math.round(255 * R)))
+      buf[i + 1] = Math.max(0, Math.min(255, Math.round(255 * G)))
+      buf[i + 2] = Math.max(0, Math.min(255, Math.round(255 * B)))
+      buf[i + 3] = 255
+    }
+  }
+  const t = new THREE.DataTexture(buf, size, size, THREE.RGBAFormat)
+  t.minFilter = t.magFilter = THREE.LinearFilter
+  t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping
+  t.colorSpace = THREE.NoColorSpace      // 这是线性光照数据，不是颜色
+  t.needsUpdate = true
+  return t
+}
+
+const MATCAP = bakeMatcap(256)
+
+const VERT = /* glsl */`
+  varying vec3 vN;
+  varying float vAo;
+  attribute float aAo;
+  void main() {
+    vN = normalize(normalMatrix * normal);
+    vAo = aAo;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }`
+
+const FRAG = /* glsl */`
+  // —— 这一段的公式与 lusion 原版逐项对应 ——
+  uniform sampler2D u_matcap;
+  uniform vec3  u_color;     // 已在线性空间
+  uniform float u_rough;
+  uniform float u_fade;      // 入场淡入
+  varying vec3 vN;
+  varying float vAo;
+
+  vec3 filmicToneMapping(vec3 x) {
+    // ACES 近似：比 Reinhard 型更有对比，白色塑料不会糊成一片
+    return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0);
+  }
+
+  void main() {
+    vec3 n = normalize(vN);
+    vec2 uvPerturbed = vec2(n.x, n.y) * 0.5 + 0.5;      // 视图空间法线 → matcap 坐标
+    vec3 matcapMap  = texture2D(u_matcap, uvPerturbed).rgb;
+    vec3 matcapDiff = vec3(matcapMap.r);
+    vec3 matcapSpec = vec3(u_rough > 0.5 ? matcapMap.g : matcapMap.b);
+    matcapDiff = 0.25 + 0.75 * matcapDiff;
+
+    vec3 color = u_color * matcapDiff + matcapSpec;
+    // lusion 原式后面还有 reflections 与 gi 两项加光。这里没有环境贴图，
+    // 补一口近似环境光顶上，否则白色塑料会偏灰。
+    color += u_color * 0.075;
+    color *= vAo;                                        // 邻居遮蔽
+    float fresnel = pow(1.0 - clamp(n.z, 0.0, 1.0), 3.0); // 塑料边缘的一点菲涅尔
+    color += fresnel * u_color * 0.09;
+
+    gl_FragColor = vec4(pow(filmicToneMapping(color), vec3(1.0 / 2.2)) * u_fade, 1.0);
+  }`
+
+/* ============================================================================
+ * 2. 字母几何：用「胶囊 + 圆环弧」搭骨架，和 lusion 那种圆管造型同源
+ * ==========================================================================*/
+
+const T = CFG.tube
+const PAD = T              // 端点内缩，避免圆头超出字母框
+const X0 = PAD, X1 = 1 - PAD
+const Y0 = PAD, Y1 = 1 - PAD
+
+// 每个字母 = 若干描边；line = 直线段，arc = 圆弧
+// 描边坐标写在 0…1 的方框里（y 向上），实际宽度由 w 横向拉伸，管半径不跟着变
+const GLYPHS = {
+  W: { w: 1.14, strokes: [
+    { t: 'line', a: [X0, Y1], b: [0.300, Y0] },
+    { t: 'line', a: [0.300, Y0], b: [0.500, 0.545] },
+    { t: 'line', a: [0.500, 0.545], b: [0.700, Y0] },
+    { t: 'line', a: [0.700, Y0], b: [X1, Y1] },
+  ]},
+  E: { w: 0.68, strokes: [
+    { t: 'line', a: [X0, Y0], b: [X0, Y1] },
+    { t: 'line', a: [X0, Y0], b: [X1, Y0] },
+    { t: 'line', a: [X0, 0.500], b: [0.80, 0.500] },
+    { t: 'line', a: [X0, Y1], b: [X1, Y1] },
+  ]},
+  L: { w: 0.62, strokes: [
+    { t: 'line', a: [X0, Y0], b: [X0, Y1] },
+    { t: 'line', a: [X0, Y0], b: [X1, Y0] },
+  ]},
+  C: { w: 1.02, strokes: [
+    { t: 'arc', c: [0.5, 0.5], r: 0.5 - PAD * 0.5, a0: 44, a1: 316 },
+  ]},
+  O: { w: 1.02, strokes: [
+    { t: 'arc', c: [0.5, 0.5], r: 0.5 - PAD * 0.5, a0: 0, a1: 360 },
+  ]},
+  M: { w: 1.08, strokes: [
+    { t: 'line', a: [X0, Y0], b: [X0, Y1] },
+    { t: 'line', a: [X0, Y1], b: [0.500, 0.420] },
+    { t: 'line', a: [0.500, 0.420], b: [X1, Y1] },
+    { t: 'line', a: [X1, Y1], b: [X1, Y0] },
+  ]},
+}
+
+function buildGlyphGeometry(def) {
+  const parts = []
+  const w = def.w
+  const up = new THREE.Vector3(0, 1, 0)
+  for (const s of def.strokes) {
+    if (s.t === 'line') {
+      const a = new THREE.Vector3(s.a[0] * w, s.a[1], 0)
+      const b = new THREE.Vector3(s.b[0] * w, s.b[1], 0)
+      const dir = new THREE.Vector3().subVectors(b, a)
+      const len = dir.length()
+      if (len < 1e-5) continue
+      const g = new THREE.CapsuleGeometry(T, len, 6, 14)
+      const q = new THREE.Quaternion().setFromUnitVectors(up, dir.clone().normalize())
+      const mid = new THREE.Vector3().addVectors(a, b).multiplyScalar(0.5)
+      g.applyQuaternion(q)
+      g.translate(mid.x, mid.y, mid.z)
+      parts.push(g)
+    } else {
+      const sweep = ((s.a1 - s.a0) * Math.PI) / 180
+      const g = new THREE.TorusGeometry(s.r, T, 10, Math.max(28, Math.round(sweep * 28)), sweep)
+      g.rotateZ((s.a0 * Math.PI) / 180)
+      g.scale(w, 1, 1)                                   // 只横向拉伸，管径基本不变
+      g.translate(s.c[0] * w, s.c[1], 0)
+      parts.push(g)
+    }
+  }
+  const merged = mergeGeometries(parts, false)
+  parts.forEach((p) => p.dispose())
+  merged.computeBoundingSphere()
+  return merged
+}
+
+/* ============================================================================
+ * 3. 二阶弹簧（t3ssel8r 那套）。lusion 用它把鼠标位置先滤一遍再喂给三维。
+ *    参数 f=1.35 / z=0.5 / r=1.25 是原值。
+ * ==========================================================================*/
+class SecondOrderDynamics {
+  constructor(f, z, r, x0 = 0) {
+    this.k1 = z / (Math.PI * f)
+    this.k2 = 1 / ((2 * Math.PI * f) ** 2)
+    this.k3 = (r * z) / (2 * Math.PI * f)
+    this.xp = x0; this.y = x0; this.yd = 0
+  }
+  update(T, x, xd = null) {
+    if (xd === null) { xd = (x - this.xp) / T; this.xp = x }
+    const ydd = (x + this.k3 * xd - this.y - this.k1 * this.yd) / this.k2
+    this.yd += ydd * T
+    this.y += this.yd * T
+    return this.y
+  }
+}
+
+/* ============================================================================
+ * 4. 场景
+ * ==========================================================================*/
+
+const stage = document.getElementById('stage')
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' })
+renderer.setPixelRatio(Math.min(1.75, window.devicePixelRatio || 1))
+renderer.outputColorSpace = THREE.LinearSRGBColorSpace   // 色彩在着色器里自己收尾
+stage.appendChild(renderer.domElement)
+
+const scene = new THREE.Scene()
+const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 200)
+camera.position.set(0, 0, 12)
+
+// —— 所有字母共用一份材质（要求：同一材质）
+const sharedUniforms = {
+  u_matcap: { value: MATCAP },
+  u_color: { value: new THREE.Color(0xffffff) },
+  u_rough: { value: 0.8 },
+  u_fade: { value: 0 },
+}
+const materials = []
+for (let i = 0; i < WORD.length; i++) {
+  materials.push(new THREE.ShaderMaterial({
+    uniforms: {
+      u_matcap: sharedUniforms.u_matcap,
+      u_color: sharedUniforms.u_color,
+      u_rough: sharedUniforms.u_rough,
+      u_fade: sharedUniforms.u_fade,
+    },
+    vertexShader: VERT, fragmentShader: FRAG,
+  }))
+  // 每份几何自带一个 aAo 属性（邻居遮蔽），互不影响
+}
+
+/* ---- 装配 7 个字母 ---- */
+const bodies = []
+const layoutInfo = { width: 1, height: 1 }
+
+function disposeBodies() {
+  for (const b of bodies) { scene.remove(b.mesh); b.mesh.geometry.dispose(); }
+  bodies.length = 0
+}
+
+function buildWord() {
+  disposeBodies()
+  let cursor = 0
+  const widths = [...WORD].map((ch) => GLYPHS[ch].w)
+  const total = widths.reduce((s, w) => s + w, 0) + CFG.tracking * (WORD.length - 1)
+  layoutInfo.width = total
+  layoutInfo.height = CFG.letterH
+
+  WORD.split('').forEach((ch, i) => {
+    const geo = buildGlyphGeometry(GLYPHS[ch])
+    const ao = new Float32Array(geo.attributes.position.count)
+    ao.fill(1)
+    geo.setAttribute('aAo', new THREE.BufferAttribute(ao, 1))
+
+    const mesh = new THREE.Mesh(geo, materials[i])
+    mesh.frustumCulled = false
+    scene.add(mesh)
+
+    const centerX = cursor + widths[i] / 2 - total / 2
+    bodies.push({
+      ch, mesh, geo, aos: geo.attributes.aAo,
+      lineX: centerX,                                   // ← 直线排列的 x 只在这里定一次
+      homePos: new THREE.Vector3(centerX, 0, 0),
+      homeQuat: new THREE.Quaternion(),
+      pos: new THREE.Vector3(), vel: new THREE.Vector3(),
+      quat: new THREE.Quaternion(), angVel: new THREE.Vector3(),
+      radius: (geo.boundingSphere?.radius ?? 0.6) * 0.62,
+      aoRadius: (geo.boundingSphere?.radius ?? 0.6) * 1.55,
+      mass: 1 + widths[i] * 0.5,
+      massInv: 1 / (1 + widths[i] * 0.5),
+      phase: i * 1.7,
+    })
+    cursor += widths[i] + CFG.tracking
+  })
+  applyLayout()
+  scatter()
+}
+
+/* ---- 排布：直线拼词 / 环形 ---- */
+function applyLayout() {
+  const n = bodies.length
+  const mid = (n - 1) / 2
+  if (CFG.layout === 'line') {
+    // ⚠️ 直线 x 一律取 lineX（建词时算好的那一个）。
+    // 早先这里读的是 b.homePos.x —— 从环形切回来时那个字段已被环形坐标覆盖，
+    // 于是字母会按环形的顺序落位，WELCOME 就散了。
+    bodies.forEach((b, i) => {
+      const k = mid ? (i - mid) / mid : 0            // -1 … 1
+      b.homePos.set(b.lineX, -Math.abs(k) * 0.05, -Math.abs(k) * CFG.zStagger)
+      b.homeQuat.setFromEuler(new THREE.Euler(
+        -k * 0.09,          // 两侧稍微后仰
+        k * CFG.tilt,       // 侧一点，露出管的厚度
+        -k * 0.05,
+      ))
+    })
+    layoutInfo.radius = 0
+  } else {
+    const total = layoutInfo.width
+    const R = Math.max(2.55, (total / (Math.PI * 2)) * 1.42)
+    const dTh = (Math.PI * 2) / n
+    bodies.forEach((b, i) => {
+      const th = Math.PI / 2 - (i - mid) * dTh
+      b.homePos.set(Math.cos(th) * R, Math.sin(th) * R, Math.sin(th * 2) * CFG.zStagger * 0.5)
+      // 沿圆周切向站好，让整圈能读出来
+      b.homeQuat.setFromEuler(new THREE.Euler(0, CFG.tilt * 0.7, th - Math.PI / 2))
+    })
+    layoutInfo.radius = R + 0.65
+  }
+  frameCamera()
+}
+
+function frameCamera() {
+  const isLine = CFG.layout === 'line'
+  const halfW = isLine ? layoutInfo.width / 2 + 0.35 : layoutInfo.radius + 0.25
+  const halfH = isLine ? 0.85 : layoutInfo.radius + 0.25
+  const vFov = (camera.fov * Math.PI) / 180
+  const dH = halfH / Math.tan(vFov / 2)
+  const hFov = 2 * Math.atan(Math.tan(vFov / 2) * camera.aspect)
+  const dW = halfW / Math.tan(hFov / 2)
+  // 环形靠竖边顶，留出更多余量，免得转到底部那几个被裁掉
+  const d = Math.max(dH, dW) * (isLine ? 1.04 : 1.16)
+  camera.position.set(0, 0, d)
+  camera.lookAt(0, 0, 0)
+}
+
+/* ---- 开场：先散开，再让弹簧把它们"拼"回词 ---- */
+function scatter() {
+  const n = bodies.length
+  bodies.forEach((b, i) => {
+    const a = (i / n) * Math.PI * 2 + 0.6
+    const r = 5.5 + Math.random() * 3.5
+    b.pos.set(Math.cos(a) * r, Math.sin(a) * r * 0.75, (Math.random() - 0.5) * 6)
+    b.vel.set(0, 0, 0)
+    b.quat.setFromEuler(new THREE.Euler(
+      (Math.random() - 0.5) * 2.4,
+      (Math.random() - 0.5) * 2.4,
+      (Math.random() - 0.5) * 3.2,
+    ))
+    b.angVel.set(0, 0, 0)
+  })
+}
+
+/* ============================================================================
+ * 5. 交互
+ * ==========================================================================*/
+
+const input = {
+  ndc: new THREE.Vector2(0, 0),       // 原始鼠标（NDC）
+  smooth: new THREE.Vector2(0, 0),    // 二阶弹簧滤波后
+  vel: new THREE.Vector2(0, 0),       // 滤波后的速度（做一个轻微的推力加成）
+  active: false,
+}
+const sx = new SecondOrderDynamics(CFG.secF, CFG.secZ, CFG.secR, 0)
+const sy = new SecondOrderDynamics(CFG.secF, CFG.secZ, CFG.secR, 0)
+
+function toNdc(cx, cy) {
+  return [ (cx / window.innerWidth) * 2 - 1, -(cy / window.innerHeight) * 2 + 1 ]
+}
+
+function onMove(cx, cy) {
+  const [x, y] = toNdc(cx, cy)
+  input.ndc.set(x, y)
+  input.active = true
+}
+
+window.addEventListener('pointermove', (e) => onMove(e.clientX, e.clientY), { passive: true })
+window.addEventListener('pointerleave', () => { input.active = false })
+window.addEventListener('touchmove', (e) => {
+  const t = e.touches[0]; if (t) onMove(t.clientX, t.clientY)
+}, { passive: true })
+
+/* ---- 排列切换 / 复位 ---- */
+function toggleLayout() {
+  CFG.layout = CFG.layout === 'line' ? 'ring' : 'line'
+  applyLayout()          // 直线一律用 lineX 落位，来回切不会把词打乱
+}
+
+// 硬复位：位置 / 速度 / 姿态一律回到当前排列的"家"
+function resetAll() {
+  applyLayout()
+  for (const b of bodies) {
+    b.pos.copy(b.homePos); b.vel.set(0, 0, 0)
+    b.quat.copy(b.homeQuat); b.angVel.set(0, 0, 0)
+  }
+}
+
+/* ---- 材质切换 ---- */
+let matIndex = 0
+
+function applyMaterial() {
+  const m = MATERIALS[matIndex]
+  sharedUniforms.u_color.value.setHex(m.color, THREE.SRGBColorSpace)
+  sharedUniforms.u_rough.value = m.rough >= 0.5 ? 1 : 0
+}
+function nextMaterial() {
+  matIndex = (matIndex + 1) % MATERIALS.length
+  applyMaterial()
+}
+
+/* ---- 点击：一次点击同时换排列 + 换材质，不出任何文字 ---- */
+// 用"按下→松开位移小且时间短"做判定，避免拨动被误判成点击
+let downAt = 0, downX = 0, downY = 0
+window.addEventListener('pointerdown', (e) => { downAt = performance.now(); downX = e.clientX; downY = e.clientY })
+window.addEventListener('pointerup', (e) => {
+  const dt = performance.now() - downAt
+  const d = Math.hypot(e.clientX - downX, e.clientY - downY)
+  if (dt < 300 && d < 40) { toggleLayout(); nextMaterial() }
+})
+
+window.addEventListener('keydown', (e) => {
+  const k = e.key.toLowerCase()
+  if (k === 'l') toggleLayout()
+  else if (k === 'r') resetAll()
+})
+
+/* ============================================================================
+ * 6. 每帧：鼠标推力 + 字母互撞 + 弹簧回位 + 邻居遮蔽
+ * ==========================================================================*/
+
+const _rayOrigin = new THREE.Vector3()
+const _rayDir = new THREE.Vector3()
+const _p = new THREE.Vector3()
+const _toC = new THREE.Vector3()
+const _closest = new THREE.Vector3()
+const _d = new THREE.Vector3()
+const _n = new THREE.Vector3()
+const _tmpQ = new THREE.Quaternion()
+const _axis = new THREE.Vector3()
+const _rel = new THREE.Vector3()
+
+function step(dt, time) {
+  const n = bodies.length
+
+  // --- 6.1 鼠标：手搓一条相机射线（与 lusion 一样不开 Raycaster）---
+  const smx = sx.update(dt, input.ndc.x)
+  const smy = sy.update(dt, input.ndc.y)
+  const pvx = sx.yd, pvy = sy.yd
+  input.smooth.set(smx, smy)
+  const mouseSpeed = Math.hypot(pvx, pvy)
+
+  _p.set(smx, smy, 0.5).unproject(camera)
+  _rayOrigin.copy(camera.position)
+  _rayDir.copy(_p).sub(camera.position).normalize()
+
+  // --- 6.2 逐字母积分 ---
+  for (let i = 0; i < n; i++) {
+    const b = bodies[i]
+
+    // 回位弹簧（含极轻的上下浮动，避免看着是静止的）
+    const bobY = Math.sin(time * 0.75 + b.phase) * 0.035
+    _d.set(b.homePos.x - b.pos.x, b.homePos.y + bobY - b.pos.y, b.homePos.z - b.pos.z)
+    b.vel.addScaledVector(_d, CFG.spring * dt)
+    b.vel.y -= CFG.gravity * dt
+    b.vel.multiplyScalar(Math.exp(-CFG.damping * dt))
+
+    // 鼠标推力：把"鼠标射线"当一根圆柱，落在里面的字母被推开
+    if (input.active) {
+      _toC.copy(b.pos).sub(_rayOrigin)
+      const t = _toC.dot(_rayDir)
+      if (t > 0) {
+        _closest.copy(_rayOrigin).addScaledVector(_rayDir, t)
+        _d.copy(b.pos).sub(_closest)
+        const dist = _d.length()
+        const outer = CFG.mouseInfluence + b.radius
+        if (dist < outer) {
+          const falloff = 1 - smoothstep(CFG.mouseRadius, outer, dist)
+          if (dist > 1e-4) _n.copy(_d).divideScalar(dist)
+          else _n.set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize()
+          // 推得越近越猛，鼠标划得越快也越猛
+          const k = CFG.mouseForce * falloff * (0.55 + Math.min(mouseSpeed * 0.35, 1.6)) * dt
+          b.vel.addScaledVector(_n, k)
+          // 顺带带一点自旋，像被拨了一下
+          _axis.crossVectors(_rayDir, _n).normalize()
+          b.angVel.addScaledVector(_axis, k * CFG.mouseSpin)
+        }
+      }
+    }
+
+    b.pos.addScaledVector(b.vel, dt)
+
+    // 姿态：回正 + 自旋衰减
+    _tmpQ.copy(b.homeQuat)
+    b.quat.slerp(_tmpQ, 1 - Math.exp(-CFG.springRot * dt))
+    b.angVel.multiplyScalar(Math.exp(-2.2 * dt))
+    const w = b.angVel.length()
+    if (w > 1e-5) {
+      _axis.copy(b.angVel).divideScalar(w)
+      _tmpQ.setFromAxisAngle(_axis, w * dt)
+      b.quat.premultiply(_tmpQ).normalize()
+    }
+
+    b.mesh.position.copy(b.pos)
+    b.mesh.quaternion.copy(b.quat)
+  }
+
+  // --- 6.3 字母互撞（球近似 + 位置修正）---
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      const a = bodies[i], c = bodies[j]
+      _d.copy(c.pos).sub(a.pos)
+      const dist = _d.length()
+      const minD = a.radius + c.radius
+      if (dist > 1e-5 && dist < minD) {
+        _n.copy(_d).divideScalar(dist)
+        const overlap = minD - dist
+        const wSum = a.massInv + c.massInv
+        a.pos.addScaledVector(_n, (-overlap * a.massInv) / wSum * 0.85)
+        c.pos.addScaledVector(_n, (overlap * c.massInv) / wSum * 0.85)
+        _rel.copy(c.vel).sub(a.vel)
+        const vn = _rel.dot(_n)
+        if (vn < 0) {
+          const imp = (-(1 + CFG.restitution) * vn) / wSum
+          a.vel.addScaledVector(_n, -imp * a.massInv)
+          c.vel.addScaledVector(_n, imp * c.massInv)
+          _axis.crossVectors(_n, _rel).normalize()
+          a.angVel.addScaledVector(_axis, -imp * 0.35)
+          c.angVel.addScaledVector(_axis, imp * 0.35)
+        }
+      }
+    }
+  }
+
+  // --- 6.4 邻居遮蔽（lusion 是在顶点着色器里遍历邻居算 AO；这里 7 个字母，CPU 算更划算）
+  for (let i = 0; i < n; i++) bodies[i].occ = 0
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      const a = bodies[i], c = bodies[j]
+      const dist = a.pos.distanceTo(c.pos)
+      const R = CFG.aoRange + (a.aoRadius + c.aoRadius) * 0.5
+      if (dist < R) {
+        const k = 1 - dist / R
+        a.occ += k; c.occ += k
+      }
+    }
+  }
+  for (let i = 0; i < n; i++) {
+    const b = bodies[i]
+    const target = Math.max(0.34, Math.min(1, 1 - b.occ * 0.42))
+    const arr = b.aos.array
+    // 平滑过渡，避免 AO 跳变
+    const prev = arr[0]
+    const v = prev + (target - prev) * Math.min(1, dt * 9)
+    arr.fill(v)
+    b.aos.needsUpdate = true
+  }
+}
+
+function smoothstep(a, b, x) {
+  const t = Math.max(0, Math.min(1, (x - a) / (b - a)))
+  return t * t * (3 - 2 * t)
+}
+
+/* ============================================================================
+ * 7. 主循环
+ * ==========================================================================*/
+
+function resize() {
+  const w = window.innerWidth, h = window.innerHeight
+  renderer.setSize(w, h, false)
+  camera.aspect = w / h
+  camera.updateProjectionMatrix()
+  frameCamera()
+}
+window.addEventListener('resize', resize)
+
+let last = performance.now()
+let elapsed = 0
+let fade = 0
+
+function loop(now) {
+  const dt = Math.min(0.033, (now - last) / 1000)
+  last = now
+  elapsed += dt
+  step(dt, elapsed)
+  fade += (1 - fade) * Math.min(1, dt * 1.8)
+  sharedUniforms.u_fade.value = fade
+  renderer.render(scene, camera)
+  requestAnimationFrame(loop)
+}
+
+/* ---- 启动 ---- */
+buildWord()
+applyMaterial()
+resize()
+document.getElementById('boot').classList.add('gone')
+requestAnimationFrame(loop)
+
+// 载入参数（便于调试）：?layout=ring|line&mat=3
+const q = new URLSearchParams(location.search)
+if (q.get('layout') === 'ring' || q.get('layout') === 'line') {
+  CFG.layout = q.get('layout'); applyLayout()
+}
+if (q.has('mat')) {
+  const m = parseInt(q.get('mat'), 10)
+  if (Number.isFinite(m)) { matIndex = ((m % MATERIALS.length) + MATERIALS.length) % MATERIALS.length; applyMaterial() }
+}
+window.__letters = { CFG, bodies, MATERIALS, camera, renderer, scene }
+</script>
+</body>
+</html>

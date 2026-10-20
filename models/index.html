@@ -1,0 +1,325 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>模型 · JINJIARAN</title><meta name="description" content="网页里就能拖拽旋转查看的模型，附带逐字算出来的规格数字"><link rel="canonical" href="https://jinjiaran.com/models/"><!--
+      图标组（2026-10-21：换成 R 标）。
+      由 `node tmp/make-brand-icons.mjs` 从矢量化的 R 生成，别手工换图。
+      · favicon.svg —— 深底圆角块 + 白色 R。**深底不是装饰**：标签栏底色不可控
+        （浅色主题浅灰 / 深色主题近黑），透明底的黑 R 在深色标签栏上会整块消失。
+      · favicon.ico —— 16/24/32/48 四档**各自原生渲染**后拼成（不是缩出来的），
+        老浏览器、收藏夹、各类爬虫要的就是它。
+      · apple-touch-icon —— 180×180 **满幅方角、不透明**：圆角与遮罩由 iOS 自己套。
+      · site.webmanifest —— Android/Chrome「添加到主屏幕」用，带 192/512 两档。
+      顺序：SVG 在前（首选），ICO 兜底。
+    --><link rel="icon" type="image/svg+xml" href="/favicon.svg"><link rel="icon" type="image/x-icon" href="/favicon.ico" sizes="16x16 24x24 32x32 48x48"><link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180"><link rel="manifest" href="/site.webmanifest"><meta name="generator" content="Astro v7.3.2"><meta property="og:type" content="website"><meta property="og:site_name" content="JINJIARAN"><meta property="og:title" content="模型 · JINJIARAN"><meta property="og:description" content="网页里就能拖拽旋转查看的模型，附带逐字算出来的规格数字"><meta property="og:url" content="https://jinjiaran.com/models/"><!--
+      社交卡片图（2026-10-19 补）。之前全站没有任何 og:image，分享出去的链接是纯文字。
+      图是 public/og.png（1200×630，站点深底 + 品牌标），由 scripts/make-og.mjs 生成，
+      改文案/换标就重跑那个脚本，不要手工改图。
+      宽高必须写：部分抓取方（含微信/Twitter）会按它预留版位，缺了会裁得很难看。
+    --><meta property="og:image" content="https://jinjiaran.com/og.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="JINJIARAN · 个人作品站"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://jinjiaran.com/og.png"><!--
+      移动端浏览器地址栏染色。**只放一个 meta**，由下面那段内联脚本按最终主题
+      改 content —— 站内的主题是「手动切换 + data-theme」，不是跟随系统，
+      用两条 media 查询会跟用户手动选的打架。
+    --><meta name="theme-color" content="#f6f7f9" data-theme-color><script>
+      // 在首次绘制前定好主题，避免闪白；顺手把地址栏颜色定下来
+      ;(() => {
+        /* 先算出最终主题，再写 data-theme —— 两件事分开做，
+           是因为 localStorage 在隐私模式下会抛异常，旧写法里抛了就整段跳过。 */
+        let theme = 'light'
+        try {
+          const saved = localStorage.getItem('theme')
+          theme =
+            saved === 'light' || saved === 'dark'
+              ? saved
+              : window.matchMedia('(prefers-color-scheme: dark)').matches
+                ? 'dark'
+                : 'light'
+        } catch {
+          theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+        }
+        document.documentElement.dataset.theme = theme
+
+        const meta = document.querySelector('meta[data-theme-color]')
+        if (meta) meta.setAttribute('content', theme === 'dark' ? '#0d1117' : '#f6f7f9')
+      })()
+    </script><link rel="stylesheet" href="/_astro/BaseLayout.CKlrZbNO.css"><style>.card[data-astro-cid-fxchbogt]{color:inherit;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);transition:border-color .18s,transform .18s,box-shadow .18s;display:block;overflow:hidden}.card[data-astro-cid-fxchbogt]:hover{border-color:var(--line-strong);box-shadow:var(--shadow);transform:translateY(-2px)}.stage[data-astro-cid-fxchbogt]{aspect-ratio:4/3;background:var(--surface-2);position:relative;overflow:hidden}.stage[data-astro-cid-fxchbogt] img[data-astro-cid-fxchbogt]{object-fit:cover;width:100%;height:100%}.stage-empty[data-astro-cid-fxchbogt]{color:#ffffff57;background-blend-mode:normal, overlay;background:linear-gradient(160deg,#1f242c 0%,#171b21 100%),repeating-linear-gradient(45deg,#0000 0 11px,#ffffff07 11px 12px);flex-direction:column;justify-content:center;align-items:center;gap:8px;width:100%;height:100%;display:flex}.stage-empty[data-astro-cid-fxchbogt] svg[data-astro-cid-fxchbogt]{opacity:.75}.stage-num[data-astro-cid-fxchbogt]{letter-spacing:.06em;color:#ffffff6b;font-variant-numeric:tabular-nums;font-size:12px}.badge[data-astro-cid-fxchbogt]{letter-spacing:.04em;color:#ffffffdb;backdrop-filter:blur(4px);background:#0e11159e;border:1px solid #ffffff29;border-radius:999px;padding:3px 9px;font-size:11px;position:absolute;top:10px;left:10px}.body[data-astro-cid-fxchbogt]{padding:16px 18px 18px}.row[data-astro-cid-fxchbogt]{justify-content:space-between;align-items:baseline;gap:10px;display:flex}.title[data-astro-cid-fxchbogt]{font-size:17px}.size[data-astro-cid-fxchbogt]{color:var(--fg-3);font-variant-numeric:tabular-nums;flex:none;font-size:12px}.en[data-astro-cid-fxchbogt]{letter-spacing:.1em;text-transform:uppercase;color:var(--fg-3);margin:4px 0 0;font-size:11.5px}.summary[data-astro-cid-fxchbogt]{color:var(--fg-2);-webkit-line-clamp:3;-webkit-box-orient:vertical;margin:10px 0 0;font-size:13.5px;line-height:1.65;display:-webkit-box;overflow:hidden}.meta[data-astro-cid-fxchbogt]{color:var(--fg-3);flex-wrap:wrap;align-items:center;gap:6px;margin:14px 0 0;font-size:12.5px;display:flex}.dot[data-astro-cid-fxchbogt]{opacity:.5}
+</style><script type="module" src="/_astro/page.CQWjsXKf.js"></script></head><body><a class="skip-link" href="#main">跳到主内容</a><header class="site-header"><div class="wrap"><a class="brand" href="/"><svg class="mark" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 524 438"><path fill="currentColor" fill-rule="evenodd" d="M416.82 435.14C401.57 430.1 389.97 420.04 326.46 356.8C296.19 326.66 271.11 302 270.71 302C270.32 302 270 305.17 270 309.04C270 325.19 266.58 345.78 262.45 354.51C255.61 368.97 239.01 381.19 219 386.5C209.37 389.05 184.12 389.66 172.36 387.62C134.98 381.14 105.07 359.07 93.9 329.73C92.7 326.56 91.89 323.77 92.12 323.55C92.35 323.32 95.67 323.54 99.52 324.04C109.01 325.26 124.12 325.21 132 323.93C141.17 322.44 145.84 319.58 148.95 313.53L151.5 308.56L151.81 272.78L152.12 237L132.31 236.97C105.96 236.93 68.66 235.43 57.5 233.96C32.51 230.67 18.83 221.26 8.86 200.5C3.37 189.06 0.95 178.74 0.29 164C-1.78 117.22 20.72 76.49 57.46 60.54C61.84 58.64 65.56 57.23 65.73 57.39C65.9 57.56 65.56 63.06 64.98 69.6C63.25 89.16 65.33 104.68 70.52 110.84C71.9 112.48 75.16 114.64 77.76 115.64C82.12 117.3 87.25 117.47 141 117.7C198.58 117.94 199.41 117.91 194 116.14C184.03 112.87 177.68 108.9 169.91 101.11C155.15 86.31 149.34 67.33 153.5 47.5C157.85 26.81 174.05 9.13 194.5 2.75C204.23 -0.28 218.77 -0.28 228.5 2.75C253.04 10.4 270.97 34.35 270.97 59.5C270.97 84.6 253.48 108.19 229 116.11C223.57 117.87 224.17 117.89 274.6 117.95C330.81 118.01 346.08 118.82 360.71 122.53C388.99 129.7 411.57 149.04 419.41 172.81C426.33 193.77 425.17 212.89 415.83 232C412.46 238.88 410.01 242.14 402.95 249.15L394.22 257.79L425.86 289.28C461.17 324.42 463.99 326.58 473.64 325.78C477.54 325.46 480.31 324.42 484.3 321.77C490.34 317.75 503.89 304.49 509.63 296.96C511.71 294.23 513.7 292 514.05 292C514.92 292 519.59 304.17 521.52 311.5C527.78 335.19 521.31 366.33 505.14 390.29C490.96 411.31 472.31 426.78 452.87 433.64C442.77 437.2 425.28 437.93 416.82 435.14ZM293.41 220.59C301.72 216.52 304.4 212.05 304.85 201.48C305.27 191.48 302.79 184.69 296.87 179.62C292 175.45 287.15 174 278.13 174L271 174L271 199.13L271 224.25L279.36 223.81C285.87 223.47 288.97 222.76 293.41 220.59Z"/></svg>
+<span>JINJIARAN<span class="sub"> · 个人作品站</span></span></a><nav class="nav" aria-label="主导航"><a href="/?browse=1">首页</a><a href="/projects">项目</a><a href="/gallery">图片</a><a href="/videos">视频</a><a href="/docs">文档</a><a href="/models" aria-current="page">模型</a><a href="/tools">工具</a><a href="/about">关于</a></nav><button class="icon-btn" type="button" data-search-open aria-label="站内搜索" title="搜索（按 / ）" aria-expanded="false" aria-controls="site-search" data-astro-cid-av774hkb><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" data-astro-cid-av774hkb><circle cx="11" cy="11" r="7" data-astro-cid-av774hkb></circle><path d="m20 20-3.5-3.5" data-astro-cid-av774hkb></path></svg></button><button class="icon-btn" id="theme-toggle" type="button" aria-label="切换深浅色主题" aria-pressed="false"><svg class="sun" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"></path></svg><svg class="moon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"></path></svg></button><!--
+          主题切换的状态播报（2026-10-19 审计 D3）。
+          按钮本身只管"按下去了没有"（aria-pressed），**说不清现在是什么主题** ——
+          读屏用户听到"切换深浅色主题，已按下"，还是不知道屏幕上到底变深了还是变浅了。
+          所以另起一个 role="status" 的区域，切换后把结果念出来。
+          role="status" 自带 aria-live="polite"；这里两个都写，是为了兼容只认其一的读屏。
+          它必须常驻 DOM（不能切换时才插入），否则播报不会触发。
+        --><p class="sr-only" role="status" aria-live="polite" data-theme-status></p></div></header><main id="main" data-pagefind-body><header class="page-head"><div class="wrap"><p class="eyebrow">Models</p><h1>模型</h1><p class="lede">网页里就能拖拽旋转查看的模型，附带逐字算出来的规格数字</p></div></header><div class="wrap page-body" data-astro-cid-fxchbogt><div class="grid-cards" data-astro-cid-fxchbogt><a class="card" href="/models/chibi-model" data-astro-cid-fxchbogt><div class="stage" data-astro-cid-fxchbogt><img src="/media/_derived/models/chibi-model-1600.webp?v=2309a95a1332" srcset="/media/_derived/models/chibi-model-800.webp?v=2309a95a1332 800w, /media/_derived/models/chibi-model-1600.webp?v=2309a95a1332 1600w" sizes="(max-width: 640px) 92vw, 380px" class="astro-fxchbogt" width="1920" height="1920" alt="给朋友做的小模型" loading="lazy" decoding="async" data-astro-cid-fxchbogt><span class="badge" data-astro-cid-fxchbogt>3D · 布线 + 面</span></div><div class="body" data-astro-cid-fxchbogt><div class="row" data-astro-cid-fxchbogt><h2 class="title" data-astro-cid-fxchbogt>给朋友做的小模型</h2><span class="size" data-astro-cid-fxchbogt>856 KB</span></div><p class="en" data-astro-cid-fxchbogt>Chibi model</p><p class="summary" data-astro-cid-fxchbogt>给朋友画的可爱角色建模并3D打印了出来</p><div class="meta" data-astro-cid-fxchbogt><span data-astro-cid-fxchbogt>35,244 顶点</span><span class="dot" aria-hidden="true" data-astro-cid-fxchbogt>·</span><span data-astro-cid-fxchbogt>0 贴图</span><span class="chip" data-astro-cid-fxchbogt>Q版</span><span class="chip" data-astro-cid-fxchbogt>二次元</span><span class="chip" data-astro-cid-fxchbogt>角色</span></div></div></a><a class="card" href="/models/fufu-02" data-astro-cid-fxchbogt><div class="stage" data-astro-cid-fxchbogt><img src="/media/_derived/models/FUFU-1600.webp?v=8d3a461d2ae4" srcset="/media/_derived/models/FUFU-800.webp?v=8d3a461d2ae4 800w, /media/_derived/models/FUFU-1600.webp?v=8d3a461d2ae4 1600w" sizes="(max-width: 640px) 92vw, 380px" class="astro-fxchbogt" width="1920" height="1920" alt="给朋友的角色制作的正比模型，带有绑骨" loading="lazy" decoding="async" data-astro-cid-fxchbogt><span class="badge" data-astro-cid-fxchbogt>3D · 布线 + 面</span></div><div class="body" data-astro-cid-fxchbogt><div class="row" data-astro-cid-fxchbogt><h2 class="title" data-astro-cid-fxchbogt>给朋友的角色制作的正比模型，带有绑骨</h2><span class="size" data-astro-cid-fxchbogt>1.5 MB</span></div><p class="en" data-astro-cid-fxchbogt>Character Model</p><p class="summary" data-astro-cid-fxchbogt>使用二分渲染加描边，绑定标准UE骨骼，手绘贴图</p><div class="meta" data-astro-cid-fxchbogt><span data-astro-cid-fxchbogt>667,800 顶点</span><span class="dot" aria-hidden="true" data-astro-cid-fxchbogt>·</span><span data-astro-cid-fxchbogt>0 贴图</span></div></div></a><a class="card" href="/models/star-helmet-chibi" data-astro-cid-fxchbogt><div class="stage" data-astro-cid-fxchbogt><img src="/media/_derived/models/star-helmet-chibi-800.webp?v=6f1731873600" srcset="/media/_derived/models/star-helmet-chibi-800.webp?v=6f1731873600 800w" sizes="(max-width: 640px) 92vw, 380px" class="astro-fxchbogt" width="1440" height="1080" alt="Q版角色（星徽头盔）" loading="lazy" decoding="async" data-astro-cid-fxchbogt><span class="badge" data-astro-cid-fxchbogt>3D · 布线 + 面</span></div><div class="body" data-astro-cid-fxchbogt><div class="row" data-astro-cid-fxchbogt><h2 class="title" data-astro-cid-fxchbogt>Q版角色（星徽头盔）</h2><span class="size" data-astro-cid-fxchbogt>205 KB</span></div><p class="en" data-astro-cid-fxchbogt>Chibi Character (Star Helmet)</p><p class="summary" data-astro-cid-fxchbogt>戴五角星盔、双手张开的 Q 版角色，身侧各一片刃，一万二千面</p><div class="meta" data-astro-cid-fxchbogt><span data-astro-cid-fxchbogt>6,764 顶点</span><span class="dot" aria-hidden="true" data-astro-cid-fxchbogt>·</span><span data-astro-cid-fxchbogt>0 贴图</span><span class="chip" data-astro-cid-fxchbogt>Q版</span><span class="chip" data-astro-cid-fxchbogt>二次元</span><span class="chip" data-astro-cid-fxchbogt>角色</span></div></div></a><a class="card" href="/models/brim-hat-parts" data-astro-cid-fxchbogt><div class="stage" data-astro-cid-fxchbogt><img src="/media/_derived/models/brim-hat-parts-800.webp?v=ff5d85576c91" srcset="/media/_derived/models/brim-hat-parts-800.webp?v=ff5d85576c91 800w" sizes="(max-width: 640px) 92vw, 380px" class="astro-fxchbogt" width="1263" height="948" alt="Q版角色（大檐帽）" loading="lazy" decoding="async" data-astro-cid-fxchbogt><span class="badge" data-astro-cid-fxchbogt>3D · 布线 + 面</span></div><div class="body" data-astro-cid-fxchbogt><div class="row" data-astro-cid-fxchbogt><h2 class="title" data-astro-cid-fxchbogt>Q版角色（大檐帽）</h2><span class="size" data-astro-cid-fxchbogt>253 KB</span></div><p class="en" data-astro-cid-fxchbogt>Chibi Character (Brim Hat)</p><p class="summary" data-astro-cid-fxchbogt>戴宽檐帽的 Q 版角色，双手张开站着，一万五千多面</p><div class="meta" data-astro-cid-fxchbogt><span data-astro-cid-fxchbogt>8,144 顶点</span><span class="dot" aria-hidden="true" data-astro-cid-fxchbogt>·</span><span data-astro-cid-fxchbogt>0 贴图</span><span class="chip" data-astro-cid-fxchbogt>Q版</span><span class="chip" data-astro-cid-fxchbogt>二次元</span><span class="chip" data-astro-cid-fxchbogt>角色</span></div></div></a><a class="card" href="/models/takamatsu-tomori" data-astro-cid-fxchbogt><div class="stage" data-astro-cid-fxchbogt><img src="/media/_derived/models/takamatsu-tomori-800.webp?v=649d42894c4e" srcset="/media/_derived/models/takamatsu-tomori-800.webp?v=649d42894c4e 800w" sizes="(max-width: 640px) 92vw, 380px" class="astro-fxchbogt" width="1440" height="1080" alt="高松灯（企鹅装）" loading="lazy" decoding="async" data-astro-cid-fxchbogt><span class="badge" data-astro-cid-fxchbogt>3D · 布线 + 面</span></div><div class="body" data-astro-cid-fxchbogt><div class="row" data-astro-cid-fxchbogt><h2 class="title" data-astro-cid-fxchbogt>高松灯（企鹅装）</h2><span class="size" data-astro-cid-fxchbogt>424 KB</span></div><p class="en" data-astro-cid-fxchbogt>Takamatsu Tomori</p><p class="summary" data-astro-cid-fxchbogt>企鹅兜帽造型的 Q 版高松灯，七千面的小体量角色</p><div class="meta" data-astro-cid-fxchbogt><span data-astro-cid-fxchbogt>5,487 顶点</span><span class="dot" aria-hidden="true" data-astro-cid-fxchbogt>·</span><span data-astro-cid-fxchbogt>0 贴图</span><span class="chip" data-astro-cid-fxchbogt>Q版</span><span class="chip" data-astro-cid-fxchbogt>二次元</span><span class="chip" data-astro-cid-fxchbogt>角色</span></div></div></a></div></div></main><footer class="site-footer"><div class="wrap row"><p style="margin:0">© 2024–2026  内容版权归作者所有</p><p style="margin:0"><span class="chip">静态站</span><span class="chip" style="margin-left:6px">CDN 直出</span><span class="chip" style="margin-left:6px">0 台服务器</span></p></div></footer><!--
+      搜索面板挂在 </body> 前，不能放进页头：
+      页头有 backdrop-filter，它会让后代里的 position: fixed 以页头为包含块，
+      面板会被裁在页头那条 60px 的带子里。
+    --><div class="search-layer" id="site-search" data-search-layer hidden data-astro-cid-av774hkb><div class="search-backdrop" data-search-close aria-hidden="true" data-astro-cid-av774hkb></div><div class="search-panel" role="dialog" aria-modal="true" aria-label="站内搜索" data-astro-cid-av774hkb><div class="search-bar" data-astro-cid-av774hkb><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" data-astro-cid-av774hkb><circle cx="11" cy="11" r="7" data-astro-cid-av774hkb></circle><path d="m20 20-3.5-3.5" data-astro-cid-av774hkb></path></svg><input type="search" data-search-input placeholder="搜项目、模块、图集、蓝图…" autocomplete="off" spellcheck="false" aria-label="搜索关键词" data-astro-cid-av774hkb><kbd data-astro-cid-av774hkb>Esc</kbd></div><div class="search-body" data-search-body data-astro-cid-av774hkb><p class="search-tip" data-astro-cid-av774hkb>输入关键词开始搜索。按 <b data-astro-cid-av774hkb>/</b> 或 <b data-astro-cid-av774hkb>Ctrl</b>+<b data-astro-cid-av774hkb>K</b> 随时打开。</p></div></div></div><script>
+      ;(() => {
+        const layer = document.querySelector('[data-search-layer]')
+        if (!layer) return
+
+        const input = layer.querySelector('[data-search-input]')
+        const body = layer.querySelector('[data-search-body]')
+        const TIP =
+          '<p class="search-tip">输入关键词开始搜索。按 <b>/</b> 或 <b>Ctrl</b>+<b>K</b> 随时打开。</p>'
+
+        /* ---------------- Pagefind 懒加载 ---------------- */
+        let enginePromise = null
+        const loadEngine = () => {
+          if (!enginePromise) {
+            enginePromise = import('/pagefind/pagefind.js')
+              .then(async (pf) => {
+                try {
+                  await pf.options({ excerptLength: 24 })
+                } catch {
+                  /* 老版本没有 options，忽略 */
+                }
+                return pf
+              })
+              .catch((err) => {
+                enginePromise = null // 允许下次重试
+                throw err
+              })
+          }
+          return enginePromise
+        }
+
+        /* ---------------- 渲染 ---------------- */
+        const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
+
+        const setTip = (html) => {
+          body.innerHTML = html
+        }
+
+        const render = (items, query) => {
+          if (!items.length) {
+            setTip(`<p class="search-tip">没有找到和「${esc(query)}」相关的内容。</p>`)
+            return
+          }
+
+          const ul = document.createElement('ul')
+          ul.className = 'search-list'
+
+          for (const it of items) {
+            const a = document.createElement('a')
+            a.href = it.url || '/'
+
+            const t = document.createElement('span')
+            t.className = 'search-item-title'
+            t.textContent = (it.meta && it.meta.title) || it.url || '未命名'
+            a.append(t)
+
+            if (it.excerpt) {
+              const e = document.createElement('span')
+              e.className = 'search-item-excerpt'
+              // Pagefind 给的片段已经转义过，只有 <mark> 是高亮标签
+              e.innerHTML = it.excerpt
+              a.append(e)
+            }
+
+            const li = document.createElement('li')
+            li.append(a)
+            ul.append(li)
+          }
+
+          body.textContent = ''
+          body.append(ul)
+        }
+
+        /* ---------------- 搜索 ---------------- */
+        let seq = 0
+        const run = async (raw) => {
+          const mine = ++seq
+          const query = raw.trim()
+
+          if (!query) {
+            setTip(TIP)
+            return
+          }
+
+          setTip('<p class="search-tip">搜索中…</p>')
+
+          let pf
+          try {
+            pf = await loadEngine()
+          } catch {
+            setTip(
+              '<p class="search-tip">搜索索引暂时用不了。<br />索引是构建期生成的，' +
+                '<b>本地开发模式（pnpm dev）下没有</b>，跑一次 <b>pnpm build</b> 或 <b>pnpm preview</b> 就有了。</p>',
+            )
+            return
+          }
+          if (mine !== seq) return
+
+          try {
+            const res = await pf.search(query)
+            if (mine !== seq) return
+            const items = await Promise.all(res.results.slice(0, 8).map((r) => r.data()))
+            if (mine !== seq) return
+            render(items, query)
+          } catch {
+            setTip('<p class="search-tip">搜索出错了，换几个词再试试。</p>')
+          }
+        }
+
+        let timer
+        input.addEventListener('input', () => {
+          clearTimeout(timer)
+          timer = setTimeout(() => run(input.value), 130)
+        })
+
+        /* ---------------- 开关 ----------------
+         * 焦点闭环（2026-10-19 审计 D2）。此前的问题：
+         *   · 点开搜索、Esc 关掉之后，焦点落在 <body> 上 —— 键盘用户等于被扔回页首，
+         *     得从头 Tab 一遍才能回到刚才那颗放大镜；
+         *   · Tab 能一路走出面板、跑到页头导航和页脚链接上，而背景还盖着，
+         *     人是"看不见自己在哪"的。
+         *
+         * 做法分两层：
+         *   ① `inert` 给面板以外的所有 body 子节点 —— 一整片区域不可聚焦、不可点、
+         *     读屏也跳过。这是浏览器原生的"这块不参与交互"，比自己数可聚焦元素可靠；
+         *   ② Tab 在面板内显式循环 —— inert 已经挡住了外面的元素，但焦点走到最后
+         *     一个链接后浏览器会把焦点交给地址栏，再 Tab 回来就出了面板。显式兜一圈。
+         */
+        const isTyping = (el) =>
+          el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)
+
+        const trigger = document.querySelector('[data-search-open]')
+        /* 面板以外的所有 body 直接子节点（含 skip-link / header / main / footer）。
+           脚本标签也在里面 —— 给 <script> 设 inert 没有任何副作用。 */
+        const background = () => [...document.body.children].filter((el) => el !== layer)
+
+        /** 记住"打开之前焦点在哪"，关的时候还回去 */
+        let lastFocus = null
+
+        const focusables = () => {
+          const list = [...layer.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])')]
+          /* 结果列表是动态渲染的，用 offsetParent 过滤掉 [hidden] 与非可见项 */
+          return list.filter((el) => el === input || el.offsetParent !== null)
+        }
+
+        const open = () => {
+          lastFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
+          layer.hidden = false
+          document.body.style.overflow = 'hidden'
+          background().forEach((el) => el.setAttribute('inert', ''))
+          trigger?.setAttribute('aria-expanded', 'true')
+          input.focus()
+          input.select()
+          // 打开的那一刻就把索引拉起来，等"输入完再等下载"会显得卡
+          loadEngine().catch(() => {})
+        }
+
+        const close = () => {
+          layer.hidden = true
+          document.body.style.overflow = ''
+          background().forEach((el) => el.removeAttribute('inert'))
+          trigger?.setAttribute('aria-expanded', 'false')
+          /* 还焦点之前确认它还在文档里 —— 面板里点链接跳走时焦点目标可能是旧元素 */
+          if (lastFocus && document.contains(lastFocus)) lastFocus.focus()
+          lastFocus = null
+        }
+
+        /* Tab 在面板里循环。Shift+Tab 从第一个回到最后一个，Tab 从最后一个回到第一个。 */
+        layer.addEventListener('keydown', (e) => {
+          if (e.key !== 'Tab') return
+          const list = focusables()
+          if (!list.length) return
+          const first = list[0]
+          const last = list[list.length - 1]
+          if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault()
+            last.focus()
+          } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault()
+            first.focus()
+          }
+        })
+
+        document.addEventListener('click', (e) => {
+          if (e.target.closest('[data-search-open]')) {
+            e.preventDefault()
+            layer.hidden ? open() : close()
+            return
+          }
+          if (e.target.closest('[data-search-close]')) {
+            e.preventDefault()
+            close()
+          }
+        })
+
+        document.addEventListener('keydown', (e) => {
+          const open_ = !layer.hidden
+
+          if (e.key === 'Escape' && open_) {
+            close()
+            return
+          }
+          if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+            e.preventDefault()
+            open_ ? close() : open()
+            return
+          }
+          if (e.key === '/' && !open_ && !isTyping(e.target) && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            e.preventDefault()
+            open()
+          }
+        })
+
+        /* 上下键在结果里走 */
+        input.addEventListener('keydown', (e) => {
+          if (e.key !== 'ArrowDown') return
+          e.preventDefault()
+          body.querySelector('a')?.focus()
+        })
+        body.addEventListener('keydown', (e) => {
+          const links = [...body.querySelectorAll('a')]
+          const i = links.indexOf(document.activeElement)
+          if (e.key === 'ArrowDown') {
+            e.preventDefault()
+            links[Math.min(i + 1, links.length - 1)]?.focus()
+          } else if (e.key === 'ArrowUp') {
+            e.preventDefault()
+            i <= 0 ? input.focus() : links[i - 1].focus()
+          }
+        })
+      })()
+    </script><script>
+      // 主题切换：写 data-theme + 地址栏染色 + 记住选择 + 告诉读屏
+      ;(() => {
+        const btn = document.getElementById('theme-toggle')
+        if (!btn) return
+        const status = document.querySelector('[data-theme-status]')
+
+        /* 初值：<head> 里那段脚本已经把最终主题写进 data-theme 了，
+           这里只负责让按钮的 aria-pressed 跟它对齐（不能写死在 HTML 里 ——
+           首屏主题有一半概率来自系统偏好，服务端并不知道）。 */
+        const sync = (theme) => {
+          btn.setAttribute('aria-pressed', theme === 'dark' ? 'true' : 'false')
+        }
+        sync(document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light')
+
+        btn.addEventListener('click', () => {
+          const root = document.documentElement
+          const next = root.dataset.theme === 'dark' ? 'light' : 'dark'
+          root.dataset.theme = next
+          /* 地址栏跟着变，否则在深色系统里手动切到浅色后，浏览器顶上还是深色 */
+          document
+            .querySelector('meta[data-theme-color]')
+            ?.setAttribute('content', next === 'dark' ? '#0d1117' : '#f6f7f9')
+          sync(next)
+          try {
+            localStorage.setItem('theme', next)
+          } catch {
+            /* 忽略 */
+          }
+          /* 播报结果。先清空再写，是为了让"浅→深→浅"这种连续切换每次都念 ——
+             内容没变化时 aria-live 不会重复播报。 */
+          if (status) {
+            status.textContent = ''
+            requestAnimationFrame(() => {
+              status.textContent = next === 'dark' ? '已切换到深色主题' : '已切换到浅色主题'
+            })
+          }
+        })
+      })()
+    </script></body></html>

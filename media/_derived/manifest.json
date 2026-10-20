@@ -1,0 +1,1538 @@
+{
+  "/media/docs/dev-doc/cover.webp": {
+    "w": 1600,
+    "h": 800,
+    "hash": "c31dc5415e90",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/docs/dev-doc/cover-800.webp?v=c31dc5415e90"
+      }
+    ]
+  },
+  "/media/illustration-portfolio/ill-01.webp": {
+    "w": 1920,
+    "h": 1080,
+    "hash": "bdc5e4e9c97d",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/illustration-portfolio/ill-01-800.webp?v=bdc5e4e9c97d"
+      },
+      {
+        "w": 1600,
+        "src": "/media/_derived/illustration-portfolio/ill-01-1600.webp?v=bdc5e4e9c97d"
+      }
+    ]
+  },
+  "/media/illustration-portfolio/ill-04.webp": {
+    "w": 1920,
+    "h": 1080,
+    "hash": "5cf5bb377419",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/illustration-portfolio/ill-04-800.webp?v=5cf5bb377419"
+      },
+      {
+        "w": 1600,
+        "src": "/media/_derived/illustration-portfolio/ill-04-1600.webp?v=5cf5bb377419"
+      }
+    ]
+  },
+  "/media/illustration-portfolio/ill-06.webp": {
+    "w": 1920,
+    "h": 1080,
+    "hash": "d96e37ebf008",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/illustration-portfolio/ill-06-800.webp?v=d96e37ebf008"
+      },
+      {
+        "w": 1600,
+        "src": "/media/_derived/illustration-portfolio/ill-06-1600.webp?v=d96e37ebf008"
+      }
+    ]
+  },
+  "/media/illustration-portfolio/ill-07.webp": {
+    "w": 1920,
+    "h": 1080,
+    "hash": "77aed78eb3dc",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/illustration-portfolio/ill-07-800.webp?v=77aed78eb3dc"
+      },
+      {
+        "w": 1600,
+        "src": "/media/_derived/illustration-portfolio/ill-07-1600.webp?v=77aed78eb3dc"
+      }
+    ]
+  },
+  "/media/illustration-portfolio/ill-08.webp": {
+    "w": 1920,
+    "h": 1080,
+    "hash": "6a198b93c7c8",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/illustration-portfolio/ill-08-800.webp?v=6a198b93c7c8"
+      },
+      {
+        "w": 1600,
+        "src": "/media/_derived/illustration-portfolio/ill-08-1600.webp?v=6a198b93c7c8"
+      }
+    ]
+  },
+  "/media/illustration-portfolio/ill-09.webp": {
+    "w": 1920,
+    "h": 1080,
+    "hash": "237fcf6dd9b6",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/illustration-portfolio/ill-09-800.webp?v=237fcf6dd9b6"
+      },
+      {
+        "w": 1600,
+        "src": "/media/_derived/illustration-portfolio/ill-09-1600.webp?v=237fcf6dd9b6"
+      }
+    ]
+  },
+  "/media/illustration-portfolio/ill-10.webp": {
+    "w": 1920,
+    "h": 1080,
+    "hash": "ba6cce8831a8",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/illustration-portfolio/ill-10-800.webp?v=ba6cce8831a8"
+      },
+      {
+        "w": 1600,
+        "src": "/media/_derived/illustration-portfolio/ill-10-1600.webp?v=ba6cce8831a8"
+      }
+    ]
+  },
+  "/media/illustration-portfolio/ill-11.webp": {
+    "w": 1920,
+    "h": 1080,
+    "hash": "53ddb770c50a",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/illustration-portfolio/ill-11-800.webp?v=53ddb770c50a"
+      },
+      {
+        "w": 1600,
+        "src": "/media/_derived/illustration-portfolio/ill-11-1600.webp?v=53ddb770c50a"
+      }
+    ]
+  },
+  "/media/illustration-portfolio/ill-12.webp": {
+    "w": 1920,
+    "h": 1080,
+    "hash": "831cb5508a0d",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/illustration-portfolio/ill-12-800.webp?v=831cb5508a0d"
+      },
+      {
+        "w": 1600,
+        "src": "/media/_derived/illustration-portfolio/ill-12-1600.webp?v=831cb5508a0d"
+      }
+    ]
+  },
+  "/media/illustration-portfolio/ill-13.webp": {
+    "w": 1920,
+    "h": 1080,
+    "hash": "42bc362ab2a4",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/illustration-portfolio/ill-13-800.webp?v=42bc362ab2a4"
+      },
+      {
+        "w": 1600,
+        "src": "/media/_derived/illustration-portfolio/ill-13-1600.webp?v=42bc362ab2a4"
+      }
+    ]
+  },
+  "/media/illustration-portfolio/ill-16.webp": {
+    "w": 1920,
+    "h": 1080,
+    "hash": "f27479c111e3",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/illustration-portfolio/ill-16-800.webp?v=f27479c111e3"
+      },
+      {
+        "w": 1600,
+        "src": "/media/_derived/illustration-portfolio/ill-16-1600.webp?v=f27479c111e3"
+      }
+    ]
+  },
+  "/media/illustration-portfolio/ill-18.webp": {
+    "w": 1920,
+    "h": 1080,
+    "hash": "4e85f8a8d7cb",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/illustration-portfolio/ill-18-800.webp?v=4e85f8a8d7cb"
+      },
+      {
+        "w": 1600,
+        "src": "/media/_derived/illustration-portfolio/ill-18-1600.webp?v=4e85f8a8d7cb"
+      }
+    ]
+  },
+  "/media/illustration-portfolio/ill-19.webp": {
+    "w": 1920,
+    "h": 1080,
+    "hash": "5aab4458e2c6",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/illustration-portfolio/ill-19-800.webp?v=5aab4458e2c6"
+      },
+      {
+        "w": 1600,
+        "src": "/media/_derived/illustration-portfolio/ill-19-1600.webp?v=5aab4458e2c6"
+      }
+    ]
+  },
+  "/media/illustration-portfolio/ill-20.webp": {
+    "w": 1920,
+    "h": 1080,
+    "hash": "fbd339f1135f",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/illustration-portfolio/ill-20-800.webp?v=fbd339f1135f"
+      },
+      {
+        "w": 1600,
+        "src": "/media/_derived/illustration-portfolio/ill-20-1600.webp?v=fbd339f1135f"
+      }
+    ]
+  },
+  "/media/marathon-volt/DDD_027.png": {
+    "w": 683,
+    "h": 1175,
+    "variants": []
+  },
+  "/media/marathon-volt/DDD_030.png": {
+    "w": 1000,
+    "h": 1508,
+    "hash": "3bee82549820",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/marathon-volt/DDD_030-800.webp?v=3bee82549820"
+      }
+    ]
+  },
+  "/media/marathon-volt/DDD_031.png": {
+    "w": 783,
+    "h": 1325,
+    "variants": []
+  },
+  "/media/marathon-volt/DDD_032.png": {
+    "w": 592,
+    "h": 1063,
+    "variants": []
+  },
+  "/media/marathon-volt/DDD_033.png": {
+    "w": 1338,
+    "h": 300,
+    "hash": "8bb9f96728e5",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/marathon-volt/DDD_033-800.webp?v=8bb9f96728e5"
+      }
+    ]
+  },
+  "/media/marathon-volt/DDD_034.png": {
+    "w": 1338,
+    "h": 300,
+    "hash": "10de774730a3",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/marathon-volt/DDD_034-800.webp?v=10de774730a3"
+      }
+    ]
+  },
+  "/media/marathon-volt/DDD_035.png": {
+    "w": 942,
+    "h": 471,
+    "hash": "859dd611325b",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/marathon-volt/DDD_035-800.webp?v=859dd611325b"
+      }
+    ]
+  },
+  "/media/marathon-volt/DDD_028.png": {
+    "w": 688,
+    "h": 379,
+    "variants": []
+  },
+  "/media/marathon-volt/DDD_029.png": {
+    "w": 708,
+    "h": 708,
+    "variants": []
+  },
+  "/media/PIC/SSS_024.png": {
+    "w": 708,
+    "h": 592,
+    "variants": []
+  },
+  "/media/marathon-volt/DDD_036.png": {
+    "w": 592,
+    "h": 592,
+    "variants": []
+  },
+  "/media/marathon-volt/SSS___7-3.png": {
+    "w": 412,
+    "h": 354,
+    "variants": []
+  },
+  "/media/marathon-volt/DDD_037.png": {
+    "w": 471,
+    "h": 471,
+    "variants": []
+  },
+  "/media/marathon-volt/DDD_038.png": {
+    "w": 1367,
+    "h": 1500,
+    "hash": "da19ad6f2568",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/marathon-volt/DDD_038-800.webp?v=da19ad6f2568"
+      }
+    ]
+  },
+  "/media/marathon-volt/SSS___5.png": {
+    "w": 477,
+    "h": 366,
+    "variants": []
+  },
+  "/media/marathon-volt/SSS___8-2.png": {
+    "w": 277,
+    "h": 711,
+    "variants": []
+  },
+  "/media/marathon-volt/SSS___14-2.png": {
+    "w": 228,
+    "h": 465,
+    "variants": []
+  },
+  "/media/marathon-volt/SSS___4-2.png": {
+    "w": 163,
+    "h": 163,
+    "variants": []
+  },
+  "/media/PIC/SSS_004.png": {
+    "w": 529,
+    "h": 492,
+    "variants": []
+  },
+  "/media/PIC/SSS_015.png": {
+    "w": 621,
+    "h": 621,
+    "variants": []
+  },
+  "/media/PIC/SSS_017.png": {
+    "w": 621,
+    "h": 621,
+    "variants": []
+  },
+  "/media/PIC/SSS_003.png": {
+    "w": 604,
+    "h": 508,
+    "variants": []
+  },
+  "/media/PIC/SSS_019.png": {
+    "w": 942,
+    "h": 946,
+    "hash": "66d27f99aefd",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/PIC/SSS_019-800.webp?v=66d27f99aefd"
+      }
+    ]
+  },
+  "/media/PIC/SSS_002.png": {
+    "w": 471,
+    "h": 358,
+    "variants": []
+  },
+  "/media/PIC/SSS_012.png": {
+    "w": 592,
+    "h": 592,
+    "variants": []
+  },
+  "/media/PIC/SSS_020.png": {
+    "w": 946,
+    "h": 946,
+    "hash": "050e8186df86",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/PIC/SSS_020-800.webp?v=050e8186df86"
+      }
+    ]
+  },
+  "/media/PIC/SSS_021.png": {
+    "w": 592,
+    "h": 592,
+    "variants": []
+  },
+  "/media/PIC/SSS_014.png": {
+    "w": 838,
+    "h": 838,
+    "hash": "4eb3d61ab596",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/PIC/SSS_014-800.webp?v=4eb3d61ab596"
+      }
+    ]
+  },
+  "/media/PIC/SSS_008.png": {
+    "w": 1179,
+    "h": 1063,
+    "hash": "ecda6d4ac444",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/PIC/SSS_008-800.webp?v=ecda6d4ac444"
+      }
+    ]
+  },
+  "/media/PIC/SSS_029.png": {
+    "w": 979,
+    "h": 992,
+    "hash": "a62cd0ae97a4",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/PIC/SSS_029-800.webp?v=a62cd0ae97a4"
+      }
+    ]
+  },
+  "/media/PIC/SSS_023.png": {
+    "w": 792,
+    "h": 408,
+    "variants": []
+  },
+  "/media/PIC/SSS_032.png": {
+    "w": 1654,
+    "h": 117,
+    "hash": "7edbb40c9d9c",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/PIC/SSS_032-800.webp?v=7edbb40c9d9c"
+      },
+      {
+        "w": 1600,
+        "src": "/media/_derived/PIC/SSS_032-1600.webp?v=7edbb40c9d9c"
+      }
+    ]
+  },
+  "/media/PIC/SSS_025.png": {
+    "w": 354,
+    "h": 354,
+    "variants": []
+  },
+  "/media/PIC/SSS_026.png": {
+    "w": 708,
+    "h": 408,
+    "variants": []
+  },
+  "/media/PIC/SSS_030.png": {
+    "w": 708,
+    "h": 708,
+    "variants": []
+  },
+  "/media/PIC/SSS_031.png": {
+    "w": 933,
+    "h": 933,
+    "hash": "9a5cdcd02d42",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/PIC/SSS_031-800.webp?v=9a5cdcd02d42"
+      }
+    ]
+  },
+  "/media/PIC/SSS_034.png": {
+    "w": 675,
+    "h": 675,
+    "variants": []
+  },
+  "/media/PIC/SSS资源 9.png": {
+    "w": 164,
+    "h": 163,
+    "variants": []
+  },
+  "/media/PIC/SSS资源 12.png": {
+    "w": 164,
+    "h": 164,
+    "variants": []
+  },
+  "/media/PIC/SSS资源 11.png": {
+    "w": 184,
+    "h": 162,
+    "variants": []
+  },
+  "/media/PIC/SSS资源 8.png": {
+    "w": 183,
+    "h": 162,
+    "variants": []
+  },
+  "/media/PIC/SSS_035.png": {
+    "w": 704,
+    "h": 704,
+    "variants": []
+  },
+  "/media/PIC/SSS_038.png": {
+    "w": 663,
+    "h": 663,
+    "variants": []
+  },
+  "/media/PIC/SSS_040.png": {
+    "w": 750,
+    "h": 746,
+    "variants": []
+  },
+  "/media/PIC/SSS资源 3.png": {
+    "w": 75,
+    "h": 75,
+    "variants": []
+  },
+  "/media/PIC/SSS资源 4.png": {
+    "w": 75,
+    "h": 75,
+    "variants": []
+  },
+  "/media/PIC/SSS资源 6.png": {
+    "w": 75,
+    "h": 75,
+    "variants": []
+  },
+  "/media/marathon-volt/SSS___13.png": {
+    "w": 118,
+    "h": 118,
+    "variants": []
+  },
+  "/media/marathon-volt/SSS___14.png": {
+    "w": 94,
+    "h": 93,
+    "variants": []
+  },
+  "/media/marathon-volt/SSS___15.png": {
+    "w": 105,
+    "h": 118,
+    "variants": []
+  },
+  "/media/marathon-volt/SSS___16.png": {
+    "w": 96,
+    "h": 92,
+    "variants": []
+  },
+  "/media/marathon-volt/SSS___17.png": {
+    "w": 154,
+    "h": 154,
+    "variants": []
+  },
+  "/media/marathon-volt/SSS___18.png": {
+    "w": 154,
+    "h": 154,
+    "variants": []
+  },
+  "/media/marathon-volt/SSS___19.png": {
+    "w": 178,
+    "h": 154,
+    "variants": []
+  },
+  "/media/marathon-volt/SSS___21.png": {
+    "w": 162,
+    "h": 154,
+    "variants": []
+  },
+  "/media/marathon-volt/SSS___22.png": {
+    "w": 130,
+    "h": 130,
+    "variants": []
+  },
+  "/media/marathon-volt/SSS___23.png": {
+    "w": 104,
+    "h": 104,
+    "variants": []
+  },
+  "/media/marathon-volt/SSS___24.png": {
+    "w": 115,
+    "h": 130,
+    "variants": []
+  },
+  "/media/marathon-volt/SSS___25.png": {
+    "w": 105,
+    "h": 100,
+    "variants": []
+  },
+  "/media/marathon-volt/SSS___26.png": {
+    "w": 178,
+    "h": 179,
+    "variants": []
+  },
+  "/media/marathon-volt/SSS___27.png": {
+    "w": 178,
+    "h": 179,
+    "variants": []
+  },
+  "/media/marathon-volt/SSS___28.png": {
+    "w": 206,
+    "h": 179,
+    "variants": []
+  },
+  "/media/marathon-volt/SSS___29.png": {
+    "w": 187,
+    "h": 179,
+    "variants": []
+  },
+  "/media/marathon-volt/SSS___30.png": {
+    "w": 154,
+    "h": 154,
+    "variants": []
+  },
+  "/media/marathon-volt/SSS___31.png": {
+    "w": 124,
+    "h": 125,
+    "variants": []
+  },
+  "/media/marathon-volt/SSS___32.png": {
+    "w": 135,
+    "h": 154,
+    "variants": []
+  },
+  "/media/marathon-volt/SSS___33.png": {
+    "w": 123,
+    "h": 118,
+    "variants": []
+  },
+  "/media/marathon-volt/SSS___34.png": {
+    "w": 226,
+    "h": 226,
+    "variants": []
+  },
+  "/media/marathon-volt/SSS___35.png": {
+    "w": 226,
+    "h": 226,
+    "variants": []
+  },
+  "/media/marathon-volt/SSS___36.png": {
+    "w": 262,
+    "h": 226,
+    "variants": []
+  },
+  "/media/marathon-volt/SSS___37.png": {
+    "w": 239,
+    "h": 226,
+    "variants": []
+  },
+  "/media/PIC/SSS_033.png": {
+    "w": 1179,
+    "h": 471,
+    "hash": "06d11ce45a88",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/PIC/SSS_033-800.webp?v=06d11ce45a88"
+      }
+    ]
+  },
+  "/media/PIC/SSS_027.png": {
+    "w": 3071,
+    "h": 1071,
+    "hash": "3857bc35b758",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/PIC/SSS_027-800.webp?v=3857bc35b758"
+      },
+      {
+        "w": 1600,
+        "src": "/media/_derived/PIC/SSS_027-1600.webp?v=3857bc35b758"
+      }
+    ]
+  },
+  "/media/PIC/SSS_013.png": {
+    "w": 4904,
+    "h": 579,
+    "hash": "6851601e2ca4",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/PIC/SSS_013-800.webp?v=6851601e2ca4"
+      },
+      {
+        "w": 1600,
+        "src": "/media/_derived/PIC/SSS_013-1600.webp?v=6851601e2ca4"
+      }
+    ]
+  },
+  "/media/marathon-volt/SSS_001.png": {
+    "w": 3200,
+    "h": 1800,
+    "hash": "acb0380af1ad",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/marathon-volt/SSS_001-800.webp?v=acb0380af1ad"
+      },
+      {
+        "w": 1600,
+        "src": "/media/_derived/marathon-volt/SSS_001-1600.webp?v=acb0380af1ad"
+      }
+    ]
+  },
+  "/media/marathon-volt/DDD_001.png": {
+    "w": 725,
+    "h": 871,
+    "variants": []
+  },
+  "/media/marathon-volt/DDD_002.png": {
+    "w": 825,
+    "h": 871,
+    "hash": "e5f65c7bd07a",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/marathon-volt/DDD_002-800.webp?v=e5f65c7bd07a"
+      }
+    ]
+  },
+  "/media/marathon-volt/DDD_003.png": {
+    "w": 879,
+    "h": 871,
+    "hash": "0208126dc931",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/marathon-volt/DDD_003-800.webp?v=0208126dc931"
+      }
+    ]
+  },
+  "/media/marathon-volt/DDD_004.png": {
+    "w": 1158,
+    "h": 871,
+    "hash": "ae6937951e17",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/marathon-volt/DDD_004-800.webp?v=ae6937951e17"
+      }
+    ]
+  },
+  "/media/marathon-volt/DDD_005.png": {
+    "w": 825,
+    "h": 871,
+    "hash": "79fbb39252f3",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/marathon-volt/DDD_005-800.webp?v=79fbb39252f3"
+      }
+    ]
+  },
+  "/media/marathon-volt/DDD_006.png": {
+    "w": 713,
+    "h": 883,
+    "variants": []
+  },
+  "/media/marathon-volt/DDD_007.png": {
+    "w": 613,
+    "h": 871,
+    "variants": []
+  },
+  "/media/marathon-volt/DDD_008.png": {
+    "w": 779,
+    "h": 896,
+    "variants": []
+  },
+  "/media/marathon-volt/DDD_009.png": {
+    "w": 775,
+    "h": 871,
+    "variants": []
+  },
+  "/media/marathon-volt/DDD_010.png": {
+    "w": 829,
+    "h": 1042,
+    "hash": "656e9defd4b1",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/marathon-volt/DDD_010-800.webp?v=656e9defd4b1"
+      }
+    ]
+  },
+  "/media/marathon-volt/DDD_011.png": {
+    "w": 742,
+    "h": 871,
+    "variants": []
+  },
+  "/media/marathon-volt/DDD_012.png": {
+    "w": 829,
+    "h": 896,
+    "hash": "d2532d963ef6",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/marathon-volt/DDD_012-800.webp?v=d2532d963ef6"
+      }
+    ]
+  },
+  "/media/marathon-volt/DDD_013.png": {
+    "w": 742,
+    "h": 871,
+    "variants": []
+  },
+  "/media/marathon-volt/DDD_014.png": {
+    "w": 946,
+    "h": 871,
+    "hash": "343667ff6293",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/marathon-volt/DDD_014-800.webp?v=343667ff6293"
+      }
+    ]
+  },
+  "/media/marathon-volt/DDD_015.png": {
+    "w": 608,
+    "h": 871,
+    "variants": []
+  },
+  "/media/marathon-volt/DDD_016.png": {
+    "w": 783,
+    "h": 871,
+    "variants": []
+  },
+  "/media/marathon-volt/DDD_017.png": {
+    "w": 792,
+    "h": 896,
+    "variants": []
+  },
+  "/media/marathon-volt/DDD_018.png": {
+    "w": 267,
+    "h": 871,
+    "variants": []
+  },
+  "/media/marathon-volt/DDD_019.png": {
+    "w": 738,
+    "h": 871,
+    "variants": []
+  },
+  "/media/marathon-volt/DDD_020.png": {
+    "w": 792,
+    "h": 896,
+    "variants": []
+  },
+  "/media/marathon-volt/DDD_021.png": {
+    "w": 629,
+    "h": 871,
+    "variants": []
+  },
+  "/media/marathon-volt/DDD_022.png": {
+    "w": 654,
+    "h": 871,
+    "variants": []
+  },
+  "/media/marathon-volt/DDD_023.png": {
+    "w": 775,
+    "h": 871,
+    "variants": []
+  },
+  "/media/marathon-volt/DDD_024.png": {
+    "w": 763,
+    "h": 896,
+    "variants": []
+  },
+  "/media/marathon-volt/DDD_025.png": {
+    "w": 729,
+    "h": 871,
+    "variants": []
+  },
+  "/media/marathon-volt/DDD_026.png": {
+    "w": 825,
+    "h": 871,
+    "hash": "cd21c66b9bff",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/marathon-volt/DDD_026-800.webp?v=cd21c66b9bff"
+      }
+    ]
+  },
+  "/media/marathon-volt/DDD_039.png": {
+    "w": 821,
+    "h": 1208,
+    "hash": "7e8144debefa",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/marathon-volt/DDD_039-800.webp?v=7e8144debefa"
+      }
+    ]
+  },
+  "/media/marathon-volt/DDD_040.png": {
+    "w": 879,
+    "h": 1213,
+    "hash": "309f137a12df",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/marathon-volt/DDD_040-800.webp?v=309f137a12df"
+      }
+    ]
+  },
+  "/media/marathon-volt/DDD_041.png": {
+    "w": 817,
+    "h": 1208,
+    "hash": "92fd050be2dd",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/marathon-volt/DDD_041-800.webp?v=92fd050be2dd"
+      }
+    ]
+  },
+  "/media/marathon-volt/DDD_042.png": {
+    "w": 775,
+    "h": 1150,
+    "variants": []
+  },
+  "/media/marathon-volt/DDD_043.png": {
+    "w": 879,
+    "h": 1213,
+    "hash": "bcdfd673a0ab",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/marathon-volt/DDD_043-800.webp?v=bcdfd673a0ab"
+      }
+    ]
+  },
+  "/media/marathon-volt/DDD_044.png": {
+    "w": 692,
+    "h": 1179,
+    "variants": []
+  },
+  "/media/marathon-volt/DDD_045.png": {
+    "w": 846,
+    "h": 1150,
+    "hash": "0c9503441bd4",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/marathon-volt/DDD_045-800.webp?v=0c9503441bd4"
+      }
+    ]
+  },
+  "/media/marathon-volt/DDD_046.png": {
+    "w": 617,
+    "h": 1179,
+    "variants": []
+  },
+  "/media/marathon-volt/DDD_047.png": {
+    "w": 813,
+    "h": 1179,
+    "hash": "9c473e11b042",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/marathon-volt/DDD_047-800.webp?v=9c473e11b042"
+      }
+    ]
+  },
+  "/media/marathon-volt/DDD_048.png": {
+    "w": 325,
+    "h": 1150,
+    "variants": []
+  },
+  "/media/ui-portfolio/ui-13.webp": {
+    "w": 3000,
+    "h": 2398,
+    "hash": "95ef4f64964a",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/ui-portfolio/ui-13-800.webp?v=95ef4f64964a"
+      },
+      {
+        "w": 1600,
+        "src": "/media/_derived/ui-portfolio/ui-13-1600.webp?v=95ef4f64964a"
+      }
+    ]
+  },
+  "/media/ui-portfolio/ui-16.webp": {
+    "w": 3000,
+    "h": 2398,
+    "hash": "befa2badf485",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/ui-portfolio/ui-16-800.webp?v=befa2badf485"
+      },
+      {
+        "w": 1600,
+        "src": "/media/_derived/ui-portfolio/ui-16-1600.webp?v=befa2badf485"
+      }
+    ]
+  },
+  "/media/ui-portfolio/ui-17.webp": {
+    "w": 3000,
+    "h": 2398,
+    "hash": "23aeb2a3fb1b",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/ui-portfolio/ui-17-800.webp?v=23aeb2a3fb1b"
+      },
+      {
+        "w": 1600,
+        "src": "/media/_derived/ui-portfolio/ui-17-1600.webp?v=23aeb2a3fb1b"
+      }
+    ]
+  },
+  "/media/ui-portfolio/ui-18.webp": {
+    "w": 3000,
+    "h": 2398,
+    "hash": "bb26a4fff89b",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/ui-portfolio/ui-18-800.webp?v=bb26a4fff89b"
+      },
+      {
+        "w": 1600,
+        "src": "/media/_derived/ui-portfolio/ui-18-1600.webp?v=bb26a4fff89b"
+      }
+    ]
+  },
+  "/media/ui-portfolio/ui-19.webp": {
+    "w": 3000,
+    "h": 2398,
+    "hash": "2c502236c17d",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/ui-portfolio/ui-19-800.webp?v=2c502236c17d"
+      },
+      {
+        "w": 1600,
+        "src": "/media/_derived/ui-portfolio/ui-19-1600.webp?v=2c502236c17d"
+      }
+    ]
+  },
+  "/media/ui-portfolio/ui-20.webp": {
+    "w": 3000,
+    "h": 2398,
+    "hash": "72f0137b2dbe",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/ui-portfolio/ui-20-800.webp?v=72f0137b2dbe"
+      },
+      {
+        "w": 1600,
+        "src": "/media/_derived/ui-portfolio/ui-20-1600.webp?v=72f0137b2dbe"
+      }
+    ]
+  },
+  "/media/ui-portfolio/ui-21.webp": {
+    "w": 3000,
+    "h": 2398,
+    "hash": "071fec11e583",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/ui-portfolio/ui-21-800.webp?v=071fec11e583"
+      },
+      {
+        "w": 1600,
+        "src": "/media/_derived/ui-portfolio/ui-21-1600.webp?v=071fec11e583"
+      }
+    ]
+  },
+  "/media/ui-portfolio/ui-22.webp": {
+    "w": 3000,
+    "h": 2398,
+    "hash": "0951411ecf0a",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/ui-portfolio/ui-22-800.webp?v=0951411ecf0a"
+      },
+      {
+        "w": 1600,
+        "src": "/media/_derived/ui-portfolio/ui-22-1600.webp?v=0951411ecf0a"
+      }
+    ]
+  },
+  "/media/ui-portfolio/ui-23.webp": {
+    "w": 3000,
+    "h": 2398,
+    "hash": "737c7439ea7d",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/ui-portfolio/ui-23-800.webp?v=737c7439ea7d"
+      },
+      {
+        "w": 1600,
+        "src": "/media/_derived/ui-portfolio/ui-23-1600.webp?v=737c7439ea7d"
+      }
+    ]
+  },
+  "/media/ui-portfolio/ui-24.webp": {
+    "w": 3000,
+    "h": 2398,
+    "hash": "2feee24f90b0",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/ui-portfolio/ui-24-800.webp?v=2feee24f90b0"
+      },
+      {
+        "w": 1600,
+        "src": "/media/_derived/ui-portfolio/ui-24-1600.webp?v=2feee24f90b0"
+      }
+    ]
+  },
+  "/media/ui-portfolio/ui-26.webp": {
+    "w": 3000,
+    "h": 2398,
+    "hash": "e7f46428a750",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/ui-portfolio/ui-26-800.webp?v=e7f46428a750"
+      },
+      {
+        "w": 1600,
+        "src": "/media/_derived/ui-portfolio/ui-26-1600.webp?v=e7f46428a750"
+      }
+    ]
+  },
+  "/media/ui-portfolio/ui-25.webp": {
+    "w": 3000,
+    "h": 2398,
+    "hash": "8ee5b87b8fd9",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/ui-portfolio/ui-25-800.webp?v=8ee5b87b8fd9"
+      },
+      {
+        "w": 1600,
+        "src": "/media/_derived/ui-portfolio/ui-25-1600.webp?v=8ee5b87b8fd9"
+      }
+    ]
+  },
+  "/media/ui-portfolio/ui-10.webp": {
+    "w": 3000,
+    "h": 2398,
+    "hash": "69c71fe74fc5",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/ui-portfolio/ui-10-800.webp?v=69c71fe74fc5"
+      },
+      {
+        "w": 1600,
+        "src": "/media/_derived/ui-portfolio/ui-10-1600.webp?v=69c71fe74fc5"
+      }
+    ]
+  },
+  "/media/ui-portfolio/ui-05.webp": {
+    "w": 3000,
+    "h": 2398,
+    "hash": "6907c7cd5335",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/ui-portfolio/ui-05-800.webp?v=6907c7cd5335"
+      },
+      {
+        "w": 1600,
+        "src": "/media/_derived/ui-portfolio/ui-05-1600.webp?v=6907c7cd5335"
+      }
+    ]
+  },
+  "/media/ui-portfolio/ui-06.webp": {
+    "w": 3000,
+    "h": 2398,
+    "hash": "8aa80058a55b",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/ui-portfolio/ui-06-800.webp?v=8aa80058a55b"
+      },
+      {
+        "w": 1600,
+        "src": "/media/_derived/ui-portfolio/ui-06-1600.webp?v=8aa80058a55b"
+      }
+    ]
+  },
+  "/media/ui-portfolio/ui-08.webp": {
+    "w": 3000,
+    "h": 2398,
+    "hash": "687aeee20869",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/ui-portfolio/ui-08-800.webp?v=687aeee20869"
+      },
+      {
+        "w": 1600,
+        "src": "/media/_derived/ui-portfolio/ui-08-1600.webp?v=687aeee20869"
+      }
+    ]
+  },
+  "/media/ui-portfolio/ui-07.webp": {
+    "w": 3000,
+    "h": 2398,
+    "hash": "43ac0b194025",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/ui-portfolio/ui-07-800.webp?v=43ac0b194025"
+      },
+      {
+        "w": 1600,
+        "src": "/media/_derived/ui-portfolio/ui-07-1600.webp?v=43ac0b194025"
+      }
+    ]
+  },
+  "/media/ui-portfolio/ui-09.webp": {
+    "w": 3000,
+    "h": 2398,
+    "hash": "1297ca296b5f",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/ui-portfolio/ui-09-800.webp?v=1297ca296b5f"
+      },
+      {
+        "w": 1600,
+        "src": "/media/_derived/ui-portfolio/ui-09-1600.webp?v=1297ca296b5f"
+      }
+    ]
+  },
+  "/media/ui-portfolio/ui-11.webp": {
+    "w": 3000,
+    "h": 2398,
+    "hash": "ecb5a92f723e",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/ui-portfolio/ui-11-800.webp?v=ecb5a92f723e"
+      },
+      {
+        "w": 1600,
+        "src": "/media/_derived/ui-portfolio/ui-11-1600.webp?v=ecb5a92f723e"
+      }
+    ]
+  },
+  "/media/ui-portfolio/ui-03.webp": {
+    "w": 3000,
+    "h": 2398,
+    "hash": "8b51285e00b6",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/ui-portfolio/ui-03-800.webp?v=8b51285e00b6"
+      },
+      {
+        "w": 1600,
+        "src": "/media/_derived/ui-portfolio/ui-03-1600.webp?v=8b51285e00b6"
+      }
+    ]
+  },
+  "/media/ui-portfolio/ui-04.webp": {
+    "w": 3000,
+    "h": 2398,
+    "hash": "7a9b8b32ea7d",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/ui-portfolio/ui-04-800.webp?v=7a9b8b32ea7d"
+      },
+      {
+        "w": 1600,
+        "src": "/media/_derived/ui-portfolio/ui-04-1600.webp?v=7a9b8b32ea7d"
+      }
+    ]
+  },
+  "/media/ui-portfolio/ui-27.webp": {
+    "w": 3000,
+    "h": 2398,
+    "hash": "b5287089b2a5",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/ui-portfolio/ui-27-800.webp?v=b5287089b2a5"
+      },
+      {
+        "w": 1600,
+        "src": "/media/_derived/ui-portfolio/ui-27-1600.webp?v=b5287089b2a5"
+      }
+    ]
+  },
+  "/media/ui-portfolio/ui-28.webp": {
+    "w": 3000,
+    "h": 2398,
+    "hash": "07afa6715d5f",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/ui-portfolio/ui-28-800.webp?v=07afa6715d5f"
+      },
+      {
+        "w": 1600,
+        "src": "/media/_derived/ui-portfolio/ui-28-1600.webp?v=07afa6715d5f"
+      }
+    ]
+  },
+  "/media/ui-portfolio/ui-29.webp": {
+    "w": 3000,
+    "h": 2398,
+    "hash": "de8b5e0b23ea",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/ui-portfolio/ui-29-800.webp?v=de8b5e0b23ea"
+      },
+      {
+        "w": 1600,
+        "src": "/media/_derived/ui-portfolio/ui-29-1600.webp?v=de8b5e0b23ea"
+      }
+    ]
+  },
+  "/media/ui-portfolio/ui-30.webp": {
+    "w": 3000,
+    "h": 2398,
+    "hash": "1144c1e3323b",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/ui-portfolio/ui-30-800.webp?v=1144c1e3323b"
+      },
+      {
+        "w": 1600,
+        "src": "/media/_derived/ui-portfolio/ui-30-1600.webp?v=1144c1e3323b"
+      }
+    ]
+  },
+  "/media/ui-portfolio/ui-31.webp": {
+    "w": 3000,
+    "h": 2398,
+    "hash": "782b61013a51",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/ui-portfolio/ui-31-800.webp?v=782b61013a51"
+      },
+      {
+        "w": 1600,
+        "src": "/media/_derived/ui-portfolio/ui-31-1600.webp?v=782b61013a51"
+      }
+    ]
+  },
+  "/media/ui-portfolio/ui-32.webp": {
+    "w": 3000,
+    "h": 2398,
+    "hash": "dbdaed1b4851",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/ui-portfolio/ui-32-800.webp?v=dbdaed1b4851"
+      },
+      {
+        "w": 1600,
+        "src": "/media/_derived/ui-portfolio/ui-32-1600.webp?v=dbdaed1b4851"
+      }
+    ]
+  },
+  "/media/ui-portfolio/ui-33.webp": {
+    "w": 3000,
+    "h": 2398,
+    "hash": "ea3eb5a2b357",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/ui-portfolio/ui-33-800.webp?v=ea3eb5a2b357"
+      },
+      {
+        "w": 1600,
+        "src": "/media/_derived/ui-portfolio/ui-33-1600.webp?v=ea3eb5a2b357"
+      }
+    ]
+  },
+  "/media/models/brim-hat-parts.webp": {
+    "w": 1263,
+    "h": 948,
+    "hash": "ff5d85576c91",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/models/brim-hat-parts-800.webp?v=ff5d85576c91"
+      }
+    ]
+  },
+  "/media/models/chibi-model.webp": {
+    "w": 1920,
+    "h": 1920,
+    "hash": "2309a95a1332",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/models/chibi-model-800.webp?v=2309a95a1332"
+      },
+      {
+        "w": 1600,
+        "src": "/media/_derived/models/chibi-model-1600.webp?v=2309a95a1332"
+      }
+    ]
+  },
+  "/media/models/FUFU.webp": {
+    "w": 1920,
+    "h": 1920,
+    "hash": "8d3a461d2ae4",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/models/FUFU-800.webp?v=8d3a461d2ae4"
+      },
+      {
+        "w": 1600,
+        "src": "/media/_derived/models/FUFU-1600.webp?v=8d3a461d2ae4"
+      }
+    ]
+  },
+  "/media/models/star-helmet-chibi.webp": {
+    "w": 1440,
+    "h": 1080,
+    "hash": "6f1731873600",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/models/star-helmet-chibi-800.webp?v=6f1731873600"
+      }
+    ]
+  },
+  "/media/models/takamatsu-tomori.webp": {
+    "w": 1440,
+    "h": 1080,
+    "hash": "649d42894c4e",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/models/takamatsu-tomori-800.webp?v=649d42894c4e"
+      }
+    ]
+  },
+  "/media/dcat/cover.webp": {
+    "w": 1600,
+    "h": 974,
+    "hash": "40ea50a23516",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/dcat/cover-800.webp?v=40ea50a23516"
+      }
+    ]
+  },
+  "/media/dcat/demo-poster.webp": {
+    "w": 1600,
+    "h": 868,
+    "hash": "3033e5a4a0c5",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/dcat/demo-poster-800.webp?v=3033e5a4a0c5"
+      }
+    ]
+  },
+  "/media/tomato/cover.webp": {
+    "w": 1600,
+    "h": 868,
+    "hash": "2071581d993d",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/tomato/cover-800.webp?v=2071581d993d"
+      }
+    ]
+  },
+  "/media/tomato/demo-poster.webp": {
+    "w": 1918,
+    "h": 1040,
+    "hash": "835ca3628f80",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/tomato/demo-poster-800.webp?v=835ca3628f80"
+      },
+      {
+        "w": 1600,
+        "src": "/media/_derived/tomato/demo-poster-1600.webp?v=835ca3628f80"
+      }
+    ]
+  },
+  "/media/wfc-island/island.webp": {
+    "w": 1440,
+    "h": 1000,
+    "hash": "3d981d3e810a",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/wfc-island/island-800.webp?v=3d981d3e810a"
+      }
+    ]
+  },
+  "/media/vector-group-exporter/cover.webp": {
+    "w": 1010,
+    "h": 714,
+    "hash": "673d3238082d",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/vector-group-exporter/cover-800.webp?v=673d3238082d"
+      }
+    ]
+  },
+  "/media/videos/scavenger/cover.webp": {
+    "w": 1280,
+    "h": 720,
+    "hash": "51a01550960e",
+    "variants": [
+      {
+        "w": 800,
+        "src": "/media/_derived/videos/scavenger/cover-800.webp?v=51a01550960e"
+      }
+    ]
+  }
+}
